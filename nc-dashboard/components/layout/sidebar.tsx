@@ -33,30 +33,22 @@ export interface NavItem {
 /*  Pure: getNavItems(enabled) — testable without React                */
 /* ------------------------------------------------------------------ */
 
-export function getNavItems(platformsEnabled: boolean): NavItem[] {
+export function getNavItems(): NavItem[] {
   const base: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/dashboard/tenants", label: "Negocios", icon: Building2 },
     { href: "/dashboard/agents", label: "Agentes", icon: Bot },
   ];
 
-  if (platformsEnabled) {
-    base.push({
-      href: "/dashboard/platforms",
-      label: "Plataformas",
-      icon: LayoutDashboard,
-      children: [
-        { href: "/dashboard/platforms/whatsapp", label: "WhatsApp", icon: Phone },
-        { href: "/dashboard/platforms/telegram", label: "Telegram", icon: Send },
-      ],
-    });
-  } else {
-    base.push({
-      href: "/dashboard/whatsapp",
-      label: "WhatsApp",
-      icon: Phone,
-    });
-  }
+  base.push({
+    href: "/dashboard/platforms",
+    label: "Plataformas",
+    icon: LayoutDashboard,
+    children: [
+      { href: "/dashboard/platforms/whatsapp", label: "WhatsApp", icon: Phone },
+      { href: "/dashboard/platforms/telegram", label: "Telegram", icon: Send },
+    ],
+  });
 
   base.push({
     href: "/dashboard/conversations",
@@ -74,10 +66,7 @@ export function getNavItems(platformsEnabled: boolean): NavItem[] {
 export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const platformsEnabled =
-    process.env.NEXT_PUBLIC_ENABLE_PLATFORMS === "true";
-
-  const navItems = getNavItems(platformsEnabled);
+  const navItems = getNavItems();
 
   return (
     <aside className="flex h-full w-56 flex-col border-r bg-background">

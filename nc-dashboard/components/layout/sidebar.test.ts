@@ -26,20 +26,8 @@ function allLabels(items: NavItem[]): string[] {
 }
 
 describe("sidebar nav items", () => {
-  it("returns base items when platforms feature is disabled", () => {
-    const items = getNavItems(false);
-    expect(items.length).toBe(5);
-    expect(items.map((i) => i.label)).toEqual([
-      "Dashboard",
-      "Negocios",
-      "Agentes",
-      "WhatsApp",
-      "Conversaciones",
-    ]);
-  });
-
-  it("adds Plataformas section with children when platforms feature is enabled", () => {
-    const items = getNavItems(true);
+  it("adds Plataformas section with children", () => {
+    const items = getNavItems();
     // Top level: Dashboard, Negocios, Agentes, Plataformas, Conversaciones
     expect(items.length).toBe(5);
     expect(items.map((i) => i.label)).toEqual([
@@ -57,7 +45,7 @@ describe("sidebar nav items", () => {
   });
 
   it("Plataformas section has collapsible structure", () => {
-    const items = getNavItems(true);
+    const items = getNavItems();
     const plataformas = items.find((i) => i.label === "Plataformas");
     expect(plataformas).toBeDefined();
     expect(plataformas!.children).toBeDefined();
@@ -69,14 +57,14 @@ describe("sidebar nav items", () => {
   });
 
   it("WhatsApp item retains its icon", () => {
-    const items = getNavItems(true);
+    const items = getNavItems();
     const wa = findItem(items, "WhatsApp");
     expect(wa).toBeDefined();
     expect(wa!.icon).toBeDefined();
   });
 
   it("Telegram item has an icon", () => {
-    const items = getNavItems(true);
+    const items = getNavItems();
     const tg = findItem(items, "Telegram");
     expect(tg).toBeDefined();
     expect(tg!.icon).toBeDefined();
