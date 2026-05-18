@@ -121,6 +121,24 @@ async def create_prompt(
     return prompt
 
 
+@router.delete("/{agent_id}", status_code=204)
+async def delete_agent(
+    agent_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Delete an agent and its prompts."""
+    agent = await session.get(AiAgent, agent_id)
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    # Delete associated prompts first
+    from sqlalchemy import delete as sa_delete
+    await session.execute(sa_delete(Prompt).where(Prompt.agent_id == agent_id))
+
+    await session.delete(agent)
+    await session.commit()
+
+
 @router.patch("/{agent_id}/prompts/{prompt_id}", response_model=PromptResponse)
 async def update_prompt(
     agent_id: uuid.UUID,
