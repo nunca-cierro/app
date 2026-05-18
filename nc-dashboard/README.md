@@ -51,6 +51,11 @@ Página web profesional del producto con secciones informativas:
 - Vista de chat con historial de mensajes
 - Detección automática del negocio por `phone_number_id`
 
+### 🔗 Conexiones de Plataforma
+- CRUD para conexiones de **Telegram** (bots) y futuras plataformas
+- Esquema unificado con `platform_type`, `extra_data`, `status`, `is_primary`
+- Validación de token de Telegram vía endpoint dedicado
+
 ---
 
 ## 🚀 Quick Start
@@ -105,6 +110,64 @@ npm test          # Vitest
 npm run build
 npm start
 ```
+
+---
+
+## 🔌 API esperada (resumen)
+
+Lo mínimo que consume el dashboard para conexiones de plataforma.
+
+### Endpoint nuevo: validar token de Telegram
+
+```
+POST /api/v1/platform-connections/validate-telegram-token
+```
+
+Body:
+
+```json
+{
+  "bot_token": "1234567890:ABCdefGHIjklmNOPqrSTUvWXyz"
+}
+```
+
+Respuesta:
+
+```json
+{
+  "valid": true
+}
+```
+
+### Esquema PlatformConnection (respuesta)
+
+```json
+{
+  "id": "uuid",
+  "tenant_id": "uuid",
+  "platform_type": "telegram",
+  "display_name": "Bot de Soporte",
+  "extra_data": {
+    "bot_username": "MyBot",
+    "bot_token": "123:ABC"
+  },
+  "status": "active",
+  "is_primary": false,
+  "created_at": "2024-01-01T00:00:00Z",
+  "updated_at": "2024-01-01T00:00:00Z"
+}
+```
+
+---
+
+## 🧩 Patrón de hooks (frontend)
+
+Para fetching en hooks:
+
+- `useEffect` con flag `cancelled`
+- Promesas con `.then().catch().finally()`
+- Sin `async/await`
+- Sin `useCallback` para fetch
 
 ---
 

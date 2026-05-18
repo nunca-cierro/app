@@ -11,6 +11,7 @@ Backend en **FastAPI** para el bot multicliente de WhatsApp de NuncaCierro. Auto
 - **Sin base de datos** — archivos JSON para configuración de negocios
 - **Logging estructurado** con loguru
 - **Rate limiting** — monitoreo del tier gratis de Groq
+- **Conexiones de plataforma** — Telegram/WhatsApp con credenciales cifradas
 
 ## 🚀 Quick Start
 
@@ -43,6 +44,53 @@ El servidor arranca en `http://localhost:8000`.
 ```bash
 curl http://localhost:8000/health
 # → {"status": "ok", "service": "NuncaCierro WhatsApp Bot"}
+```
+
+---
+
+## 🔗 Platform Connections (API)
+
+Resumen de lo necesario para el dashboard.
+
+### Validar token de Telegram
+
+```
+POST /api/v1/platform-connections/validate-telegram-token
+```
+
+Body:
+
+```json
+{
+  "bot_token": "1234567890:ABCdefGHIjklmNOPqrSTUvWXyz"
+}
+```
+
+Respuesta:
+
+```json
+{
+  "valid": true
+}
+```
+
+### Esquema PlatformConnection (respuesta)
+
+```json
+{
+  "id": "uuid",
+  "tenant_id": "uuid",
+  "platform_type": "telegram",
+  "display_name": "Bot de Soporte",
+  "extra_data": {
+    "bot_username": "MyBot",
+    "bot_token": "123:ABC"
+  },
+  "status": "active",
+  "is_primary": false,
+  "created_at": "2024-01-01T00:00:00Z",
+  "updated_at": "2024-01-01T00:00:00Z"
+}
 ```
 
 ## 🔌 Configurar WhatsApp Webhook

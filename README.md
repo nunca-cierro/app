@@ -15,7 +15,6 @@ nunca-cierro/
 │   ├── components/
 │   ├── tests/            ← 62 tests
 │   └── package.json
-├── vercel.json            ← Vercel config (root: nc-dashboard)
 ├── .gitignore
 └── README.md
 ```
@@ -32,17 +31,17 @@ Un sistema que permite a los negocios:
 
 ## Stack
 
-| Componente | Tecnología |
-|------------|-----------|
-| **API** | FastAPI (Python 3.12) |
-| **Base de Datos** | PostgreSQL + SQLAlchemy + Alembic |
-| **AI** | Groq — LLaMA 3 70B |
-| **WhatsApp** | Meta Cloud API v22.0 |
-| **Telegram** | Bot API |
-| **Dashboard** | Next.js 16 + React 19 + TypeScript |
-| **UI** | shadcn/ui + Tailwind CSS v4 |
-| **Dashboard Deploy** | Vercel |
-| **API Deploy** | Railway |
+| Componente           | Tecnología                         |
+| -------------------- | ---------------------------------- |
+| **API**              | FastAPI (Python 3.12)              |
+| **Base de Datos**    | PostgreSQL + SQLAlchemy + Alembic  |
+| **AI**               | Groq — LLaMA 3 70B                 |
+| **WhatsApp**         | Meta Cloud API v22.0               |
+| **Telegram**         | Bot API                            |
+| **Dashboard**        | Next.js 16 + React 19 + TypeScript |
+| **UI**               | shadcn/ui + Tailwind CSS v4        |
+| **Dashboard Deploy** | Vercel                             |
+| **API Deploy**       | Railway                            |
 
 ## Inicio Rápido
 
@@ -84,9 +83,9 @@ cd nc-dashboard && npm test
 Cada proyecto se despliega de forma independiente desde el mismo repo:
 
 | Proyecto | Plataforma | Root Directory |
-|----------|-----------|---------------|
-| Backend | Railway | `nc-api` |
-| Frontend | Vercel | `nc-dashboard` |
+| -------- | ---------- | -------------- |
+| Backend  | Railway    | `nc-api`       |
+| Frontend | Vercel     | `nc-dashboard` |
 
 > **Vercel:** Al conectar el repo, configura el **Root Directory** como `nc-dashboard` en la sección "Root Directory" del proyecto. Next.js se detecta automáticamente, no necesita `vercel.json`.
 

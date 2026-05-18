@@ -27,22 +27,27 @@ export function useTenant(id: string): UseTenantReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTenant = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  useEffect(() => {
+    let cancelled = false;
 
-    try {
-      const data = await apiClient<Tenant>(`/api/v1/tenants/${id}`);
-      setTenant(data);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("Error al cargar el negocio");
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    apiClient<Tenant>(`/api/v1/tenants/${id}`)
+      .then((data) => {
+        if (cancelled) return;
+        setTenant(data);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(
+          err instanceof ApiError ? err.message : "Error al cargar el negocio",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   const updateTenant = useCallback(
@@ -51,7 +56,7 @@ export function useTenant(id: string): UseTenantReturn {
         method: "PATCH",
         body: JSON.stringify({
           ...data,
-          slug: slugify(data.name),   // ← auto-generado
+          slug: slugify(data.name), // ← auto-generado
         }),
       });
       setTenant(updated);
@@ -64,10 +69,6 @@ export function useTenant(id: string): UseTenantReturn {
     await apiClient(`/api/v1/tenants/${id}`, { method: "DELETE" });
     setTenant(null);
   }, [id]);
-
-  useEffect(() => {
-    fetchTenant();
-  }, [fetchTenant]);
 
   return { tenant, isLoading, error, updateTenant, deleteTenant };
 }

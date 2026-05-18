@@ -27,27 +27,34 @@ export function useWhatsAppNumbers(
   const [numbers, setNumbers] = useState<WhatsAppNumber[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refetchCount, setRefetchCount] = useState(0);
 
-  const fetchNumbers = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  useEffect(() => {
+    let cancelled = false;
 
-    try {
-      const params = tenantId ? `?tenant_id=${tenantId}` : "";
-      const data = await apiClient<WhatsAppNumber[]>(
-        `/api/v1/whatsapp-numbers${params}`,
-      );
-      setNumbers(data);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("Error al cargar números WhatsApp");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [tenantId]);
+    const params = tenantId ? `?tenant_id=${tenantId}` : "";
+
+    apiClient<WhatsAppNumber[]>(`/api/v1/whatsapp-numbers${params}`)
+      .then((data) => {
+        if (cancelled) return;
+        setNumbers(data);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "Error al cargar números WhatsApp",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tenantId, refetchCount]);
 
   const createNumber = useCallback(
     async (data: WhatsAppNumberFormValues): Promise<WhatsAppNumber> => {
@@ -64,15 +71,17 @@ export function useWhatsAppNumbers(
     [],
   );
 
-  useEffect(() => {
-    fetchNumbers();
-  }, [fetchNumbers]);
+  const refetch = useCallback(() => {
+    setError(null);
+    setIsLoading(true);
+    setRefetchCount((c) => c + 1);
+  }, []);
 
   return {
     numbers,
     isLoading,
     error,
-    refetch: fetchNumbers,
+    refetch,
     createNumber,
   };
 }

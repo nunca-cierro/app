@@ -26,25 +26,32 @@ export function useTenants(filterStatus?: string): UseTenantsReturn {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refetchCount, setRefetchCount] = useState(0);
 
-  const fetchTenants = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  useEffect(() => {
+    let cancelled = false;
 
-    try {
-      const params = filterStatus ? `?status=${filterStatus}` : "";
-      const data = await apiClient<Tenant[]>(`/api/v1/tenants${params}`);
-      setTenants(data);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("Error al cargar negocios");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [filterStatus]);
+    const params = filterStatus ? `?status=${filterStatus}` : "";
+
+    apiClient<Tenant[]>(`/api/v1/tenants${params}`)
+      .then((data) => {
+        if (cancelled) return;
+        setTenants(data);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(
+          err instanceof ApiError ? err.message : "Error al cargar negocios",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filterStatus, refetchCount]);
 
   const createTenant = useCallback(
     async (data: TenantFormValues): Promise<Tenant> => {
@@ -52,7 +59,7 @@ export function useTenants(filterStatus?: string): UseTenantsReturn {
         method: "POST",
         body: JSON.stringify({
           ...data,
-          slug: slugify(data.name),   // ← auto-generado
+          slug: slugify(data.name), // ← auto-generado
         }),
       });
       setTenants((prev) => [tenant, ...prev]);
@@ -61,9 +68,11 @@ export function useTenants(filterStatus?: string): UseTenantsReturn {
     [],
   );
 
-  useEffect(() => {
-    fetchTenants();
-  }, [fetchTenants]);
+  const refetch = useCallback(() => {
+    setError(null);
+    setIsLoading(true);
+    setRefetchCount((c) => c + 1);
+  }, []);
 
-  return { tenants, isLoading, error, refetch: fetchTenants, createTenant };
+  return { tenants, isLoading, error, refetch, createTenant };
 }

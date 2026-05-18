@@ -22,9 +22,13 @@ export default function NewTelegramConnectionPage() {
 
     try {
       const conn = await createConnection({
-        platform: "telegram",
+        platform_type: "telegram",
         display_name: data.display_name,
-        config: {
+        credentials: {
+          bot_token: data.bot_token,
+          bot_username: data.bot_username,
+        },
+        extra_data: {
           bot_token: data.bot_token,
           bot_username: data.bot_username,
         },

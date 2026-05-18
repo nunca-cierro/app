@@ -122,11 +122,11 @@ export default function TelegramConnectionDetailPage() {
     );
   }
 
-  const config = connection.config as Record<string, string>;
+  const extraData = connection.extra_data as Record<string, string> | null;
   const defaultFormValues: TelegramConnectionFormValues = {
     display_name: connection.display_name,
-    bot_token: config.bot_token ?? "",
-    bot_username: config.bot_username ?? "",
+    bot_token: extraData?.bot_token ?? "",
+    bot_username: extraData?.bot_username ?? "",
     status: connection.status as "active" | "inactive",
   };
 
@@ -137,7 +137,11 @@ export default function TelegramConnectionDetailPage() {
       await updateConnection({
         display_name: data.display_name,
         status: data.status,
-        config: {
+        credentials: {
+          bot_token: data.bot_token,
+          bot_username: data.bot_username,
+        },
+        extra_data: {
           bot_token: data.bot_token,
           bot_username: data.bot_username,
         },
@@ -263,14 +267,14 @@ export default function TelegramConnectionDetailPage() {
                   <InfoRow
                     icon={Hash}
                     label="Usuario del Bot"
-                    value={`@${config.bot_username ?? "—"}`}
+                    value={`@${extraData?.bot_username ?? "—"}`}
                   />
                   <InfoRow
                     icon={Info}
                     label="Token"
                     value={
-                      config.bot_token
-                        ? `${config.bot_token.slice(0, 10)}...`
+                      extraData?.bot_token
+                        ? `${extraData.bot_token.slice(0, 10)}...`
                         : "—"
                     }
                   />

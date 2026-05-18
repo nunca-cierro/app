@@ -40,6 +40,7 @@ export function AgentForm({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<AgentFormValues>({
     resolver: zodResolver(agentFormSchema),

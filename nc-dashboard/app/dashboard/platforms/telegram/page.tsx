@@ -62,7 +62,7 @@ export default function TelegramConnectionsPage() {
       ) : (
         <div className="space-y-2">
           {connections.map((conn) => {
-            const config = conn.config as Record<string, string>;
+            const extraData = conn.extra_data as Record<string, string> | null;
             return (
               <Link
                 key={conn.id}
@@ -88,7 +88,7 @@ export default function TelegramConnectionsPage() {
                           />
                         </div>
                         <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          @{config.bot_username ?? "sin usuario"}
+                          @{extraData?.bot_username ?? "sin usuario"}
                         </p>
                       </div>
                     </div>

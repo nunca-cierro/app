@@ -74,13 +74,14 @@ export default function PlatformsPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {connections.map((conn) => {
             const Icon =
-              PLATFORM_ICONS[conn.platform] ?? ExternalLink;
-            const platformLabel = PLATFORM_LABELS[conn.platform] ?? conn.platform;
+              PLATFORM_ICONS[conn.platform_type] ?? ExternalLink;
+            const platformLabel =
+              PLATFORM_LABELS[conn.platform_type] ?? conn.platform_type;
 
             return (
               <Link
                 key={conn.id}
-                href={`/dashboard/platforms/${conn.platform}/${conn.id}`}
+                href={`/dashboard/platforms/${conn.platform_type}/${conn.id}`}
               >
                 <Card className="transition-colors hover:bg-accent/50">
                   <CardContent className="flex items-start gap-3 py-4">

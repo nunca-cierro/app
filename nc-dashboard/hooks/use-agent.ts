@@ -31,26 +31,31 @@ export function useAgent(id: string): UseAgentReturn {
   const [promptsLoading, setPromptsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchAgent = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  useEffect(() => {
+    let cancelled = false;
 
-    try {
-      const [agentData, promptsData] = await Promise.all([
-        apiClient<Agent>(`/api/v1/agents/${id}`),
-        apiClient<Prompt[]>(`/api/v1/agents/${id}/prompts`),
-      ]);
-      setAgent(agentData);
-      setPrompts(promptsData);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("Error al cargar el agente");
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    Promise.all([
+      apiClient<Agent>(`/api/v1/agents/${id}`),
+      apiClient<Prompt[]>(`/api/v1/agents/${id}/prompts`),
+    ])
+      .then(([agentData, promptsData]) => {
+        if (cancelled) return;
+        setAgent(agentData);
+        setPrompts(promptsData);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(
+          err instanceof ApiError ? err.message : "Error al cargar el agente",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   const updateAgent = useCallback(
@@ -78,10 +83,7 @@ export function useAgent(id: string): UseAgentReturn {
           `/api/v1/agents/${id}/prompts`,
           {
             method: "POST",
-            body: JSON.stringify({
-              ...data,
-              tenant_id: agent?.tenant_id,
-            }),
+            body: JSON.stringify(data),
           },
         );
         setPrompts((prev) => [prompt, ...prev]);
@@ -90,12 +92,8 @@ export function useAgent(id: string): UseAgentReturn {
         setPromptsLoading(false);
       }
     },
-    [id, agent?.tenant_id],
+    [id],
   );
-
-  useEffect(() => {
-    fetchAgent();
-  }, [fetchAgent]);
 
   return {
     agent,

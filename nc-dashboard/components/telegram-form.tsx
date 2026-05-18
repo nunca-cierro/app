@@ -49,6 +49,7 @@ export function TelegramForm({
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm<TelegramConnectionFormValues>({
     resolver: zodResolver(telegramConnectionSchema),
@@ -64,7 +65,7 @@ export function TelegramForm({
   const botToken = useWatch({ control, name: "bot_token" });
 
   /* ── Token validation ── */
-  const handleValidateToken = async () => {
+  const handleValidateToken = () => {
     if (!botToken || botToken.length < 5) {
       setTokenStatus("invalid");
       return;
@@ -72,16 +73,17 @@ export function TelegramForm({
 
     setTokenStatus("validating");
 
-    try {
-      // Call Telegram's getMe via backend proxy to validate the token
-      await apiClient("/api/v1/platform-connections/validate-telegram-token", {
-        method: "POST",
-        body: JSON.stringify({ bot_token: botToken }),
+    // Call Telegram's getMe via backend proxy to validate the token
+    apiClient("/api/v1/platform-connections/validate-telegram-token", {
+      method: "POST",
+      body: JSON.stringify({ bot_token: botToken }),
+    })
+      .then(() => {
+        setTokenStatus("valid");
+      })
+      .catch(() => {
+        setTokenStatus("invalid");
       });
-      setTokenStatus("valid");
-    } catch {
-      setTokenStatus("invalid");
-    }
   };
 
   return (

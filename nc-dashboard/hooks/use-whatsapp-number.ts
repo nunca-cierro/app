@@ -26,24 +26,29 @@ export function useWhatsAppNumber(id: string): UseWhatsAppNumberReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchNumber = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  useEffect(() => {
+    let cancelled = false;
 
-    try {
-      const data = await apiClient<WhatsAppNumber>(
-        `/api/v1/whatsapp-numbers/${id}`,
-      );
-      setNumber(data);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("Error al cargar el número");
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    apiClient<WhatsAppNumber>(`/api/v1/whatsapp-numbers/${id}`)
+      .then((data) => {
+        if (cancelled) return;
+        setNumber(data);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "Error al cargar el número",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   const updateNumber = useCallback(
@@ -65,10 +70,6 @@ export function useWhatsAppNumber(id: string): UseWhatsAppNumberReturn {
     await apiClient(`/api/v1/whatsapp-numbers/${id}`, { method: "DELETE" });
     setNumber(null);
   }, [id]);
-
-  useEffect(() => {
-    fetchNumber();
-  }, [fetchNumber]);
 
   return { number, isLoading, error, updateNumber, deleteNumber };
 }

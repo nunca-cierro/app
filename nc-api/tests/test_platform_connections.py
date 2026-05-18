@@ -226,6 +226,21 @@ class TestPlatformConnectionsAPI:
         for item in data:
             assert "credentials" not in item
 
+    async def test_list_connections_filtered_by_platform(self, client: Any, db_session: Any) -> None:
+        await self._create_tenant(db_session)
+        await client.post("/api/v1/platform-connections", json=self.CREATE_PAYLOAD)
+        response = await client.get("/api/v1/platform-connections?platform_type=whatsapp")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) >= 1
+        assert all(item["platform_type"] == "whatsapp" for item in data)
+
+        response = await client.get("/api/v1/platform-connections?platform_type=telegram")
+        assert response.status_code == 200
+        data = response.json()
+        assert data == []
+
+
     async def test_get_connection_by_id(self, client: Any, db_session: Any) -> None:
         await self._create_tenant(db_session)
         create_resp = await client.post("/api/v1/platform-connections", json=self.CREATE_PAYLOAD)

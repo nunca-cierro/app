@@ -14,9 +14,12 @@ export interface UsePlatformConnectionsReturn {
   error: string | null;
   refetch: () => void;
   createConnection: (data: {
-    platform: string;
+    platform_type: string;
     display_name: string;
-    config: Record<string, unknown>;
+    credentials: Record<string, unknown>;
+    extra_data?: Record<string, unknown> | null;
+    status?: string;
+    is_primary?: boolean;
   }) => Promise<PlatformConnection>;
 }
 
@@ -26,8 +29,10 @@ export interface UsePlatformConnectionReturn {
   error: string | null;
   updateConnection: (data: {
     display_name?: string;
-    config?: Record<string, unknown>;
+    credentials?: Record<string, unknown> | null;
+    extra_data?: Record<string, unknown> | null;
     status?: string;
+    is_primary?: boolean;
   }) => Promise<PlatformConnection>;
   deleteConnection: () => Promise<void>;
 }
@@ -37,38 +42,48 @@ export interface UsePlatformConnectionReturn {
 /* ------------------------------------------------------------------ */
 
 export function usePlatformConnections(
-  platform?: string,
+  platformType?: string,
 ): UsePlatformConnectionsReturn {
   const [connections, setConnections] = useState<PlatformConnection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refetchCount, setRefetchCount] = useState(0);
 
-  const fetchConnections = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  useEffect(() => {
+    let cancelled = false;
 
-    try {
-      const params = platform ? `?platform=${platform}` : "";
-      const data = await apiClient<PlatformConnection[]>(
-        `/api/v1/platform-connections${params}`,
-      );
-      setConnections(data);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("Error al cargar conexiones");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [platform]);
+    const params = platformType ? `?platform_type=${platformType}` : "";
+
+    apiClient<PlatformConnection[]>(`/api/v1/platform-connections${params}`)
+      .then((data) => {
+        if (cancelled) return;
+        setConnections(data);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "Error al cargar conexiones",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [platformType, refetchCount]);
 
   const createConnection = useCallback(
     async (data: {
-      platform: string;
+      platform_type: string;
       display_name: string;
-      config: Record<string, unknown>;
+      credentials: Record<string, unknown>;
+      extra_data?: Record<string, unknown> | null;
+      status?: string;
+      is_primary?: boolean;
     }): Promise<PlatformConnection> => {
       const conn = await apiClient<PlatformConnection>(
         "/api/v1/platform-connections",
@@ -83,15 +98,17 @@ export function usePlatformConnections(
     [],
   );
 
-  useEffect(() => {
-    fetchConnections();
-  }, [fetchConnections]);
+  const refetch = useCallback(() => {
+    setError(null);
+    setIsLoading(true);
+    setRefetchCount((c) => c + 1);
+  }, []);
 
   return {
     connections,
     isLoading,
     error,
-    refetch: fetchConnections,
+    refetch,
     createConnection,
   };
 }
@@ -109,31 +126,38 @@ export function usePlatformConnection(
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchConnection = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  useEffect(() => {
+    let cancelled = false;
 
-    try {
-      const data = await apiClient<PlatformConnection>(
-        `/api/v1/platform-connections/${id}`,
-      );
-      setConnection(data);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("Error al cargar la conexión");
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    apiClient<PlatformConnection>(`/api/v1/platform-connections/${id}`)
+      .then((data) => {
+        if (cancelled) return;
+        setConnection(data);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "Error al cargar la conexión",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   const updateConnection = useCallback(
     async (data: {
       display_name?: string;
-      config?: Record<string, unknown>;
+      credentials?: Record<string, unknown> | null;
+      extra_data?: Record<string, unknown> | null;
       status?: string;
+      is_primary?: boolean;
     }): Promise<PlatformConnection> => {
       const updated = await apiClient<PlatformConnection>(
         `/api/v1/platform-connections/${id}`,
@@ -154,10 +178,6 @@ export function usePlatformConnection(
     });
     setConnection(null);
   }, [id]);
-
-  useEffect(() => {
-    fetchConnection();
-  }, [fetchConnection]);
 
   return {
     connection,

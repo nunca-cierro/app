@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import uuid
 import typing as t
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
@@ -21,17 +22,31 @@ from app.modules.platform_connections.service import (
     list_connections,
     update_connection,
 )
+from app.modules.telegram.client import TelegramClient
 
 router = APIRouter(prefix="/platform-connections", tags=["platform-connections"])
+
+
+class TelegramTokenValidationRequest(BaseModel):
+    bot_token: str
+
+
+class TelegramTokenValidationResponse(BaseModel):
+    valid: bool
 
 
 @router.get("", response_model=list[PlatformConnectionResponse])
 async def list_platform_connections(
     tenant_id: uuid.UUID | None = None,
+    platform_type: str | None = None,
     session: AsyncSession = Depends(get_session),
 ) -> t.Any:
     """List all platform connections, optionally filtered by tenant_id."""
-    return await list_connections(session, tenant_id=tenant_id)
+    return await list_connections(
+        session,
+        tenant_id=tenant_id,
+        platform_type=platform_type,
+    )
 
 
 @router.post("", response_model=PlatformConnectionResponse, status_code=201)
@@ -78,3 +93,16 @@ async def delete_platform_connection(
     if not connection:
         raise HTTPException(status_code=404, detail="Platform connection not found")
     await delete_connection(session, connection)
+
+
+@router.post("/validate-telegram-token", response_model=TelegramTokenValidationResponse)
+async def validate_telegram_token(
+    body: TelegramTokenValidationRequest,
+) -> TelegramTokenValidationResponse:
+    """Validate a Telegram bot token by calling getMe."""
+    client = TelegramClient()
+    try:
+        response = await client.getMe(body.bot_token)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Telegram validation failed") from exc
+    return TelegramTokenValidationResponse(valid=bool(response.get("ok")))

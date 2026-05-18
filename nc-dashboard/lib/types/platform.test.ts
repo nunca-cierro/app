@@ -7,18 +7,19 @@ describe("Platform types", () => {
     const conn: PlatformConnection = {
       id: "pc_123",
       tenant_id: "tenant_1",
-      platform: "whatsapp",
+      platform_type: "whatsapp",
       display_name: "WhatsApp Principal",
-      config: { phone_number_id: "12345" },
+      extra_data: { phone_number_id: "12345" },
       status: "active",
+      is_primary: false,
       created_at: "2024-01-01T00:00:00Z",
       updated_at: "2024-01-01T00:00:00Z",
     };
     expect(conn.id).toBe("pc_123");
     expect(conn.tenant_id).toBe("tenant_1");
-    expect(conn.platform).toBe("whatsapp");
+    expect(conn.platform_type).toBe("whatsapp");
     expect(conn.display_name).toBe("WhatsApp Principal");
-    expect(conn.config).toEqual({ phone_number_id: "12345" });
+    expect(conn.extra_data).toEqual({ phone_number_id: "12345" });
     expect(conn.status).toBe("active");
     expect(conn.created_at).toBe("2024-01-01T00:00:00Z");
     expect(conn.updated_at).toBe("2024-01-01T00:00:00Z");
@@ -31,19 +32,20 @@ describe("Platform types", () => {
     expect([wp, tg]).toContain("telegram");
   });
 
-  it("accepts telegram platform with bot config", () => {
+  it("accepts telegram platform with bot extra data", () => {
     const conn: PlatformConnection = {
       id: "pc_456",
       tenant_id: "tenant_1",
-      platform: "telegram",
+      platform_type: "telegram",
       display_name: "Bot de Soporte",
-      config: { bot_token: "123:ABC", bot_username: "MyBot" },
+      extra_data: { bot_token: "123:ABC", bot_username: "MyBot" },
       status: "active",
+      is_primary: false,
       created_at: "2024-01-01T00:00:00Z",
       updated_at: "2024-01-01T00:00:00Z",
     };
-    expect(conn.platform).toBe("telegram");
-    expect((conn.config as Record<string, string>).bot_token).toBe("123:ABC");
+    expect(conn.platform_type).toBe("telegram");
+    expect((conn.extra_data as Record<string, string>).bot_token).toBe("123:ABC");
   });
 
   it("Conversation includes new platform fields", () => {

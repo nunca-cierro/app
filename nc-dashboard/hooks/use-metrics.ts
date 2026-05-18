@@ -23,30 +23,36 @@ export function useMetrics(): UseMetricsReturn {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const fetchMetrics = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const data = await apiClient<DashboardMetrics>(
-        "/api/v1/metrics/dashboard",
-      );
-      setMetrics(data);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("Error al cargar métricas");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const [refetchCount, setRefetchCount] = useState(0);
 
   useEffect(() => {
-    fetchMetrics();
-  }, [fetchMetrics]);
+    let cancelled = false;
 
-  return { metrics, isLoading, error, refetch: fetchMetrics };
+    apiClient<DashboardMetrics>("/api/v1/metrics/dashboard")
+      .then((data) => {
+        if (cancelled) return;
+        setMetrics(data);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(
+          err instanceof ApiError ? err.message : "Error al cargar métricas",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [refetchCount]);
+
+  const refetch = useCallback(() => {
+    setError(null);
+    setIsLoading(true);
+    setRefetchCount((c) => c + 1);
+  }, []);
+
+  return { metrics, isLoading, error, refetch };
 }

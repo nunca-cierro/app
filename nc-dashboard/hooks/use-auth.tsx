@@ -5,7 +5,6 @@ import {
   useContext,
   useState,
   useEffect,
-  useCallback,
   type ReactNode,
 } from "react";
 import {
@@ -41,59 +40,65 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return !!localStorage.getItem(TOKEN_KEYS.access);
+  });
 
   /* ── Mount: try silent auth from stored token ── */
   useEffect(() => {
-    const init = async () => {
-      try {
-        const accessToken = localStorage.getItem(TOKEN_KEYS.access);
-        if (!accessToken) {
-          setIsLoading(false);
-          return;
-        }
+    let cancelled = false;
+    const accessToken = localStorage.getItem(TOKEN_KEYS.access);
+    if (!accessToken) {
+      return () => {
+        cancelled = true;
+      };
+    }
 
-        // Verify token is still valid by fetching profile
-        const profile = await apiGetProfile();
+    // Verify token is still valid by fetching profile
+    apiGetProfile()
+      .then((profile) => {
+        if (cancelled) return;
         setUser(profile);
         localStorage.setItem(TOKEN_KEYS.user, JSON.stringify(profile));
-      } catch {
+      })
+      .catch(() => {
+        if (cancelled) return;
         // Token invalid — clear everything
         localStorage.removeItem(TOKEN_KEYS.access);
         localStorage.removeItem(TOKEN_KEYS.user);
         setUser(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
 
-    init();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   /* ── Login ── */
-  const login = useCallback(async (_email: string, _password: string) => {
+  const login = async (_email: string, _password: string) => {
     const data = await apiLogin(_email, _password);
     setUser({ id: data.user_id, email: data.email, name: data.name });
-  }, []);
+  };
 
   /* ── Register ── */
-  const register = useCallback(
-    async (_email: string, _password: string, _name: string) => {
-      const data = await apiRegister(_email, _password, _name);
-      setUser({ id: data.user_id, email: data.email, name: data.name });
-    },
-    [],
-  );
+  const register = async (_email: string, _password: string, _name: string) => {
+    const data = await apiRegister(_email, _password, _name);
+    setUser({ id: data.user_id, email: data.email, name: data.name });
+  };
 
   /* ── Logout ── */
-  const logout = useCallback(() => {
+  const logout = () => {
     localStorage.removeItem(TOKEN_KEYS.access);
     localStorage.removeItem(TOKEN_KEYS.user);
     setUser(null);
     if (typeof window !== "undefined") {
       window.location.href = "/auth/login";
     }
-  }, []);
+  };
 
   return (
     <AuthContext.Provider

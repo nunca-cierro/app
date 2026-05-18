@@ -21,29 +21,45 @@ export interface UseAgentsReturn {
 /*  Hook                                                               */
 /* ------------------------------------------------------------------ */
 
-export function useAgents(tenantId?: string): UseAgentsReturn {
+export function useAgents(
+  skip = 0,
+  limit = 10,
+  tenantId?: string,
+): UseAgentsReturn {
+  void tenantId; // reserved for tenant-scoped filtering
   const [agents, setAgents] = useState<Agent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refetchCount, setRefetchCount] = useState(0);
 
-  const fetchAgents = useCallback(async () => {
-    setIsLoading(true);
+  useEffect(() => {
+    let cancelled = false;
+
+    apiClient<Agent[]>(`/api/v1/agents?skip=${skip}&limit=${limit}`)
+      .then((data) => {
+        if (cancelled) return;
+        setAgents(data);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(
+          err instanceof ApiError ? err.message : "Error al cargar los agentes",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [skip, limit, refetchCount]);
+
+  const refetch = useCallback(() => {
     setError(null);
-
-    try {
-      const params = tenantId ? `?tenant_id=${tenantId}` : "";
-      const data = await apiClient<Agent[]>(`/api/v1/agents${params}`);
-      setAgents(data);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("Error al cargar agentes");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [tenantId]);
+    setIsLoading(true);
+    setRefetchCount((c) => c + 1);
+  }, []);
 
   const createAgent = useCallback(
     async (data: AgentFormValues): Promise<Agent> => {
@@ -57,9 +73,5 @@ export function useAgents(tenantId?: string): UseAgentsReturn {
     [],
   );
 
-  useEffect(() => {
-    fetchAgents();
-  }, [fetchAgents]);
-
-  return { agents, isLoading, error, refetch: fetchAgents, createAgent };
+  return { agents, isLoading, error, refetch, createAgent };
 }

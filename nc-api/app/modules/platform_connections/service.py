@@ -19,11 +19,14 @@ from app.modules.platform_connections.schemas import (
 async def list_connections(
     session: AsyncSession,
     tenant_id: uuid.UUID | None = None,
+    platform_type: str | None = None,
 ) -> list[PlatformConnection]:
     """Return all platform connections, optionally filtered by tenant."""
     query = select(PlatformConnection).order_by(PlatformConnection.created_at.desc())
     if tenant_id:
         query = query.where(PlatformConnection.tenant_id == tenant_id)
+    if platform_type:
+        query = query.where(PlatformConnection.platform_type == platform_type)
     result = await session.execute(query)
     return list(result.scalars().all())
 

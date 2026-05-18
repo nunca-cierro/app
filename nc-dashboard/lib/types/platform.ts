@@ -7,10 +7,11 @@ export type Platform = "whatsapp" | "telegram";
 export interface PlatformConnection {
   id: string;
   tenant_id: string;
-  platform: Platform;
+  platform_type: Platform;
   display_name: string;
-  config: Record<string, unknown>;
+  extra_data: Record<string, unknown> | null;
   status: string;
+  is_primary: boolean;
   created_at: string;
   updated_at: string;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { apiClient, ApiError } from "@/lib/api";
 import type { Conversation, Message } from "@/lib/types";
 
@@ -25,31 +25,34 @@ export function useConversation(id: string): UseConversationReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetch = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const [convData, msgsData] = await Promise.all([
-        apiClient<Conversation>(`/api/v1/conversations/${id}`),
-        apiClient<Message[]>(`/api/v1/conversations/${id}/messages`),
-      ]);
-      setConversation(convData);
-      setMessages(msgsData);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("Error al cargar la conversación");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [id]);
-
   useEffect(() => {
-    fetch();
-  }, [fetch]);
+    let cancelled = false;
+
+    Promise.all([
+      apiClient<Conversation>(`/api/v1/conversations/${id}`),
+      apiClient<Message[]>(`/api/v1/conversations/${id}/messages`),
+    ])
+      .then(([convData, msgsData]) => {
+        if (cancelled) return;
+        setConversation(convData);
+        setMessages(msgsData);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : "Error al cargar la conversación",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   return { conversation, messages, isLoading, error };
 }
