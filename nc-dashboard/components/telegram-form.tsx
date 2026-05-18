@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import type { Tenant } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -21,6 +22,8 @@ interface TelegramFormProps {
   onSubmit: (data: TelegramConnectionFormValues) => Promise<void>;
   isSubmitting: boolean;
   mode: "create" | "edit";
+  tenants?: Tenant[];
+  tenantsLoading?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -41,6 +44,8 @@ export function TelegramForm({
   onSubmit,
   isSubmitting,
   mode,
+  tenants,
+  tenantsLoading,
 }: TelegramFormProps) {
   const [tokenStatus, setTokenStatus] = useState<
     "idle" | "validating" | "valid" | "invalid"
@@ -54,6 +59,7 @@ export function TelegramForm({
   } = useForm<TelegramConnectionFormValues>({
     resolver: zodResolver(telegramConnectionSchema),
     defaultValues: {
+      tenant_id: "",
       display_name: "",
       bot_token: "",
       bot_username: "",
@@ -88,6 +94,39 @@ export function TelegramForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* ── Tenant (solo en creación) ── */}
+      {mode === "create" && (
+        <div className="space-y-2">
+          <label htmlFor="tenant_id" className="text-sm font-medium">
+            Negocio
+          </label>
+          {tenantsLoading ? (
+            <div className="flex h-10 items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              Cargando negocios...
+            </div>
+          ) : (
+            <select
+              id="tenant_id"
+              {...register("tenant_id")}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">Selecciona un negocio</option>
+              {tenants?.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {errors.tenant_id && (
+            <p className="text-xs text-destructive">
+              {errors.tenant_id.message}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* ── Display Name ── */}
       <div className="space-y-2">
         <label htmlFor="display_name" className="text-sm font-medium">

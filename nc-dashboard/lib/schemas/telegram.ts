@@ -11,6 +11,7 @@ import { z } from "zod";
 const botTokenRegex = /^\d+:[\w-]+$/;
 
 export const telegramConnectionSchema = z.object({
+  tenant_id: z.string().min(1, "Selecciona un negocio"),
   display_name: z
     .string()
     .min(1, "El nombre es requerido")

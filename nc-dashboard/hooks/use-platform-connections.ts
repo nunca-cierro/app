@@ -14,6 +14,7 @@ export interface UsePlatformConnectionsReturn {
   error: string | null;
   refetch: () => void;
   createConnection: (data: {
+    tenant_id: string;
     platform_type: string;
     display_name: string;
     credentials: Record<string, unknown>;

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePlatformConnections } from "@/hooks/use-platform-connections";
+import { useTenants } from "@/hooks/use-tenants";
 import { TelegramForm } from "@/components/telegram-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import type { TelegramConnectionFormValues } from "@/lib/schemas/telegram";
 export default function NewTelegramConnectionPage() {
   const router = useRouter();
   const { createConnection } = usePlatformConnections();
+  const { tenants, isLoading: loadingTenants } = useTenants();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (data: TelegramConnectionFormValues) => {
@@ -22,6 +24,7 @@ export default function NewTelegramConnectionPage() {
 
     try {
       const conn = await createConnection({
+        tenant_id: data.tenant_id,
         platform_type: "telegram",
         display_name: data.display_name,
         credentials: {
@@ -76,6 +79,8 @@ export default function NewTelegramConnectionPage() {
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
             mode="create"
+            tenants={tenants}
+            tenantsLoading={loadingTenants}
           />
         </CardContent>
       </Card>
