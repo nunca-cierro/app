@@ -88,7 +88,7 @@ Cada proyecto se despliega de forma independiente desde el mismo repo:
 | Backend | Railway | `nc-api` |
 | Frontend | Vercel | `nc-dashboard` |
 
-El `vercel.json` en la raíz ya configura Vercel automáticamente para que construya desde `nc-dashboard`.
+> **Vercel:** Al conectar el repo, configura el **Root Directory** como `nc-dashboard` en la sección "Root Directory" del proyecto. Next.js se detecta automáticamente, no necesita `vercel.json`.
 
 ## Licencia
 
