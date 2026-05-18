@@ -38,6 +38,7 @@ export type TelegramConnectionFormValues = z.infer<
 /* ------------------------------------------------------------------ */
 
 export const defaultTelegramConnectionValues: TelegramConnectionFormValues = {
+  tenant_id: "",
   display_name: "",
   bot_token: "",
   bot_username: "",

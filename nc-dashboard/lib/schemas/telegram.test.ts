@@ -7,6 +7,7 @@ import {
 describe("telegram connection schema", () => {
   it("accepts valid telegram connection data", () => {
     const data: TelegramConnectionFormValues = {
+      tenant_id: "00000000-0000-0000-0000-000000000000",
       display_name: "Bot de Soporte",
       bot_token: "1234567890:ABCdefGHIjklmNOPqrSTUvWXyz",
       bot_username: "MySupportBot",
@@ -74,6 +75,7 @@ describe("telegram connection schema", () => {
 
   it("accepts inactive status", () => {
     const data: TelegramConnectionFormValues = {
+      tenant_id: "00000000-0000-0000-0000-000000000000",
       display_name: "Bot Inactivo",
       bot_token: "1234567890:ABCdefGHIjklmNOPqrSTUvWXyz",
       bot_username: "InactiveBot",
