@@ -84,7 +84,10 @@ class Conversation(Base):
     platform_connection = relationship(
         "PlatformConnection", backref="conversations", lazy="selectin"
     )
-    messages = relationship("Message", back_populates="conversation", lazy="selectin")
+    messages = relationship(
+        "Message", back_populates="conversation", lazy="selectin",
+        cascade="all, delete-orphan",
+    )
 
     # ── Derived property ───────────────────────────────────────────────────
     @property

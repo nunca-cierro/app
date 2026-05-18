@@ -44,7 +44,10 @@ class AiAgent(Base):
 
     # relationships
     tenant = relationship("Tenant", back_populates="ai_agents")
-    prompts = relationship("Prompt", back_populates="agent", lazy="selectin")
+    prompts = relationship(
+        "Prompt", back_populates="agent", lazy="selectin",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return f"<AiAgent {self.name} ({self.provider}/{self.model})>"

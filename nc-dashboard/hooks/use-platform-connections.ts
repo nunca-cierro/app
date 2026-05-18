@@ -36,6 +36,7 @@ export interface UsePlatformConnectionReturn {
     is_primary?: boolean;
   }) => Promise<PlatformConnection>;
   deleteConnection: () => Promise<void>;
+  registerWebhook: () => Promise<{ webhook_url: string }>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -180,11 +181,25 @@ export function usePlatformConnection(
     setConnection(null);
   }, [id]);
 
+  const registerWebhook = useCallback(async () => {
+    const result = await apiClient<{ webhook_url: string }>(
+      `/api/v1/platform-connections/${id}/register-webhook`,
+      { method: "POST" },
+    );
+    // Refresh connection to get updated extra_data
+    const updated = await apiClient<PlatformConnection>(
+      `/api/v1/platform-connections/${id}`,
+    );
+    setConnection(updated);
+    return result;
+  }, [id]);
+
   return {
     connection,
     isLoading,
     error,
     updateConnection,
     deleteConnection,
+    registerWebhook,
   };
 }

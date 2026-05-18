@@ -15,17 +15,20 @@ import os
 
 from cryptography.fernet import Fernet
 
+from app.core.config import settings
+
 
 def _get_key() -> bytes:
-    """Retrieve the Fernet key from ``ENCRYPTION_KEY`` env var.
+    """Retrieve the Fernet key from ``ENCRYPTION_KEY`` env var
+    (fallback to ``settings.encryption_key``).
 
     The key MUST be a 32-byte URL-safe base64-encoded string
     (generated via ``cryptography.fernet.Fernet.generate_key()``).
 
     Raises:
-        ValueError: If the env var is missing or invalid.
+        ValueError: If neither source provides a key.
     """
-    raw = os.environ.get("ENCRYPTION_KEY")
+    raw = os.environ.get("ENCRYPTION_KEY") or settings.encryption_key
     if not raw:
         msg = "ENCRYPTION_KEY environment variable is not set"
         raise ValueError(msg)

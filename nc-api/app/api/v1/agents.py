@@ -114,7 +114,7 @@ async def create_prompt(
     )
     next_version = (last_version.scalar() or 0) + 1
 
-    prompt = Prompt(**body.model_dump(), agent_id=agent_id, version=next_version)
+    prompt = Prompt(**body.model_dump(exclude={"agent_id"}), agent_id=agent_id, version=next_version)
     session.add(prompt)
     await session.commit()
     await session.refresh(prompt)

@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
@@ -54,6 +54,9 @@ class PlatformConnection(Base):
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
+
+    # relationships
+    tenant = relationship("Tenant", back_populates="platform_connections")
 
     def __repr__(self) -> str:
         return f"<PlatformConnection {self.display_name} ({self.platform_type})>"

@@ -29,6 +29,9 @@ import {
   Hash,
   Calendar,
   Info,
+  Globe,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { toast } from "sonner";
@@ -66,12 +69,20 @@ export default function TelegramConnectionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const { connection, isLoading, error, updateConnection, deleteConnection } =
-    usePlatformConnection(id);
+  const {
+    connection,
+    isLoading,
+    error,
+    updateConnection,
+    deleteConnection,
+    registerWebhook,
+  } = usePlatformConnection(id);
 
   const [activeTab, setActiveTab] = useState("info");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRegisteringWebhook, setIsRegisteringWebhook] = useState(false);
+  const [webhookResult, setWebhookResult] = useState<string | null>(null);
 
   /* ── Loading ── */
   if (isLoading) {
@@ -157,6 +168,24 @@ export default function TelegramConnectionDetailPage() {
       }
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  /* ── Handle register webhook ── */
+  const handleRegisterWebhook = async () => {
+    setIsRegisteringWebhook(true);
+    setWebhookResult(null);
+    try {
+      const result = await registerWebhook();
+      setWebhookResult("ok");
+      toast.success("Webhook registrado exitosamente");
+    } catch (err) {
+      setWebhookResult("error");
+      const message =
+        err instanceof ApiError ? err.message : "Error de conexión.";
+      toast.error(message);
+    } finally {
+      setIsRegisteringWebhook(false);
     }
   };
 
@@ -302,6 +331,71 @@ export default function TelegramConnectionDetailPage() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* ── Webhook ── */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">
+                  Webhook de Telegram
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Registrá el webhook para que Telegram envíe los mensajes de
+                  tus clientes a NuncaCierro.
+                </p>
+
+                {extraData?.webhook_url && (
+                  <InfoRow
+                    icon={Globe}
+                    label="URL del Webhook"
+                    value={extraData.webhook_url}
+                  />
+                )}
+
+                {extraData?.webhook_status === "registered" && (
+                  <div className="flex items-center gap-2 text-xs text-green-600">
+                    <CheckCircle2 className="size-4" />
+                    Webhook registrado
+                  </div>
+                )}
+
+                {webhookResult === "error" && (
+                  <div className="flex items-center gap-2 text-xs text-destructive">
+                    <XCircle className="size-4" />
+                    Error al registrar el webhook
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleRegisterWebhook}
+                  disabled={isRegisteringWebhook}
+                  size="sm"
+                  variant={
+                    extraData?.webhook_status === "registered"
+                      ? "outline"
+                      : "default"
+                  }
+                >
+                  {isRegisteringWebhook ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      Registrando...
+                    </>
+                  ) : extraData?.webhook_status === "registered" ? (
+                    <>
+                      <Globe className="mr-2 size-4" />
+                      Re-registrar Webhook
+                    </>
+                  ) : (
+                    <>
+                      <Globe className="mr-2 size-4" />
+                      Registrar Webhook
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 

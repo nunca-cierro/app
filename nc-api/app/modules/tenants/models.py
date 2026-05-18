@@ -38,9 +38,22 @@ class Tenant(Base):
     )
 
     # relationships
-    whatsapp_numbers = relationship("WhatsAppNumber", back_populates="tenant", lazy="selectin")
-    ai_agents = relationship("AiAgent", back_populates="tenant", lazy="selectin")
-    conversations = relationship("Conversation", back_populates="tenant", lazy="selectin")
+    whatsapp_numbers = relationship(
+        "WhatsAppNumber", back_populates="tenant", lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+    ai_agents = relationship(
+        "AiAgent", back_populates="tenant", lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+    platform_connections = relationship(
+        "PlatformConnection", back_populates="tenant", lazy="selectin",
+        cascade="all, delete-orphan",
+    )
+    conversations = relationship(
+        "Conversation", back_populates="tenant", lazy="selectin",
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:
         return f"<Tenant {self.slug} ({self.status})>"

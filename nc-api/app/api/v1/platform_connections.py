@@ -106,3 +106,66 @@ async def validate_telegram_token(
     except Exception as exc:
         raise HTTPException(status_code=502, detail="Telegram validation failed") from exc
     return TelegramTokenValidationResponse(valid=bool(response.get("ok")))
+
+
+@router.post("/{connection_id}/register-webhook")
+async def register_telegram_webhook(
+    connection_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, str]:
+    """Register (or re-register) the Telegram webhook for this connection.
+
+    Decrypts the stored ``bot_token``, calls
+    ``Telegram API /setWebhook`` with the public Railway URL,
+    and saves the webhook URL in ``extra_data``.
+    """
+    connection = await get_connection(session, connection_id)
+    if not connection:
+        raise HTTPException(status_code=404, detail="Platform connection not found")
+
+    if connection.platform_type != "telegram":
+        raise HTTPException(
+            status_code=400,
+            detail="Webhook registration is only supported for Telegram connections",
+        )
+
+    # ── Decrypt credentials ────────────────────────────────────────────
+    from app.core.encryption import decrypt
+
+    creds = decrypt(connection.credentials)
+    if not isinstance(creds, dict):
+        raise HTTPException(status_code=500, detail="Invalid credential format")
+
+    bot_token: str | None = creds.get("bot_token")
+    if not bot_token:
+        raise HTTPException(status_code=400, detail="No bot_token found in credentials")
+
+    # ── Register webhook with Telegram ─────────────────────────────────
+    webhook_url = (
+        f"https://nunca-cierro.up.railway.app"
+        f"/webhook/telegram/{connection_id}"
+    )
+
+    client = TelegramClient()
+    try:
+        response = await client.setWebhook(bot_token, webhook_url)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Telegram API error: {exc}",
+        ) from exc
+
+    if not response.get("ok"):
+        raise HTTPException(
+            status_code=502,
+            detail=response.get("description", "Telegram webhook registration failed"),
+        )
+
+    # ── Persist webhook URL in extra_data ──────────────────────────────
+    extra = dict(connection.extra_data or {})
+    extra["webhook_url"] = webhook_url
+    extra["webhook_status"] = "registered"
+    connection.extra_data = extra
+    await session.commit()
+
+    return {"status": "ok", "webhook_url": webhook_url}
