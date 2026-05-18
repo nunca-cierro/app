@@ -1,0 +1,81 @@
+"""Business logic for PlatformConnection CRUD — handles credential encryption."""
+
+from __future__ import annotations
+
+import uuid
+from typing import Any
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.encryption import decrypt, encrypt
+from app.modules.platform_connections.models import PlatformConnection
+from app.modules.platform_connections.schemas import (
+    PlatformConnectionCreate,
+    PlatformConnectionUpdate,
+)
+
+
+async def list_connections(
+    session: AsyncSession,
+    tenant_id: uuid.UUID | None = None,
+) -> list[PlatformConnection]:
+    """Return all platform connections, optionally filtered by tenant."""
+    query = select(PlatformConnection).order_by(PlatformConnection.created_at.desc())
+    if tenant_id:
+        query = query.where(PlatformConnection.tenant_id == tenant_id)
+    result = await session.execute(query)
+    return list(result.scalars().all())
+
+
+async def get_connection(
+    session: AsyncSession,
+    connection_id: uuid.UUID,
+) -> PlatformConnection | None:
+    """Get a single connection by ID."""
+    return await session.get(PlatformConnection, connection_id)
+
+
+async def create_connection(
+    session: AsyncSession,
+    data: PlatformConnectionCreate,
+) -> PlatformConnection:
+    """Create a new platform connection with encrypted credentials."""
+    connection = PlatformConnection(
+        tenant_id=data.tenant_id,
+        platform_type=data.platform_type,
+        display_name=data.display_name,
+        credentials=encrypt(data.credentials),
+        extra_data=data.extra_data,
+        status=data.status,
+        is_primary=data.is_primary,
+    )
+    session.add(connection)
+    await session.commit()
+    await session.refresh(connection)
+    return connection
+
+
+async def update_connection(
+    session: AsyncSession,
+    connection: PlatformConnection,
+    data: PlatformConnectionUpdate,
+) -> PlatformConnection:
+    """Update a platform connection, re-encrypting credentials if provided."""
+    update_data = data.model_dump(exclude_unset=True)
+    if "credentials" in update_data and update_data["credentials"] is not None:
+        update_data["credentials"] = encrypt(update_data["credentials"])
+    for field, value in update_data.items():
+        setattr(connection, field, value)
+    await session.commit()
+    await session.refresh(connection)
+    return connection
+
+
+async def delete_connection(
+    session: AsyncSession,
+    connection: PlatformConnection,
+) -> None:
+    """Delete a platform connection."""
+    await session.delete(connection)
+    await session.commit()
