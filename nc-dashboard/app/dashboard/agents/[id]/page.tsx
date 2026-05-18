@@ -138,8 +138,9 @@ export default function AgentDetailPage() {
 
   /* ── Handle create prompt ── */
   const handleCreatePrompt = async (data: PromptFormValues) => {
+    if (!agent) return;
     try {
-      await createPrompt(data);
+      await createPrompt({ ...data, tenant_id: agent.tenant_id });
       toast.success("Prompt guardado como nueva versión");
     } catch (err) {
       const message =

@@ -16,7 +16,7 @@ export interface UseAgentReturn {
   error: string | null;
   updateAgent: (data: AgentFormValues) => Promise<Agent>;
   deleteAgent: () => Promise<void>;
-  createPrompt: (data: PromptFormValues) => Promise<Prompt>;
+  createPrompt: (data: PromptFormValues & { tenant_id: string }) => Promise<Prompt>;
   promptsLoading: boolean;
 }
 
@@ -76,7 +76,7 @@ export function useAgent(id: string): UseAgentReturn {
   }, [id]);
 
   const createPrompt = useCallback(
-    async (data: PromptFormValues): Promise<Prompt> => {
+    async (data: PromptFormValues & { tenant_id: string }): Promise<Prompt> => {
       setPromptsLoading(true);
       try {
         const prompt = await apiClient<Prompt>(
