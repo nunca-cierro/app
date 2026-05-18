@@ -124,6 +124,7 @@ export default function TelegramConnectionDetailPage() {
 
   const extraData = connection.extra_data as Record<string, string> | null;
   const defaultFormValues: TelegramConnectionFormValues = {
+    tenant_id: connection.tenant_id ?? "",
     display_name: connection.display_name,
     bot_token: extraData?.bot_token ?? "",
     bot_username: extraData?.bot_username ?? "",
