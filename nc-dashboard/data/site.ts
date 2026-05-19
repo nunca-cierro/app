@@ -27,43 +27,9 @@ export const siteBanner = {
 // Hero section data
 export const siteHero = {
   sectionId: "inicio",
-  title:
-    "Atiende clientes 24/7 aunque estés durmiendo o cerrado con " + companyName,
+  title: "Clientes atendidos todo el tiempo.",
   subtitle:
-    "Automatizamos tu WhatsApp para que nunca pierdas un cliente. Responde preguntas, agenda citas y vende automáticamente — incluso cuando no estás.",
-  cta: {
-    primary: {
-      label: "Quiero automatizar mi negocio",
-      href: "https://wa.me/573219615338?text=Hola%2C%20quiero%20automatizar%20mi%20negocio%20con%20NuncaCierro.",
-    },
-    secondary: {
-      label: "Ver servicios",
-      href: "#servicios",
-    },
-  },
-  disclaimer: [
-    "✔ Responde automáticamente 24/7",
-    "✔ Nunca pierdas un cliente",
-    "✔ Sin conocimientos técnicos",
-  ],
-  stats: [
-    {
-      icon: "MdSmartToy",
-      title: "24/7 Automático",
-    },
-    {
-      icon: "MdWhatsapp",
-      title: "Más clientes",
-    },
-    {
-      icon: "MdAttachMoney",
-      title: "Más ventas",
-    },
-    {
-      icon: "MdFlashOn",
-      title: "Sin esfuerzo",
-    },
-  ],
+    "Automatizamos tu WhatsApp para que tu negocio responda 24/7, tome pedidos, agende citas y nunca pierda ventas. Sin configuraciones técnicas.",
 };
 
 export const siteDevicePreview = {
@@ -136,7 +102,7 @@ export const siteProcess = {
 // Header data layout
 export const headerData = {
   brand: {
-    name: "NC",
+    name: "NuncaCierro",
     accent: ".",
     href: "/",
     logo: {
@@ -148,18 +114,15 @@ export const headerData = {
     },
   },
   navItems: [
-    { name: "Inicio", href: "#inicio" },
     { name: "Servicios", href: "#servicios" },
     { name: "Planes", href: "#planes" },
-    { name: "Ejemplos", href: "#ejemplos" },
-    { name: "Contacto", href: "#contacto" },
   ],
   mobileMenu: {
     openLabel: "Abrir menú",
     closeLabel: "Cerrar menú",
   },
   button: {
-    label: "Asesoría gratis",
+    label: "Agendar una llamada",
     href: "#contacto",
   },
 };

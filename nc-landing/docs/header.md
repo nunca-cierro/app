@@ -64,7 +64,6 @@ Items:
 - Planes
 
 Estilo:
-- uppercase
 - sans serif moderna
 - peso medium
 - tracking ligeramente amplio
