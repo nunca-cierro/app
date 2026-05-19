@@ -179,10 +179,12 @@ export function BusinessConfigForm({
             }
             placeholder={`Describe cómo debe comportarse el bot al atender clientes. Ej:
 
-- Sé amable, claro y conciso. Usa emojis con moderación.
+- Sé amable, breve y directo. Usa emojis con moderación.
+- Haz máximo UNA pregunta por mensaje.
 - No inventes precios ni productos que no estén en la lista.
-- Si preguntan por algo que no sabes, di: "Un asesor humano te atenderá en breve".
-- Saluda siempre al inicio y ofrece ayuda.`}
+- Si el cliente se interesa, sugiérele el producto de forma natural, sin presionar.
+- Si preguntan algo que no sabes, di: "Un asesor humano te atenderá en breve".
+- Saluda al inicio y ofrece ayuda.`}
           />
           <p className="text-xs text-muted-foreground">
             Estas instrucciones se combinan con los datos del negocio para
