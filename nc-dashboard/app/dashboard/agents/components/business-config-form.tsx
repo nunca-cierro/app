@@ -36,6 +36,17 @@ const textareaClass =
 
 const labelClass = "text-sm font-medium";
 
+/* ── Recommended defaults ─────────────────────────────────────────── */
+const RECOMMENDED_INSTRUCTIONS =
+  "Eres un asistente de atención al cliente.\n" +
+  "- Responde SOLO con la información del negocio que se te proporciona.\n" +
+  "- Si no sabes algo, no inventes — di que un asesor humano va a ayudar.\n" +
+  "- Sé breve: responde lo justo y necesario, sin rodeos.\n" +
+  "- Haz máximo UNA pregunta por mensaje.\n" +
+  "- Si el cliente muestra interés en algo, menciónalo de forma natural.\n" +
+  "  La venta debe sentirse como sugerencia, no como empuje.\n" +
+  "- Saluda y ofrece ayuda cuando el cliente salude.";
+
 /* ------------------------------------------------------------------ */
 /*  Default config                                                     */
 /* ------------------------------------------------------------------ */
@@ -165,9 +176,25 @@ export function BusinessConfigForm({
       {/* ── Instrucciones de comportamiento ── */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            Instrucciones de comportamiento
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium">
+              Instrucciones de comportamiento
+            </CardTitle>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-auto px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+              onClick={() =>
+                setForm((prev) => ({
+                  ...prev,
+                  instructions: RECOMMENDED_INSTRUCTIONS,
+                }))
+              }
+            >
+              + Usar instrucciones recomendadas
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-2">
           <textarea
