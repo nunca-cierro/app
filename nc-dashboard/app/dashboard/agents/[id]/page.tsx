@@ -7,7 +7,7 @@ import { useAgent } from "@/hooks/use-agent";
 import { useTenants } from "@/hooks/use-tenants";
 import { AgentInfo } from "@/app/dashboard/agents/components/agent-info";
 import { AgentForm } from "@/app/dashboard/agents/components/agent-form";
-import { PromptEditor } from "@/app/dashboard/agents/components/prompt-editor";
+import { BusinessConfigForm } from "@/app/dashboard/agents/components/business-config-form";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,11 +28,12 @@ import {
   Trash2,
   Loader2,
   AlertCircle,
-  MessageSquareText,
+  Building2,
 } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { toast } from "sonner";
-import type { AgentFormValues, PromptFormValues } from "@/lib/schemas/agent";
+import type { AgentFormValues } from "@/lib/schemas/agent";
+import type { BusinessConfig } from "@/lib/types/agent";
 
 export default function AgentDetailPage() {
   const params = useParams();
@@ -40,13 +41,11 @@ export default function AgentDetailPage() {
   const id = params.id as string;
   const {
     agent,
-    prompts,
     isLoading,
     error,
     updateAgent,
     deleteAgent,
-    createPrompt,
-    promptsLoading,
+    updateBusinessConfig,
   } = useAgent(id);
 
   const { tenants, isLoading: loadingTenants } = useTenants();
@@ -54,6 +53,7 @@ export default function AgentDetailPage() {
   const [activeTab, setActiveTab] = useState("info");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSavingBusiness, setIsSavingBusiness] = useState(false);
 
   /* ── Loading ── */
   if (isLoading) {
@@ -136,16 +136,19 @@ export default function AgentDetailPage() {
     }
   };
 
-  /* ── Handle create prompt ── */
-  const handleCreatePrompt = async (data: PromptFormValues) => {
+  /* ── Handle save business config ── */
+  const handleSaveBusinessConfig = async (config: BusinessConfig) => {
     if (!agent) return;
+    setIsSavingBusiness(true);
     try {
-      await createPrompt({ ...data, tenant_id: agent.tenant_id });
-      toast.success("Prompt guardado como nueva versión");
+      await updateBusinessConfig(config);
+      toast.success("Configuración del negocio guardada");
     } catch (err) {
       const message =
         err instanceof ApiError ? err.message : "Error de conexión.";
       toast.error(message);
+    } finally {
+      setIsSavingBusiness(false);
     }
   };
 
@@ -200,9 +203,9 @@ export default function AgentDetailPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="info">Información</TabsTrigger>
-          <TabsTrigger value="prompt">
-            <MessageSquareText className="mr-2 size-4" />
-            System Prompt
+          <TabsTrigger value="business">
+            <Building2 className="mr-2 size-4" />
+            Negocio
           </TabsTrigger>
           <TabsTrigger value="edit">
             <Pencil className="mr-2 size-4" />
@@ -215,12 +218,12 @@ export default function AgentDetailPage() {
           <AgentInfo agent={agent} />
         </TabsContent>
 
-        {/* ── Tab: Prompt ── */}
-        <TabsContent value="prompt" className="mt-6">
-          <PromptEditor
-            prompts={prompts}
-            onCreatePrompt={handleCreatePrompt}
-            isSubmitting={promptsLoading}
+        {/* ── Tab: Negocio ── */}
+        <TabsContent value="business" className="mt-6">
+          <BusinessConfigForm
+            config={agent.business_config}
+            onSave={handleSaveBusinessConfig}
+            isSaving={isSavingBusiness}
           />
         </TabsContent>
 

@@ -15,6 +15,13 @@ from loguru import logger
 from app.core.config import settings
 
 
+# ── Context window ─────────────────────────────────────────────────────────
+# Number of previous messages to include as conversation history for context.
+# 6 messages = ~3 full exchanges (user → assistant pairs). Adjust based on
+# token budget and desired continuity.
+CONTEXT_WINDOW_SIZE: int = 6
+
+
 class GroqClient:
     """Async Groq client with rate-limiting awareness (30 rpm free tier)."""
 
@@ -26,15 +33,20 @@ class GroqClient:
         self,
         system_prompt: str,
         user_message: str,
+        *,
+        conversation_history: list[dict[str, str]] | None = None,
         model: str | None = None,
         max_tokens: int | None = None,
         temperature: float | None = None,
     ) -> str:
-        """Generate a response.
+        """Generate a response with optional conversation context.
 
         Args:
             system_prompt: System-level instructions.
             user_message: The incoming user message.
+            conversation_history: Previous messages formatted as
+                ``[{"role": "user"|"assistant", "content": "…"}, …]``.
+                Injected between the system prompt and the current message.
             model: Model name (default from settings or per-tenant agent).
             max_tokens: Max tokens (default from settings or per-tenant agent).
             temperature: Sampling temperature.
@@ -44,13 +56,17 @@ class GroqClient:
         """
         self._track_rate_limit()
 
+        messages: list[dict[str, str]] = [
+            {"role": "system", "content": system_prompt},
+        ]
+        if conversation_history:
+            messages.extend(conversation_history)
+        messages.append({"role": "user", "content": user_message})
+
         try:
             completion = await self._client.chat.completions.create(
                 model=model or settings.groq_model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_message},
-                ],
+                messages=messages,  # type: ignore[arg-type]
                 max_tokens=max_tokens or settings.groq_max_tokens,
                 temperature=temperature or settings.groq_temperature,
             )

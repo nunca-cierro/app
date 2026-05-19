@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { apiClient, ApiError } from "@/lib/api";
 import type { Agent, Prompt } from "@/lib/types";
+import type { BusinessConfig } from "@/lib/types/agent";
 import type { AgentFormValues, PromptFormValues } from "@/lib/schemas/agent";
 
 /* ------------------------------------------------------------------ */
@@ -17,6 +18,7 @@ export interface UseAgentReturn {
   updateAgent: (data: AgentFormValues) => Promise<Agent>;
   deleteAgent: () => Promise<void>;
   createPrompt: (data: PromptFormValues & { tenant_id: string }) => Promise<Prompt>;
+  updateBusinessConfig: (config: BusinessConfig) => Promise<Agent>;
   promptsLoading: boolean;
 }
 
@@ -95,6 +97,18 @@ export function useAgent(id: string): UseAgentReturn {
     [id],
   );
 
+  const updateBusinessConfig = useCallback(
+    async (config: BusinessConfig): Promise<Agent> => {
+      const updated = await apiClient<Agent>(`/api/v1/agents/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ business_config: config }),
+      });
+      setAgent(updated);
+      return updated;
+    },
+    [id],
+  );
+
   return {
     agent,
     prompts,
@@ -103,6 +117,7 @@ export function useAgent(id: string): UseAgentReturn {
     updateAgent,
     deleteAgent,
     createPrompt,
+    updateBusinessConfig,
     promptsLoading,
   };
 }

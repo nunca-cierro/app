@@ -1,4 +1,34 @@
 /* ------------------------------------------------------------------ */
+/*  Business config — structured info for the AI agent                  */
+/* ------------------------------------------------------------------ */
+
+export interface BusinessConfig {
+  /** Instrucciones de comportamiento para el bot */
+  instructions?: string;
+  business_info?: {
+    name?: string;
+    description?: string;
+    schedule?: string;
+    location?: string;
+    phone?: string;
+    website?: string;
+    social?: string;
+  };
+  products_services?: Array<{
+    name: string;
+    price: string;
+    duration: string;
+  }>;
+  faq?: Array<{
+    question: string;
+    answer: string;
+  }>;
+  tone?: string;
+  keywords_to_escalate?: string[];
+  fallback_message?: string;
+}
+
+/* ------------------------------------------------------------------ */
 /*  AiAgent — 1:1 con AiAgentResponse del backend                       */
 /* ------------------------------------------------------------------ */
 
@@ -12,6 +42,7 @@ export interface Agent {
   temperature: number;
   max_tokens: number;
   enabled: boolean;
+  business_config: BusinessConfig | null;
   created_at: string;
   updated_at: string;
 }

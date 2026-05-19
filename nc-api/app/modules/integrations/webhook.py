@@ -21,7 +21,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.tenancy import resolve_by_phone_number_id
 from app.modules.conversations.models import Conversation, Message
-from app.modules.integrations.llm.provider import groq_client
+from app.modules.agents.utils import format_business_config
+from app.modules.integrations.llm.provider import CONTEXT_WINDOW_SIZE, groq_client
 from app.modules.integrations.meta.client import send_text_message
 from app.modules.platforms.adapter import WhatsAppAdapter
 
@@ -196,15 +197,32 @@ async def handle_incoming(
                 status="received",
             )
         session.add(inbound_msg)
+        await session.flush()  # ensure inbound_msg.id is populated
 
-        # ── 5. Build system prompt from tenant config ────────────────────
-        system_prompt = (
-            f"Eres un asistente de atención al cliente para {tenant.name}. "
-            "Responde de forma amable, clara y concisa."
+        # ── 4b. Load conversation history ─────────────────────────────────
+        history_result = await session.execute(
+            select(Message)
+            .where(
+                Message.conversation_id == conversation.id,
+                Message.id != inbound_msg.id,
+            )
+            .order_by(Message.created_at.desc())
+            .limit(CONTEXT_WINDOW_SIZE)
         )
-        if resolution.prompts:
-            active_prompt = resolution.prompts[0]
-            system_prompt = active_prompt.content
+        past_messages = list(reversed(history_result.scalars().all()))
+        conversation_history = [
+            {
+                "role": "user" if m.direction == "in" else "assistant",
+                "content": m.content or "",
+            }
+            for m in past_messages
+        ]
+
+        # ── 5. Build system prompt ───────────────────────────────────────
+        # Priority: business_config (instructions + data) > custom prompt > default
+        system_prompt = (
+            f"Eres un asistente de atención al cliente para {tenant.name}."
+        )
 
         model = None
         temperature = None
@@ -214,11 +232,19 @@ async def handle_incoming(
             temperature = resolution.agent.temperature
             max_tokens = resolution.agent.max_tokens
 
+            biz_text = format_business_config(resolution.agent.business_config)
+            if biz_text:
+                system_prompt = f"{system_prompt}\n\n{biz_text}"
+            elif resolution.prompts:
+                # Backward compat: custom prompt when no business_config
+                system_prompt = resolution.prompts[0].content
+
         # ── 6. Generate response via LLM ─────────────────────────────────
         try:
             response = await groq_client.generate(
                 system_prompt=system_prompt,
                 user_message=msg["text"],
+                conversation_history=conversation_history,
                 model=model,
                 max_tokens=max_tokens,
                 temperature=temperature,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -20,6 +21,7 @@ class AiAgentCreate(BaseModel):
     temperature: float = 0.7
     max_tokens: int = 512
     enabled: bool = True
+    business_config: dict[str, Any] | None = None
 
 
 class AiAgentUpdate(BaseModel):
@@ -30,6 +32,7 @@ class AiAgentUpdate(BaseModel):
     temperature: float | None = None
     max_tokens: int | None = None
     enabled: bool | None = None
+    business_config: dict[str, Any] | None = None
 
 
 class AiAgentResponse(BaseModel):
@@ -44,6 +47,7 @@ class AiAgentResponse(BaseModel):
     temperature: float
     max_tokens: int
     enabled: bool
+    business_config: dict[str, Any] | None = None
     created_at: datetime
     updated_at: datetime
 

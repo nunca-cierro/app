@@ -15,7 +15,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.conversations.models import Conversation, Message
-from app.modules.integrations.llm.provider import groq_client
+from app.modules.agents.utils import format_business_config
+from app.modules.integrations.llm.provider import CONTEXT_WINDOW_SIZE, groq_client
 from app.modules.platform_connections.models import PlatformConnection
 from app.modules.platform_connections.service import get_connection
 from app.modules.telegram.webhook import extract_telegram_message
@@ -96,6 +97,26 @@ async def handle_telegram_incoming(
         status="received",
     )
     session.add(inbound_msg)
+    await session.flush()  # ensure inbound_msg.id is populated
+
+    # ── 4b. Load conversation history ─────────────────────────────────
+    history_result = await session.execute(
+        select(Message)
+        .where(
+            Message.conversation_id == conversation.id,
+            Message.id != inbound_msg.id,
+        )
+        .order_by(Message.created_at.desc())
+        .limit(CONTEXT_WINDOW_SIZE)
+    )
+    past_messages = list(reversed(history_result.scalars().all()))
+    conversation_history = [
+        {
+            "role": "user" if m.direction == "in" else "assistant",
+            "content": m.content or "",
+        }
+        for m in past_messages
+    ]
 
     # ── 5. Build system prompt from tenant config ───────────────────────
     # Lazy imports to avoid cycles
@@ -124,13 +145,11 @@ async def handle_telegram_incoming(
     )
     prompts = list(prompts_result.scalars().all())
 
+    # ── 5. Build system prompt ───────────────────────────────────────────
+    # Priority: business_config (instructions + data) > custom prompt > default
     system_prompt = (
-        f"Eres un asistente de atención al cliente para {tenant.name}. "
-        "Responde de forma amable, clara y concisa."
+        f"Eres un asistente de atención al cliente para {tenant.name}."
     )
-    if prompts:
-        active_prompt = prompts[0]
-        system_prompt = active_prompt.content
 
     model = None
     temperature = None
@@ -140,11 +159,19 @@ async def handle_telegram_incoming(
         temperature = agent.temperature
         max_tokens = agent.max_tokens
 
+        biz_text = format_business_config(agent.business_config)
+        if biz_text:
+            system_prompt = f"{system_prompt}\n\n{biz_text}"
+        elif prompts:
+            # Backward compat: custom prompt when no business_config
+            system_prompt = prompts[0].content
+
     # ── 6. Generate response via LLM ────────────────────────────────────
     try:
         response = await groq_client.generate(
             system_prompt=system_prompt,
             user_message=parsed["content"],
+            conversation_history=conversation_history,
             model=model,
             max_tokens=max_tokens,
             temperature=temperature,

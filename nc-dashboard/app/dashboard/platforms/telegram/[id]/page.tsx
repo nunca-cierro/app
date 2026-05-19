@@ -176,7 +176,7 @@ export default function TelegramConnectionDetailPage() {
     setIsRegisteringWebhook(true);
     setWebhookResult(null);
     try {
-      const result = await registerWebhook();
+      await registerWebhook();
       setWebhookResult("ok");
       toast.success("Webhook registrado exitosamente");
     } catch (err) {
