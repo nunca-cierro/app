@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [language, setLanguage] = useState<"EN" | "ES">("ES");
   const { brand, navItems, mobileMenu } = headerData;
 
   // Smooth scroll handler
@@ -41,25 +42,31 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const handleLanguageToggle = () => {
+    setLanguage((prev) => (prev === "EN" ? "ES" : "EN"));
+  };
+
   return (
     <header
-      className={cn(
-        "fixed top-12 left-0 right-0 z-50 transition-all duration-300",
-        isScrolled
-          ? "bg-[rgba(15,15,15,0.6)] border-b border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl backdrop-saturate-150"
-          : "bg-transparent",
-      )}
-      style={
-        isScrolled
-          ? {
-              WebkitBackdropFilter: "blur(18px) saturate(150%)",
-              backdropFilter: "blur(18px) saturate(150%)",
-            }
-          : undefined
-      }
+      className="fixed top-4 left-0 right-0 z-50 px-3 sm:px-4 lg:px-6 transition-all duration-300"
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-20">
+      <div
+        className={cn(
+          "mx-auto max-w-7xl rounded-2xl transition-all duration-300",
+          isScrolled
+            ? "border border-white/15 bg-[rgba(15,15,15,0.55)] shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl backdrop-saturate-150"
+            : "border border-transparent bg-transparent shadow-none",
+        )}
+        style={
+          isScrolled
+            ? {
+                WebkitBackdropFilter: "blur(18px) saturate(150%)",
+                backdropFilter: "blur(18px) saturate(150%)",
+              }
+            : undefined
+        }
+      >
+        <div className="flex items-center justify-between h-20 px-4 sm:px-6">
           <a
             href={brand.href}
             className="flex items-center gap-2 px-3 py-1"
@@ -67,7 +74,7 @@ export function Header() {
             onClick={(e) => handleSmoothScroll(e, brand.href)}
           >
             <span
-              className="text-xl font-semibold"
+              className="text-[1.55rem] font-semibold"
               style={{ letterSpacing: "-0.4px" }}
             >
               <span className="text-white">{brand.name}</span>
@@ -81,7 +88,7 @@ export function Header() {
               <a
                 key={item.name}
                 href={item.href}
-                className="text-sm text-white/80 hover:text-white transition-colors px-2 py-1"
+                className="text-[0.95rem] text-white/80 hover:text-white transition-colors px-2 py-1"
                 style={{ letterSpacing: "0.06em" }}
                 onClick={(e) => handleSmoothScroll(e, item.href)}
               >
@@ -89,21 +96,18 @@ export function Header() {
               </a>
             ))}
 
-            <div className="flex items-center gap-2 text-[11px] text-white/70">
-              <span className="font-medium text-white/80">EN</span>
-              <button
-                type="button"
-                className="relative inline-flex h-5 w-9 items-center rounded-full border border-white/20 bg-white/10 transition-colors"
-                aria-label="Selector de idioma"
-              >
-                <span className="inline-block h-3.5 w-3.5 translate-x-1 rounded-full bg-white shadow-sm" />
-              </button>
-              <span className="font-medium text-white/50">ES</span>
-            </div>
+            <button
+              type="button"
+              onClick={handleLanguageToggle}
+              className="inline-flex w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.18em] text-white/80 transition-colors hover:bg-white/20"
+              aria-label="Cambiar idioma"
+            >
+              {language}
+            </button>
 
             <a
               href={headerData.button.href}
-              className="rounded-full border border-white/70 bg-white px-6 py-2 text-sm font-semibold text-stone-950 transition-all hover:shadow-[0_0_20px_rgba(242,191,39,0.35)] hover:-translate-y-0.5"
+              className="rounded-full border border-white/70 bg-white px-6 py-2 text-[0.95rem] font-semibold text-stone-950 transition-all hover:shadow-[0_0_20px_rgba(242,191,39,0.35)] hover:-translate-y-0.5"
               style={{ letterSpacing: "0.01em" }}
               onClick={(e) => handleSmoothScroll(e, headerData.button.href)}
             >
@@ -147,7 +151,7 @@ export function Header() {
                 <a
                   key={item.name}
                   href={item.href}
-                  className="text-sm text-white/80 hover:text-white transition-colors px-4 py-2 rounded-xl border border-white/10 bg-white/5"
+                  className="text-[0.95rem] text-white/80 hover:text-white transition-colors px-4 py-2 rounded-xl border border-white/10 bg-white/5"
                   onClick={(e) => {
                     handleSmoothScroll(e, item.href);
                     setIsMenuOpen(false);
@@ -156,11 +160,14 @@ export function Header() {
                   {item.name}
                 </a>
               ))}
-              <div className="flex items-center justify-between px-4 py-2 rounded-full border border-white/10 bg-white/5 text-[11px] text-white/70">
-                <span className="font-medium text-white/80">ES</span>
-                <span className="text-white/40">Idioma</span>
-                <span className="font-medium text-white/50">EN</span>
-              </div>
+              <button
+                type="button"
+                onClick={handleLanguageToggle}
+                className="inline-flex w-12 items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white/80"
+                aria-label="Cambiar idioma"
+              >
+                {language}
+              </button>
             </div>
           </nav>
         )}
