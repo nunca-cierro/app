@@ -84,7 +84,9 @@ async def root() -> dict:
         "endpoints": {
             "admin_api": "/api/v1/",
             "webhook": "/webhook",
+            "webhook_platform": "/webhook/{platform}/{connection_id}",
         },
+        "platforms": ["whatsapp", "telegram", "evolution"],
     }
 
 

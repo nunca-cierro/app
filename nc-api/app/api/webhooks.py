@@ -26,10 +26,12 @@ from app.modules.platform_connections.service import get_connection
 from app.modules.platforms.adapter import WhatsAppAdapter
 from app.modules.telegram.adapter import TelegramAdapter
 from app.modules.telegram.handler import handle_telegram_incoming
+from app.modules.evolution.adapter import EvolutionAdapter
+from app.modules.evolution.handler import handle_evolution_incoming
 
 router = APIRouter(tags=["webhook"])
 
-VALID_PLATFORMS = {"whatsapp", "telegram"}
+VALID_PLATFORMS = {"whatsapp", "telegram", "evolution"}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -173,5 +175,21 @@ async def webhook_platform_post(
 
         # ── 4. Dispatch ─────────────────────────────────────────────────
         await handle_telegram_incoming(payload, connection, session)
+
+    elif platform == "evolution":
+        adapter = EvolutionAdapter()
+        valid = await adapter.validate_webhook(
+            payload,
+            dict(request.headers),
+            connection=connection,
+        )
+        if not valid:
+            raise HTTPException(
+                status_code=403,
+                detail="Webhook validation failed",
+            )
+
+        # ── 4. Dispatch ─────────────────────────────────────────────────
+        await handle_evolution_incoming(payload, connection, session)
 
     return {"status": "ok"}

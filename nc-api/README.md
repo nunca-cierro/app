@@ -151,6 +151,18 @@ Variables de entorno requeridas:
 | `WHATSAPP_API_VERSION` | Versión de la API (default: v22.0) |
 | `GROQ_API_KEY` | API key de Groq |
 
+## 🔌 Evolution API (WhatsApp Gateway)
+
+Si estás usando **Evolution API v2.x** como gateway de WhatsApp (en vez de Meta Cloud API directo), leé la guía completa:
+
+➡️ **[EVOLUTION.md](./EVOLUTION.md)**
+
+Incluye:
+- Setup en 4 pasos (local + ngrok)
+- Pipeline de composing + delay anti-baneo
+- Endpoint para registrar webhook automáticamente
+- Scripts curl para probar todo
+
 ## 📖 Stack técnico
 
 - **FastAPI 0.136+** — framework web async

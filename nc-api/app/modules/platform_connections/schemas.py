@@ -12,7 +12,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
-VALID_PLATFORM_TYPES = {"whatsapp", "telegram"}
+VALID_PLATFORM_TYPES = {"whatsapp", "telegram", "evolution"}
 
 
 class PlatformConnectionCreate(BaseModel):

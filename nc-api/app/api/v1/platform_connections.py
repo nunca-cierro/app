@@ -169,3 +169,105 @@ async def register_telegram_webhook(
     await session.commit()
 
     return {"status": "ok", "webhook_url": webhook_url}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Evolution API — register webhook
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+@router.post("/{connection_id}/register-evolution-webhook")
+async def register_evolution_webhook(
+    connection_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    base_url_override: str | None = None,
+) -> dict[str, str]:
+    """Register (or re-register) the Evolution API webhook for this connection.
+
+    Calls Evolution API's ``/instance/setWebhook/{instance}`` to tell
+    Evolution where to forward incoming messages.
+
+    Args:
+        connection_id: The platform connection UUID.
+        base_url_override: Optional override for the public-facing URL
+            (defaults to ``https://nunca-cierro.up.railway.app``).
+
+    Returns:
+        Dict with registration status and webhook URL.
+    """
+    connection = await get_connection(session, connection_id)
+    if not connection:
+        raise HTTPException(status_code=404, detail="Platform connection not found")
+
+    if connection.platform_type != "evolution":
+        raise HTTPException(
+            status_code=400,
+            detail="Webhook registration is only supported for Evolution connections",
+        )
+
+    # ── Decrypt credentials ────────────────────────────────────────────
+    from app.core.encryption import decrypt
+
+    creds = decrypt(connection.credentials)
+    if not isinstance(creds, dict):
+        raise HTTPException(status_code=500, detail="Invalid credential format")
+
+    base_url: str = (creds.get("base_url") or "").rstrip("/")
+    api_key: str = creds.get("api_key", "") or ""
+    instance_name: str = creds.get("instance_name", "") or ""
+
+    if not base_url or not instance_name:
+        raise HTTPException(
+            status_code=400,
+            detail="base_url and instance_name are required in credentials",
+        )
+
+    # ── Build the webhook URL where Evolution should send events ───────
+    public_url = (
+        base_url_override
+        or "https://nunca-cierro.up.railway.app"
+    )
+    webhook_url = f"{public_url}/webhook/evolution/{connection_id}"
+
+    # ── Register webhook with Evolution API ────────────────────────────
+    import httpx
+
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["apikey"] = api_key
+
+    set_webhook_payload = {
+        "webhook": {
+            "url": webhook_url,
+            "enabled": True,
+            "events": ["MESSAGES_UPSERT"],
+        }
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                f"{base_url}/webhook/set/{instance_name}",
+                json=set_webhook_payload,
+                headers=headers,
+            )
+            data = resp.json()
+            if not resp.is_success:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Evolution API error: {data}",
+                )
+    except httpx.RequestError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Evolution API unreachable: {exc}",
+        ) from exc
+
+    # ── Persist webhook URL in extra_data ──────────────────────────────
+    extra = dict(connection.extra_data or {})
+    extra["webhook_url"] = webhook_url
+    extra["webhook_status"] = "registered"
+    connection.extra_data = extra
+    await session.commit()
+
+    return {"status": "ok", "webhook_url": webhook_url}
