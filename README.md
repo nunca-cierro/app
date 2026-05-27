@@ -10,7 +10,7 @@ nunca-cierro/
 │   ├── app/
 │   ├── tests/            ← 149 tests
 │   └── Procfile          ← Railway deploy
-├── nc-dashboard/          ← Frontend (Next.js + shadcn/ui)
+├── nc-dashboard/          ← Frontend (Next.js 16 + React 19)
 │   ├── app/
 │   ├── components/
 │   ├── tests/            ← 62 tests
@@ -21,27 +21,28 @@ nunca-cierro/
 
 ## ¿Qué es NuncaCierro?
 
-Un sistema que permite a los negocios:
+Un sistema multi-tenant que permite a los negocios:
 
-- **Conectar WhatsApp y/o Telegram** como canales de atención
-- **Configurar agentes de IA** con prompts personalizados por negocio
-- **Recibir y responder mensajes** automáticamente vía Groq (LLaMA 3 70B)
-- **Gestionar todo** desde un dashboard web centralizado
-- **Escalar** agregando múltiples negocios, números y plataformas
+- **Conectar WhatsApp (vía Meta o Evolution API) y Telegram** como canales
+- **Dashboard Wizard**: Flujo guiado para crear Negocio → Agente IA → Conexión
+- **Configurar agentes de IA** con prompts personalizados y versionados por negocio
+- **Recibir y responder mensajes** automáticamente vía Groq (LLaMA 3.3 70B)
+- **Gestionar todo** desde un dashboard web centralizado con métricas en vivo
+- **Escalar** agregando múltiples negocios y agentes bajo una misma cuenta
 
 ## Stack
 
-| Componente           | Tecnología                         |
-| -------------------- | ---------------------------------- |
-| **API**              | FastAPI (Python 3.12)              |
-| **Base de Datos**    | PostgreSQL + SQLAlchemy + Alembic  |
-| **AI**               | Groq — LLaMA 3 70B                 |
-| **WhatsApp**         | Meta Cloud API v22.0               |
-| **Telegram**         | Bot API                            |
-| **Dashboard**        | Next.js 16 + React 19 + TypeScript |
-| **UI**               | shadcn/ui + Tailwind CSS v4        |
-| **Dashboard Deploy** | Vercel                             |
-| **API Deploy**       | Railway                            |
+| Componente           | Tecnología                               |
+| -------------------- | ---------------------------------------- |
+| **API**              | FastAPI (Python 3.12)                    |
+| **Base de Datos**    | PostgreSQL + SQLAlchemy + Alembic        |
+| **AI**               | Groq — LLaMA 3.3 70B (Versatile)         |
+| **WhatsApp Gateway** | Evolution API v2.x / Meta Cloud API v22  |
+| **Telegram**         | Bot API                                  |
+| **Dashboard**        | Next.js 16 + React 19 + TypeScript       |
+| **UI**               | shadcn/ui + Tailwind CSS v4              |
+| **Dashboard Deploy** | Vercel                                   |
+| **API Deploy**       | Railway                                  |
 
 ## Inicio Rápido
 

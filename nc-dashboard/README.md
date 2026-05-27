@@ -9,52 +9,33 @@ Administra negocios, agentes de IA, números WhatsApp y conversaciones — todo 
 
 ## ✨ Funcionalidades
 
-### 🌐 Landing Page
-Página web profesional del producto con secciones informativas:
-- **Hero** — propuesta de valor y CTA a WhatsApp
-- **Servicios** — bot WhatsApp, asistente inteligente, sistema completo
-- **Proceso** — cómo funciona en 3 pasos
-- **Planes** — Básico / Profesional / Empresarial
-- **Ejemplos** — demos interactivos por industria (restaurante, spa, gym, barbería, belleza, dental)
-- **FAQ** — preguntas frecuentes
-- **Contacto** — formulario y enlaces directos
+### 🔐 Multi-tenant Auth
+- Registro e inicio de sesión con JWT.
+- Cada usuario puede crear y administrar múltiples **Tenants** (Negocios).
+- Aislamiento total de datos entre tenants.
 
-### 🔐 Auth
-- Registro e inicio de sesión con JWT
-- Protección de rutas del dashboard
-- Sesión persistente con contexto React
+### 🧙 Dashboard Wizard Flow
+Flujo guiado para poner en marcha un negocio en minutos:
+1. **Crear Tenant**: Definir nombre, zona horaria y plan.
+2. **Configurar Agente**: Personalizar el cerebro de la IA (instrucciones, FAQ, catálogo).
+3. **Vincular Plataforma**: Conectar WhatsApp (vía Evolution API) o Telegram.
+4. **Validación Automática**: El sistema registra los webhooks y valida las conexiones en tiempo real.
 
-### 📊 Dashboard
-- **Métricas en vivo**: total negocios, leads, mensajes hoy, uso de API
-- **Negocios recientes**: cards con estado y plan
-- **Últimas conversaciones**: resumen con conteo de mensajes
-
-### 🏢 Negocios (Tenants)
-- CRUD completo de negocios
-- Planes: Basic / Pro / Enterprise
-- Zona horaria e idioma por negocio
-- Slug auto-generado desde el nombre
-
-### 🤖 Agentes de IA
-- CRUD completo de agentes por negocio
-- Múltiples proveedores: **Groq** (gratis), OpenAI, Anthropic
-- Modelos configurables (temperatura, max tokens)
-- **System prompts versionados** — cada guardado crea una nueva versión, historial completo
-
-### 📱 Números WhatsApp
-- Registro de números reales de Meta
-- Campos: Phone Number ID, WABA ID, estado
-- Vinculación directa al negocio (tenant)
-
-### 💬 Conversaciones
-- Listado de conversaciones activas
-- Vista de chat con historial de mensajes
-- Detección automática del negocio por `phone_number_id`
+### 🤖 Agentes de IA Inteligentes
+- CRUD completo de agentes por negocio.
+- Motor: **Groq** con modelos LLaMA 3.3 70B Versatile.
+- **System prompts versionados**: Historial completo de cambios en la configuración del agente.
+- **Business Config**: Estructura de datos completa para que la IA conozca el negocio (horarios, servicios, tono).
 
 ### 🔗 Conexiones de Plataforma
-- CRUD para conexiones de **Telegram** (bots) y futuras plataformas
-- Esquema unificado con `platform_type`, `extra_data`, `status`, `is_primary`
-- Validación de token de Telegram vía endpoint dedicado
+- **Evolution API v2.x**: Gateway preferido para WhatsApp (multi-número, sin verificación Meta).
+- **Telegram**: Integración nativa con bots.
+- **Cifrado**: Las credenciales se envían y almacenan cifradas en el backend.
+
+### 📊 Gestión de Conversaciones
+- Listado de conversaciones activas multi-tenant.
+- Vista de chat con historial completo de mensajes y estado de entrega.
+- Identificación automática de plataforma y número de origen.
 
 ---
 
@@ -62,112 +43,27 @@ Página web profesional del producto con secciones informativas:
 
 ### Prerrequisitos
 
-- **Node.js 20+**
-- **npm** (viene con Node)
-- **nc-api** corriendo localmente (ver [nc-api README](../nc-api/README.md))
+- **Node.js 22+**
+- **npm** o **pnpm**
+- **nc-api** corriendo (ver [nc-api README](../nc-api/README.md))
 
-### Instalación
-
-```bash
-# Clonar (si no lo tienes)
-git clone https://github.com/beto18v/nunca-cierro.git
-cd nunca-cierro/nc-dashboard
-
-# Instalar dependencias
-npm install
-
-# Configurar variables de entorno
-cp .env.local.example .env.local
-```
+### Configuración
 
 Edita `.env.local`:
 
 ```env
-# URL del backend nc-api (producción)
-NEXT_PUBLIC_API_URL=https://nunca-cierro.up.railway.app
-
-# URL del backend nc-api (desarrollo local — sobreescribe la anterior)
-NEXT_PUBLIC_API_URL_LOCAL=http://localhost:8000
+# URL del backend nc-api
+NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
 ### Desarrollo
 
 ```bash
+npm install
 npm run dev
 ```
 
 Abrir [http://localhost:3000](http://localhost:3000).
-
-### Tests
-
-```bash
-npm test          # Vitest
-```
-
-### Producción
-
-```bash
-npm run build
-npm start
-```
-
----
-
-## 🔌 API esperada (resumen)
-
-Lo mínimo que consume el dashboard para conexiones de plataforma.
-
-### Endpoint nuevo: validar token de Telegram
-
-```
-POST /api/v1/platform-connections/validate-telegram-token
-```
-
-Body:
-
-```json
-{
-  "bot_token": "1234567890:ABCdefGHIjklmNOPqrSTUvWXyz"
-}
-```
-
-Respuesta:
-
-```json
-{
-  "valid": true
-}
-```
-
-### Esquema PlatformConnection (respuesta)
-
-```json
-{
-  "id": "uuid",
-  "tenant_id": "uuid",
-  "platform_type": "telegram",
-  "display_name": "Bot de Soporte",
-  "extra_data": {
-    "bot_username": "MyBot",
-    "bot_token": "123:ABC"
-  },
-  "status": "active",
-  "is_primary": false,
-  "created_at": "2024-01-01T00:00:00Z",
-  "updated_at": "2024-01-01T00:00:00Z"
-}
-```
-
----
-
-## 🧩 Patrón de hooks (frontend)
-
-Para fetching en hooks:
-
-- `useEffect` con flag `cancelled`
-- Promesas con `.then().catch().finally()`
-- Sin `async/await`
-- Sin `useCallback` para fetch
 
 ---
 
@@ -176,116 +72,22 @@ Para fetching en hooks:
 | Capa | Tecnología |
 |------|-----------|
 | **Framework** | Next.js 16 (App Router) |
-| **UI** | React 19 + shadcn/ui (Radix UI) |
-| **Estilos** | Tailwind CSS v4 + tw-animate-css |
+| **UI** | React 19 + shadcn/ui |
+| **Estilos** | Tailwind CSS v4 |
 | **Formularios** | React Hook Form + Zod |
-| **Animaciones** | Framer Motion / Motion |
-| **Iconos** | lucide-react + react-icons |
+| **Animaciones** | Framer Motion |
 | **Notificaciones** | sonner |
-| **Tema** | next-themes (claro/oscuro) |
-| **Analytics** | @vercel/analytics |
-| **Tests** | Vitest + @testing-library/react |
+| **Icons** | Lucide React |
 
 ---
 
-## 🔗 Arquitectura
-
-```
-                         ┌─────────────────┐
-                         │  nc-dashboard    │
-                         │  (Next.js 16)    │
-                         │  localhost:3000  │
-                         └────────┬────────┘
-                                  │
-                           (API REST)
-                                  │
-                         ┌────────▼────────┐
-                         │    nc-api        │
-                         │  (FastAPI +      │
-                         │   PostgreSQL)    │
-                         │  localhost:8000  │
-                         └────────┬────────┘
-                                  │
-                    ┌─────────────┼─────────────┐
-                    │             │             │
-              ┌─────▼─────┐ ┌────▼────┐ ┌──────▼─────┐
-              │ WhatsApp   │ │  Groq   │ │   Auth     │
-              │ Cloud API  │ │  AI     │ │   (JWT)    │
-              └───────────┘ └─────────┘ └────────────┘
-```
-
-**Dos repositorios, un solo proyecto:**
-
-| Proyecto | Rol | Puerto |
-|----------|-----|--------|
-| `nc-api` | Backend FastAPI + PostgreSQL | `:8000` |
-| `nc-dashboard` | Frontend Next.js | `:3000` |
-
----
-
-## 🗂️ Estructura del Proyecto
-
-```
-nc-dashboard/
-├── app/                    # Next.js App Router
-│   ├── auth/               # Login + Register
-│   ├── dashboard/          # Panel protegido
-│   │   ├── agents/         # Agentes de IA
-│   │   ├── conversations/  # Conversaciones
-│   │   ├── tenants/        # Negocios
-│   │   └── whatsapp/       # Números WhatsApp
-│   ├── layout.tsx          # Layout global
-│   └── page.tsx            # Landing page
-├── components/
-│   ├── layout/             # Header, Footer, Sidebar, etc.
-│   ├── sections/           # Secciones de landing (hero, services, etc.)
-│   └── ui/                 # shadcn/ui components
-├── data/
-│   └── site.ts             # Contenido estático (marcas, planes, FAQ, etc.)
-├── docs/                   # Documentación interna
-│   ├── app-guide.md        # Guía completa de uso
-│   ├── backend-info.md     # Referencia de endpoints de nc-api
-│   └── rbac-route-matrix.md # Matriz de rutas y permisos
-├── hooks/                  # React hooks + clients API
-├── lib/                    # Utilidades, tipos, esquemas, config
-├── tests/                  # Tests (Vitest)
-└── public/                 # Assets estáticos
-```
-
----
-
-## 📁 Documentación Relacionada
+## 📁 Documentación Interna
 
 | Documento | Contenido |
 |-----------|-----------|
-| [`docs/app-guide.md`](./docs/app-guide.md) | Guía completa del flujo de la aplicación |
-| [`docs/backend-info.md`](./docs/backend-info.md) | Referencia de todos los endpoints de nc-api |
-| [`docs/rbac-route-matrix.md`](./docs/rbac-route-matrix.md) | Matriz de rutas y permisos por rol |
-
----
-
-## 📄 Estado del Proyecto
-
-**Fase:** MVP funcional — desarrollo activo.
-
-### ✅ Implementado
-- Landing page completa con todas las secciones
-- Auth (registro / login con JWT)
-- Dashboard con métricas en vivo
-- CRUD de negocios (tenants)
-- CRUD de agentes de IA con versionado de prompts
-- CRUD de números WhatsApp
-- Visualización de conversaciones
-- Tema claro/oscuro
-- Tests unitarios con Vitest
-- Deploy en Vercel
-
-### 🔜 Próximos pasos
-- Filtros avanzados en conversaciones
-- Notificaciones en tiempo real (WebSockets)
-- Roles y permisos multi-usuario
-- Exportación de reportes
-- Onboarding guiado para nuevos negocios
+| [`docs/app-guide.md`](./docs/app-guide.md) | Guía de uso y flujos de usuario |
+| [`docs/backend-info.md`](./docs/backend-info.md) | Referencia de la API REST |
+| [`docs/rbac-route-matrix.md`](./docs/rbac-route-matrix.md) | Rutas y permisos |
 
 ---
 
