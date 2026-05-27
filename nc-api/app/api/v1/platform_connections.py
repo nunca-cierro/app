@@ -35,6 +35,57 @@ class TelegramTokenValidationResponse(BaseModel):
     valid: bool
 
 
+@router.get("/evolution-fetch-instances")
+async def evolution_fetch_instances(
+    base_url: str,
+    api_key: str | None = None,
+) -> list[dict[str, t.Any]]:
+    """Fetch all instances from a given Evolution API server.
+
+    Useful for the dashboard to show a dropdown instead of manual entry.
+    """
+    import httpx
+    from loguru import logger
+
+    base_url = base_url.rstrip("/")
+    headers = {}
+    if api_key:
+        headers["apikey"] = api_key
+
+    logger.info("Fetching instances from Evolution API: {url}", url=base_url)
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(f"{base_url}/instance/fetchInstances", headers=headers)
+            logger.info("Evolution API response status: {status}", status=resp.status_code)
+            
+            if not resp.is_success:
+                logger.error("Evolution API error: {text}", text=resp.text)
+                raise HTTPException(
+                    status_code=resp.status_code,
+                    detail=f"Evolution API error: {resp.text}",
+                )
+            
+            data = resp.json()
+            # Evolution API v2.x often returns a list directly, or a dict with instances
+            if isinstance(data, list):
+                return data
+            if isinstance(data, dict) and "instances" in data:
+                return data["instances"]
+            
+            logger.warning("Unexpected Evolution API response format: {data}", data=data)
+            return []
+    except httpx.RequestError as exc:
+        logger.error("Evolution API unreachable: {exc}", exc=exc)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Evolution API unreachable: {exc}",
+        )
+    except Exception as exc:
+        logger.exception("Unexpected error fetching instances")
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @router.get("", response_model=list[PlatformConnectionResponse])
 async def list_platform_connections(
     tenant_id: uuid.UUID | None = None,
@@ -213,8 +264,8 @@ async def register_evolution_webhook(
         raise HTTPException(status_code=500, detail="Invalid credential format")
 
     base_url: str = (creds.get("base_url") or "").rstrip("/")
-    api_key: str = creds.get("api_key", "") or ""
-    instance_name: str = creds.get("instance_name", "") or ""
+    api_key: str = (creds.get("api_key", "") or "").strip()
+    instance_name: str = (creds.get("instance_name", "") or "").strip()
 
     if not base_url or not instance_name:
         raise HTTPException(
@@ -223,14 +274,15 @@ async def register_evolution_webhook(
         )
 
     # ── Build the webhook URL where Evolution should send events ───────
-    public_url = (
-        base_url_override
-        or "https://nunca-cierro.up.railway.app"
-    )
+    public_url = (base_url_override or "").strip().rstrip("/")
+    if not public_url:
+        public_url = "https://nunca-cierro.up.railway.app"
+    
     webhook_url = f"{public_url}/webhook/evolution/{connection_id}"
 
     # ── Register webhook with Evolution API ────────────────────────────
     import httpx
+    from loguru import logger
 
     headers = {"Content-Type": "application/json"}
     if api_key:
@@ -245,29 +297,45 @@ async def register_evolution_webhook(
     }
 
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        async with httpx.AsyncClient(timeout=15.0, verify=False) as client:
+            url = f"{base_url}/webhook/set/{instance_name}"
+            logger.info("Registering Evolution webhook. URL: {url} | Payload: {payload}", url=url, payload=set_webhook_payload)
+            
             resp = await client.post(
-                f"{base_url}/webhook/set/{instance_name}",
+                url,
                 json=set_webhook_payload,
                 headers=headers,
             )
-            data = resp.json()
+            
+            logger.info("Evolution response status: {status} | body: {body}", status=resp.status_code, body=resp.text)
+            
             if not resp.is_success:
                 raise HTTPException(
                     status_code=502,
-                    detail=f"Evolution API error: {data}",
+                    detail=f"Evolution API error ({resp.status_code}): {resp.text}",
                 )
+            
+            # Evolution often returns success even if body is empty or non-JSON
+            try:
+                data = resp.json()
+            except Exception:
+                data = {"status": "ok", "raw_response": resp.text}
+                
+            # Update extra_data
+            extra = dict(connection.extra_data or {})
+            extra["webhook_url"] = webhook_url
+            extra["webhook_status"] = "registered"
+            connection.extra_data = extra
+            await session.commit()
+
+            return {"status": "ok", "webhook_url": webhook_url}
+
     except httpx.RequestError as exc:
+        logger.error("Evolution API unreachable: {exc}", exc=exc)
         raise HTTPException(
             status_code=502,
             detail=f"Evolution API unreachable: {exc}",
         ) from exc
 
-    # ── Persist webhook URL in extra_data ──────────────────────────────
-    extra = dict(connection.extra_data or {})
-    extra["webhook_url"] = webhook_url
-    extra["webhook_status"] = "registered"
-    connection.extra_data = extra
-    await session.commit()
 
-    return {"status": "ok", "webhook_url": webhook_url}
+# Moved evolution-fetch-instances to the top to avoid UUID collision

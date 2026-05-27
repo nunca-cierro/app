@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Phone, Send, Loader2, ExternalLink } from "lucide-react";
 
 const PLATFORM_LABELS: Record<string, string> = {
-  whatsapp: "WhatsApp",
+  whatsapp: "WhatsApp (Cloud API)",
+  evolution: "WhatsApp (Evolution)",
   telegram: "Telegram",
 };
 
 const PLATFORM_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   whatsapp: Phone,
+  evolution: Phone,
   telegram: Send,
 };
 
@@ -48,7 +50,7 @@ export default function PlatformsPage() {
         </div>
         <div className="flex gap-2">
           <Button asChild variant="outline" size="sm">
-            <Link href="/dashboard/platforms/whatsapp/new">
+            <Link href="/dashboard/platforms/evolution/new">
               <Phone className="mr-2 size-4" />
               WhatsApp
             </Link>

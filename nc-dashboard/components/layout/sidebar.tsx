@@ -45,7 +45,8 @@ export function getNavItems(): NavItem[] {
     label: "Plataformas",
     icon: LayoutDashboard,
     children: [
-      { href: "/dashboard/platforms/whatsapp", label: "WhatsApp", icon: Phone },
+      { href: "/dashboard/platforms/evolution", label: "WhatsApp (Evo)", icon: Phone },
+      { href: "/dashboard/platforms/whatsapp", label: "WhatsApp (Meta)", icon: Phone },
       { href: "/dashboard/platforms/telegram", label: "Telegram", icon: Send },
     ],
   });

@@ -22,6 +22,10 @@ export interface UsePlatformConnectionsReturn {
     status?: string;
     is_primary?: boolean;
   }) => Promise<PlatformConnection>;
+  fetchEvolutionInstances: (
+    baseUrl: string,
+    apiKey?: string,
+  ) => Promise<any[]>;
 }
 
 export interface UsePlatformConnectionReturn {
@@ -36,7 +40,7 @@ export interface UsePlatformConnectionReturn {
     is_primary?: boolean;
   }) => Promise<PlatformConnection>;
   deleteConnection: () => Promise<void>;
-  registerWebhook: () => Promise<{ webhook_url: string }>;
+  registerWebhook: (baseUrlOverride?: string) => Promise<{ webhook_url: string }>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -100,6 +104,18 @@ export function usePlatformConnections(
     [],
   );
 
+  const fetchEvolutionInstances = useCallback(
+    async (baseUrl: string, apiKey?: string): Promise<any[]> => {
+      const params = new URLSearchParams({ base_url: baseUrl });
+      if (apiKey) params.append("api_key", apiKey);
+
+      return apiClient<any[]>(
+        `/api/v1/platform-connections/evolution-fetch-instances?${params.toString()}`,
+      );
+    },
+    [],
+  );
+
   const refetch = useCallback(() => {
     setError(null);
     setIsLoading(true);
@@ -112,6 +128,7 @@ export function usePlatformConnections(
     error,
     refetch,
     createConnection,
+    fetchEvolutionInstances,
   };
 }
 
@@ -129,7 +146,10 @@ export function usePlatformConnection(
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!id || id === "undefined") return;
+
     let cancelled = false;
+    setIsLoading(true);
 
     apiClient<PlatformConnection>(`/api/v1/platform-connections/${id}`)
       .then((data) => {
@@ -181,15 +201,25 @@ export function usePlatformConnection(
     setConnection(null);
   }, [id]);
 
-  const registerWebhook = useCallback(async () => {
+  const registerWebhook = useCallback(async (baseUrlOverride?: string) => {
+    // We fetch the current connection state to ensure we have the platform_type
+    const currentConn = await apiClient<PlatformConnection>(`/api/v1/platform-connections/${id}`);
+    
+    const endpoint = currentConn.platform_type === "evolution" 
+      ? `/api/v1/platform-connections/${id}/register-evolution-webhook`
+      : `/api/v1/platform-connections/${id}/register-webhook`;
+    
+    const urlWithParams = baseUrlOverride 
+      ? `${endpoint}?base_url_override=${encodeURIComponent(baseUrlOverride)}`
+      : endpoint;
+
     const result = await apiClient<{ webhook_url: string }>(
-      `/api/v1/platform-connections/${id}/register-webhook`,
+      urlWithParams,
       { method: "POST" },
     );
-    // Refresh connection to get updated extra_data
-    const updated = await apiClient<PlatformConnection>(
-      `/api/v1/platform-connections/${id}`,
-    );
+    
+    // Refresh local state with updated data
+    const updated = await apiClient<PlatformConnection>(`/api/v1/platform-connections/${id}`);
     setConnection(updated);
     return result;
   }, [id]);
