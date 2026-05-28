@@ -16,6 +16,7 @@ export const evolutionFormSchema = z.object({
     message: "Selecciona un estado válido",
   }),
   is_primary: z.boolean(),
+  agent_id: z.string().uuid().optional().nullable(),
 });
 
 export type EvolutionFormValues = z.infer<typeof evolutionFormSchema>;
@@ -28,4 +29,5 @@ export const defaultEvolutionValues: EvolutionFormValues = {
   instance_name: "",
   status: "active",
   is_primary: false,
+  agent_id: null,
 };

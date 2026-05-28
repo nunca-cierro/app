@@ -8,7 +8,10 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from fastapi import HTTPException
+
 from app.core.encryption import decrypt, encrypt
+from app.modules.agents.models import AiAgent
 from app.modules.platform_connections.models import PlatformConnection
 from app.modules.platform_connections.schemas import (
     PlatformConnectionCreate,
@@ -44,6 +47,14 @@ async def create_connection(
     data: PlatformConnectionCreate,
 ) -> PlatformConnection:
     """Create a new platform connection with encrypted credentials."""
+    if data.agent_id:
+        agent = await session.get(AiAgent, data.agent_id)
+        if agent and agent.tenant_id != data.tenant_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Agent belongs to a different tenant",
+            )
+
     connection = PlatformConnection(
         tenant_id=data.tenant_id,
         platform_type=data.platform_type,
@@ -52,6 +63,7 @@ async def create_connection(
         extra_data=data.extra_data,
         status=data.status,
         is_primary=data.is_primary,
+        agent_id=data.agent_id,
     )
     session.add(connection)
     await session.commit()
@@ -66,6 +78,15 @@ async def update_connection(
 ) -> PlatformConnection:
     """Update a platform connection, re-encrypting credentials if provided."""
     update_data = data.model_dump(exclude_unset=True)
+
+    if "agent_id" in update_data and update_data["agent_id"] is not None:
+        agent = await session.get(AiAgent, update_data["agent_id"])
+        if agent and agent.tenant_id != connection.tenant_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Agent belongs to a different tenant",
+            )
+
     if "credentials" in update_data and update_data["credentials"] is not None:
         update_data["credentials"] = encrypt(update_data["credentials"])
     for field, value in update_data.items():

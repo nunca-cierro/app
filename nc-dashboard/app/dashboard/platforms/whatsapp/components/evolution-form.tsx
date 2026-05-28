@@ -1,9 +1,10 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect, useCallback } from "react";
 import { usePlatformConnections } from "@/hooks/use-platform-connections";
+import { useAgents } from "@/hooks/use-agents";
 import {
   evolutionFormSchema,
   type EvolutionFormValues,
@@ -23,6 +24,17 @@ interface EvolutionFormProps {
   tenantsLoading: boolean;
 }
 
+interface EvolutionInstance {
+  instance?: {
+    instanceName?: string;
+    name?: string;
+    status?: string;
+  };
+  instanceName?: string;
+  name?: string;
+  status?: string;
+}
+
 export function EvolutionForm({
   defaultValues,
   onSubmit,
@@ -32,13 +44,13 @@ export function EvolutionForm({
   tenantsLoading,
 }: EvolutionFormProps) {
   const { fetchEvolutionInstances } = usePlatformConnections();
-  const [instances, setInstances] = useState<any[]>([]);
+  const [instances, setInstances] = useState<EvolutionInstance[]>([]);
   const [isFetchingInstances, setIsFetchingInstances] = useState(false);
 
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors },
   } = useForm<EvolutionFormValues>({
@@ -55,17 +67,38 @@ export function EvolutionForm({
     },
   });
 
-  const baseUrl = watch("base_url");
-  const apiKey = watch("api_key");
+  const [watchedBaseUrl, watchedApiKey, watchedTenantId] = useWatch({
+    control,
+    name: ["base_url", "api_key", "tenant_id"],
+  });
+
+  const { agents, isLoading: agentsLoading } = useAgents(0, 100, watchedTenantId);
+
+  // Auto-select agent if there's only one or if one matches a "primary" criteria
+  useEffect(() => {
+    if (!agentsLoading && agents.length > 0 && watchedTenantId) {
+      // If only one agent exists, select it automatically
+      if (agents.length === 1) {
+        setValue("agent_id", agents[0].id);
+      } 
+      // Or if there are multiple, but one is named "Default" or similar (optional logic)
+      else if (!defaultValues?.agent_id) {
+        const defaultAgent = agents.find(a => a.is_default || a.name.toLowerCase().includes("default"));
+        if (defaultAgent) {
+          setValue("agent_id", defaultAgent.id);
+        }
+      }
+    }
+  }, [agents, agentsLoading, watchedTenantId, setValue, defaultValues?.agent_id]);
 
   const handleFetchInstances = useCallback(async () => {
-    if (!baseUrl) {
+    if (!watchedBaseUrl) {
       toast.error("Ingresa la URL del servidor primero");
       return;
     }
     setIsFetchingInstances(true);
     try {
-      const data = await fetchEvolutionInstances(baseUrl, apiKey);
+      const data = (await fetchEvolutionInstances(watchedBaseUrl, watchedApiKey)) as EvolutionInstance[];
       console.log("Evolution instances response:", data);
       setInstances(data);
       if (data.length === 0) {
@@ -77,11 +110,15 @@ export function EvolutionForm({
     } finally {
       setIsFetchingInstances(false);
     }
-  }, [fetchEvolutionInstances, baseUrl, apiKey]);
+  }, [fetchEvolutionInstances, watchedBaseUrl, watchedApiKey]);
 
   useEffect(() => {
     if (mode === "edit" && defaultValues?.base_url) {
-      handleFetchInstances();
+      // Use a timeout to avoid synchronous state update in effect
+      const timer = setTimeout(() => {
+        handleFetchInstances();
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [mode, defaultValues?.base_url, handleFetchInstances]);
 
@@ -124,7 +161,7 @@ export function EvolutionForm({
             variant="outline"
             className="w-full"
             onClick={handleFetchInstances}
-            disabled={isFetchingInstances || !baseUrl}
+            disabled={isFetchingInstances || !watchedBaseUrl}
           >
             {isFetchingInstances ? (
               <Loader2 className="mr-2 size-4 animate-spin" />
@@ -199,6 +236,39 @@ export function EvolutionForm({
           )}
           {errors.tenant_id && (
             <p className="text-xs text-destructive">{errors.tenant_id.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="agent_id" className="text-sm font-medium">
+            Agente vinculado (Opcional)
+          </label>
+          {agentsLoading ? (
+            <div className="flex h-10 items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              Cargando agentes...
+            </div>
+          ) : (
+            <select
+              id="agent_id"
+              {...register("agent_id")}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              disabled={!watchedTenantId}
+            >
+              <option value="">
+                {watchedTenantId
+                  ? "Selecciona un agente (predeterminado del negocio)"
+                  : "Selecciona un negocio primero"}
+              </option>
+              {agents.map((agent) => (
+                <option key={agent.id} value={agent.id}>
+                  {agent.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {errors.agent_id && (
+            <p className="text-xs text-destructive">{errors.agent_id.message}</p>
           )}
         </div>
 

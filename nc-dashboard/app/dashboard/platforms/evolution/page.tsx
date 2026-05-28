@@ -70,7 +70,7 @@ export default function EvolutionPlatformsPage() {
                       {conn.display_name}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Instancia: {conn.credentials?.instance_name}
+                      Instancia: {(conn.credentials?.instance_name as string) || "N/A"}
                       {" · "}
                       {conn.status === "active" ? "Activo" : "Inactivo"}
                     </p>

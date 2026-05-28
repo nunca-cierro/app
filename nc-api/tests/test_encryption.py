@@ -78,6 +78,9 @@ class TestEncryptionKeyMissing:
     def test_encrypt_raises_without_key(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Calling encrypt() without ENCRYPTION_KEY raises ValueError."""
         monkeypatch.delenv("ENCRYPTION_KEY", raising=False)
+        from app.core.config import settings
+        monkeypatch.setattr(settings, "encryption_key", "")
+        
         import importlib
         import app.core.encryption as encryption_module  # noqa: F811
 

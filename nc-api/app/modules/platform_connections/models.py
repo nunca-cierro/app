@@ -45,6 +45,9 @@ class PlatformConnection(Base):
     is_primary: Mapped[bool] = mapped_column(
         Boolean, default=False
     )
+    agent_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("ai_agents.id"), nullable=True, index=True
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)

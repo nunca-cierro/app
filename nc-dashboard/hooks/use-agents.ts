@@ -26,7 +26,6 @@ export function useAgents(
   limit = 10,
   tenantId?: string,
 ): UseAgentsReturn {
-  void tenantId; // reserved for tenant-scoped filtering
   const [agents, setAgents] = useState<Agent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +34,16 @@ export function useAgents(
   useEffect(() => {
     let cancelled = false;
 
-    apiClient<Agent[]>(`/api/v1/agents?skip=${skip}&limit=${limit}`)
+    const queryParams = new URLSearchParams({
+      skip: skip.toString(),
+      limit: limit.toString(),
+    });
+
+    if (tenantId) {
+      queryParams.append("tenant_id", tenantId);
+    }
+
+    apiClient<Agent[]>(`/api/v1/agents?${queryParams.toString()}`)
       .then((data) => {
         if (cancelled) return;
         setAgents(data);
@@ -53,7 +61,7 @@ export function useAgents(
     return () => {
       cancelled = true;
     };
-  }, [skip, limit, refetchCount]);
+  }, [skip, limit, tenantId, refetchCount]);
 
   const refetch = useCallback(() => {
     setError(null);

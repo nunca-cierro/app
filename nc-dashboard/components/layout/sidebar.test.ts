@@ -40,7 +40,8 @@ describe("sidebar nav items", () => {
 
     // All labels including children
     const labels = allLabels(items);
-    expect(labels).toContain("WhatsApp");
+    expect(labels).toContain("WhatsApp (Evo)");
+    expect(labels).toContain("WhatsApp (Meta)");
     expect(labels).toContain("Telegram");
   });
 
@@ -49,16 +50,17 @@ describe("sidebar nav items", () => {
     const plataformas = items.find((i) => i.label === "Plataformas");
     expect(plataformas).toBeDefined();
     expect(plataformas!.children).toBeDefined();
-    expect(plataformas!.children!.length).toBe(2);
+    expect(plataformas!.children!.length).toBe(3);
     expect(plataformas!.children!.map((c) => c.label)).toEqual([
-      "WhatsApp",
+      "WhatsApp (Evo)",
+      "WhatsApp (Meta)",
       "Telegram",
     ]);
   });
 
-  it("WhatsApp item retains its icon", () => {
+  it("WhatsApp (Evo) item retains its icon", () => {
     const items = getNavItems();
-    const wa = findItem(items, "WhatsApp");
+    const wa = findItem(items, "WhatsApp (Evo)");
     expect(wa).toBeDefined();
     expect(wa!.icon).toBeDefined();
   });

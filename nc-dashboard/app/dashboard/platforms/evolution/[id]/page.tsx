@@ -7,10 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, CheckCircle2, AlertCircle, ExternalLink, Globe } from "lucide-center";
 import { toast } from "sonner";
-
-// Fix icons import - lucide-react not lucide-center
 import { 
   CheckCircle2 as CheckIcon, 
   AlertCircle as AlertIcon, 
@@ -53,9 +50,9 @@ export default function PlatformEvolutionDetailPage({
     try {
       await registerWebhook(baseUrlOverride || undefined);
       toast.success("Webhook registrado correctamente en Evolution API");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error registering webhook:", err);
-      const detail = err.message || "Verifica la conexión.";
+      const detail = err instanceof Error ? err.message : "Verifica la conexión.";
       toast.error(`Error al registrar el webhook: ${detail}`);
     } finally {
       setIsRegistering(false);
@@ -90,7 +87,7 @@ export default function PlatformEvolutionDetailPage({
           <CardContent className="space-y-4">
             <div className="flex items-center gap-2 text-sm">
               <span className="font-medium">Instancia:</span>
-              <span className="text-muted-foreground">{connection.credentials?.instance_name}</span>
+              <span className="text-muted-foreground">{(connection.credentials?.instance_name as string) || "N/A"}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <span className="font-medium">Servidor:</span>
@@ -99,7 +96,7 @@ export default function PlatformEvolutionDetailPage({
                 target="_blank" 
                 className="text-primary hover:underline flex items-center gap-1"
               >
-                {connection.credentials?.base_url as string}
+                {(connection.credentials?.base_url as string) || "N/A"}
                 <LinkIcon className="size-3" />
               </a>
             </div>
@@ -151,7 +148,7 @@ export default function PlatformEvolutionDetailPage({
             {hasWebhook && (
               <div className="rounded-md bg-background p-3 border text-[11px] break-all font-mono">
                 <span className="text-muted-foreground block mb-1 font-sans">URL Registrada:</span>
-                {(connection.extra_data as any)?.webhook_url}
+                {(connection.extra_data as Record<string, unknown>)?.webhook_url as string}
               </div>
             )}
           </CardContent>

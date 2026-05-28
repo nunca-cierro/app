@@ -5,43 +5,22 @@ from __future__ import annotations
 import uuid
 import typing as t
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, delete
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
 from app.modules.tenants.models import Tenant
-from app.modules.tenants.schemas import TenantCreate, TenantResponse, TenantUpdate
+from app.modules.tenants.schemas import TenantCreate, TenantUpdate, TenantResponse
 
 router = APIRouter(prefix="/tenants", tags=["tenants"])
 
 
-@router.get("", response_model=list[TenantResponse])
-async def list_tenants(
-    status: str | None = None,
-    session: AsyncSession = Depends(get_session),
-) -> t.Any:
-    """List all tenants (clients), optionally filtered by status."""
-    query = select(Tenant).order_by(Tenant.created_at.desc())
-    if status:
-        query = query.where(Tenant.status == status)
-    result = await session.execute(query)
-    return result.scalars().all()
-
-
 @router.post("", response_model=TenantResponse, status_code=201)
-async def create_tenant(
+async def create_new_tenant(
     body: TenantCreate,
     session: AsyncSession = Depends(get_session),
-) -> t.Any:
-    """Create a new tenant (client)."""
-    # Check slug uniqueness
-    existing = await session.execute(
-        select(Tenant).where(Tenant.slug == body.slug)
-    )
-    if existing.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail="Slug already exists")
-
+) -> Tenant:
+    """Register a new tenant (business)."""
     tenant = Tenant(**body.model_dump())
     session.add(tenant)
     await session.commit()
@@ -49,12 +28,24 @@ async def create_tenant(
     return tenant
 
 
+@router.get("", response_model=t.List[TenantResponse])
+async def list_tenants(
+    session: AsyncSession = Depends(get_session),
+    skip: int = 0,
+    limit: int = 100,
+) -> t.Sequence[Tenant]:
+    """List all tenants."""
+    from sqlalchemy import select
+    result = await session.execute(select(Tenant).offset(skip).limit(limit))
+    return result.scalars().all()
+
+
 @router.get("/{tenant_id}", response_model=TenantResponse)
 async def get_tenant(
     tenant_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-) -> t.Any:
-    """Get a single tenant by ID."""
+) -> Tenant:
+    """Get a specific tenant."""
     tenant = await session.get(Tenant, tenant_id)
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
@@ -62,29 +53,31 @@ async def get_tenant(
 
 
 @router.patch("/{tenant_id}", response_model=TenantResponse)
-async def update_tenant(
+async def update_tenant_info(
     tenant_id: uuid.UUID,
     body: TenantUpdate,
     session: AsyncSession = Depends(get_session),
-) -> t.Any:
-    """Update a tenant."""
+) -> Tenant:
+    """Update tenant information."""
     tenant = await session.get(Tenant, tenant_id)
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
-    for field, value in body.model_dump(exclude_unset=True).items():
-        setattr(tenant, field, value)
+    update_data = body.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(tenant, key, value)
 
+    session.add(tenant)
     await session.commit()
     await session.refresh(tenant)
     return tenant
 
 
-@router.delete("/{tenant_id}", status_code=204)
+@router.delete("/{tenant_id}", status_code=204, response_class=Response)
 async def delete_tenant(
     tenant_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-) -> None:
+):
     """Delete a tenant."""
     tenant = await session.get(Tenant, tenant_id)
     if not tenant:

@@ -25,7 +25,7 @@ export interface UsePlatformConnectionsReturn {
   fetchEvolutionInstances: (
     baseUrl: string,
     apiKey?: string,
-  ) => Promise<any[]>;
+  ) => Promise<unknown[]>;
 }
 
 export interface UsePlatformConnectionReturn {
@@ -105,11 +105,11 @@ export function usePlatformConnections(
   );
 
   const fetchEvolutionInstances = useCallback(
-    async (baseUrl: string, apiKey?: string): Promise<any[]> => {
+    async (baseUrl: string, apiKey?: string): Promise<unknown[]> => {
       const params = new URLSearchParams({ base_url: baseUrl });
       if (apiKey) params.append("api_key", apiKey);
 
-      return apiClient<any[]>(
+      return apiClient<unknown[]>(
         `/api/v1/platform-connections/evolution-fetch-instances?${params.toString()}`,
       );
     },
@@ -142,14 +142,23 @@ export function usePlatformConnection(
   const [connection, setConnection] = useState<PlatformConnection | null>(
     null,
   );
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!!id && id !== "undefined");
   const [error, setError] = useState<string | null>(null);
+  const [prevId, setPrevId] = useState(id);
+
+  // Adjust state when id changes
+  if (id !== prevId) {
+    setPrevId(id);
+    const valid = !!id && id !== "undefined";
+    setIsLoading(valid);
+    setError(null);
+    setConnection(null);
+  }
 
   useEffect(() => {
     if (!id || id === "undefined") return;
 
     let cancelled = false;
-    setIsLoading(true);
 
     apiClient<PlatformConnection>(`/api/v1/platform-connections/${id}`)
       .then((data) => {

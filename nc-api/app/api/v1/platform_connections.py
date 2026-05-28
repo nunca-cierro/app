@@ -5,7 +5,7 @@ from __future__ import annotations
 import typing as t
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -134,11 +134,11 @@ async def update_platform_connection(
     return await update_connection(session, connection, body)
 
 
-@router.delete("/{connection_id}", status_code=204)
+@router.delete("/{connection_id}", status_code=204, response_class=Response)
 async def delete_platform_connection(
     connection_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-) -> None:
+):
     """Remove a platform connection."""
     connection = await get_connection(session, connection_id)
     if not connection:

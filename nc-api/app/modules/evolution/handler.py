@@ -134,13 +134,26 @@ async def handle_evolution_incoming(
         await session.commit()
         return
 
-    agent_result = await session.execute(
-        select(AiAgent).where(
-            AiAgent.tenant_id == tenant.id,
-            AiAgent.enabled == True,
+    # Resolve agent: linked > tenant default
+    agent = None
+    if connection.agent_id:
+        agent_result = await session.execute(
+            select(AiAgent).where(
+                AiAgent.id == connection.agent_id,
+                AiAgent.tenant_id == tenant.id,
+                AiAgent.enabled == True,
+            )
         )
-    )
-    agent = agent_result.scalar_one_or_none()
+        agent = agent_result.scalar_one_or_none()
+
+    if agent is None:
+        agent_result = await session.execute(
+            select(AiAgent).where(
+                AiAgent.tenant_id == tenant.id,
+                AiAgent.enabled == True,
+            )
+        )
+        agent = agent_result.scalar_one_or_none()
 
     prompts_result = await session.execute(
         select(Prompt).where(

@@ -25,6 +25,7 @@ class PlatformConnectionCreate(BaseModel):
     extra_data: dict[str, Any] | None = None
     status: str = "active"
     is_primary: bool = False
+    agent_id: uuid.UUID | None = None
 
     @field_validator("platform_type")
     @classmethod
@@ -46,6 +47,7 @@ class PlatformConnectionUpdate(BaseModel):
     extra_data: dict[str, Any] | None = None
     status: str | None = None
     is_primary: bool | None = None
+    agent_id: uuid.UUID | None = None
 
 
 class PlatformConnectionResponse(BaseModel):
@@ -60,6 +62,7 @@ class PlatformConnectionResponse(BaseModel):
     extra_data: dict[str, Any] | None = None
     status: str
     is_primary: bool
+    agent_id: uuid.UUID | None = None
     created_at: datetime
     updated_at: datetime
 
