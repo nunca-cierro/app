@@ -17,6 +17,8 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
+from app.core.rate_limiter import rate_limiter
 from app.modules.conversations.models import Conversation, Message
 from app.modules.agents.utils import format_business_config
 from app.modules.integrations.llm.provider import CONTEXT_WINDOW_SIZE, groq_client
@@ -55,6 +57,20 @@ async def handle_evolution_incoming(
         logger.warning(
             "No connection provided for Evolution event — skipping"
         )
+        return
+
+    # ── Rate limiting check ─────────────────────────────────────────────
+    rate_limiter.max_requests = settings.rate_limit_max_requests
+    rate_limiter.window_seconds = settings.rate_limit_window_seconds
+
+    rl_key = f"{parsed['external_user_id']}:{connection.id}"
+    if not rate_limiter.is_allowed(rl_key):
+        logger.warning(
+            "Rate limit exceeded | user={user} | conn={conn}",
+            user=parsed["external_user_id"],
+            conn=connection.id,
+        )
+        await session.commit()
         return
 
     # ── 2. Resolve tenant ───────────────────────────────────────────────
@@ -187,7 +203,7 @@ async def handle_evolution_incoming(
     try:
         response = await groq_client.generate(
             system_prompt=system_prompt,
-            user_message=parsed["content"],
+            user_message=f"<user_query>\n{parsed['content']}\n</user_query>",
             conversation_history=conversation_history,
             model=model,
             max_tokens=max_tokens,

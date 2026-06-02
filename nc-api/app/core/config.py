@@ -56,6 +56,10 @@ class Settings(BaseSettings):
     # ── Encryption ─────────────────────────────────────────────────────────
     encryption_key: str = ""
 
+    # ── Rate Limiting ────────────────────────────────────────────────────
+    rate_limit_max_requests: int = 10
+    rate_limit_window_seconds: int = 60
+
     # ── Paths ────────────────────────────────────────────────────────────
     businesses_dir: Path = Path("businesses")
 
