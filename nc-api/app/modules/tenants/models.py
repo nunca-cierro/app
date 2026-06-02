@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.modules.auth.models import TenantStatus
 
 
 class Tenant(Base):
@@ -21,7 +22,7 @@ class Tenant(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
     status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="active", index=True
+        String(20), nullable=False, default=TenantStatus.ACTIVE, index=True
     )
     plan: Mapped[str] = mapped_column(String(50), nullable=False, default="basic")
     timezone: Mapped[str] = mapped_column(String(50), nullable=False, default="America/Bogota")
@@ -53,6 +54,9 @@ class Tenant(Base):
     conversations = relationship(
         "Conversation", back_populates="tenant", lazy="selectin",
         cascade="all, delete-orphan",
+    )
+    user_associations: Mapped[list["UserTenant"]] = relationship(
+        "UserTenant", back_populates="tenant", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:

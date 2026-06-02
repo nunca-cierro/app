@@ -2,14 +2,28 @@
 
 from __future__ import annotations
 
+import enum
 import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, String
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+
+class UserRole(str, enum.Enum):
+    SUPERADMIN = "superadmin"
+    ADMIN = "admin"
+    AGENT = "agent"
+    CLIENT = "client"
+
+
+class TenantStatus(str, enum.Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    SUSPENDED = "suspended"
 
 
 class User(Base):
@@ -31,6 +45,11 @@ class User(Base):
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
+    )
+
+    # relationships
+    tenant_associations: Mapped[list["UserTenant"]] = relationship(
+        "UserTenant", back_populates="user", cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
