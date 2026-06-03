@@ -1,17 +1,20 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/layout/sidebar";
+import { isRouteAllowed, getRoleLandingRoute } from "@/lib/rbac";
+import type { UserRole } from "@/lib/types";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   /* ── Auth guard: redirect to login if not authenticated ── */
   useEffect(() => {
@@ -19,6 +22,18 @@ export default function DashboardLayout({
       router.replace("/auth/login");
     }
   }, [isLoading, isAuthenticated, router]);
+
+  /* ── Role guard: redirect to landing route if not allowed ── */
+  useEffect(() => {
+    if (isLoading || !isAuthenticated) return;
+
+    const effectiveRole: UserRole | undefined = user?.current_role ?? user?.role;
+    if (!effectiveRole) return;
+
+    if (!isRouteAllowed(effectiveRole, pathname)) {
+      router.replace(getRoleLandingRoute(effectiveRole));
+    }
+  }, [isLoading, isAuthenticated, user, pathname, router]);
 
   if (isLoading) {
     return (

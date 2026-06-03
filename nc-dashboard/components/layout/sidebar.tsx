@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { UserRole } from "@/lib/types";
 import {
   LayoutDashboard,
   Building2,
@@ -16,6 +17,8 @@ import {
   Send,
   ChevronDown,
   ChevronRight,
+  Users,
+  Shield,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -27,37 +30,85 @@ export interface NavItem {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   children?: NavItem[];
+  /** If set, only users with one of these roles see this nav item. */
+  roles?: UserRole[];
 }
 
 /* ------------------------------------------------------------------ */
-/*  Pure: getNavItems(enabled) — testable without React                */
+/*  Pure: getNavItems(role) — testable without React                   */
 /* ------------------------------------------------------------------ */
 
-export function getNavItems(): NavItem[] {
-  const base: NavItem[] = [
-    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/dashboard/tenants", label: "Negocios", icon: Building2 },
-    { href: "/dashboard/agents", label: "Agentes", icon: Bot },
+const CLIENT_ROUTES: UserRole[] = ["client", "agent"];
+const ADMIN_ROUTES: UserRole[] = ["superadmin", "admin", "agent", "client"];
+const SUPERADMIN_ROUTES: UserRole[] = ["superadmin", "admin"];
+
+export function getNavItems(role?: UserRole | null): NavItem[] {
+  const isClientOrAgent = role && CLIENT_ROUTES.includes(role);
+  const isSuperOrAdmin = role && SUPERADMIN_ROUTES.includes(role);
+
+  const items: NavItem[] = [
+    {
+      href: "/dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      roles: ADMIN_ROUTES,
+    },
   ];
 
-  base.push({
-    href: "/dashboard/platforms",
-    label: "Plataformas",
-    icon: LayoutDashboard,
-    children: [
-      { href: "/dashboard/platforms/evolution", label: "WhatsApp (Evo)", icon: Phone },
-      { href: "/dashboard/platforms/whatsapp", label: "WhatsApp (Meta)", icon: Phone },
-      { href: "/dashboard/platforms/telegram", label: "Telegram", icon: Send },
-    ],
-  });
+  // Negocios: only superadmin/admin
+  if (isSuperOrAdmin) {
+    items.push({
+      href: "/dashboard/tenants",
+      label: "Negocios",
+      icon: Building2,
+      roles: SUPERADMIN_ROUTES,
+    });
+  }
 
-  base.push({
+  // Admin: solo superadmin
+  if (role === "superadmin") {
+    items.push({
+      href: "/dashboard/admin",
+      label: "Admin",
+      icon: Shield,
+      roles: ["superadmin"],
+      children: [
+        { href: "/dashboard/admin/users", label: "Usuarios", icon: Users, roles: ["superadmin"] },
+      ],
+    });
+  }
+
+  // Agentes y Plataformas: hidden for client/agent
+  if (!isClientOrAgent) {
+    items.push({
+      href: "/dashboard/agents",
+      label: "Agentes",
+      icon: Bot,
+      roles: SUPERADMIN_ROUTES,
+    });
+
+    items.push({
+      href: "/dashboard/platforms",
+      label: "Plataformas",
+      icon: LayoutDashboard,
+      roles: SUPERADMIN_ROUTES,
+      children: [
+        { href: "/dashboard/platforms/evolution", label: "WhatsApp (Evo)", icon: Phone, roles: SUPERADMIN_ROUTES },
+        { href: "/dashboard/platforms/whatsapp", label: "WhatsApp (Meta)", icon: Phone, roles: SUPERADMIN_ROUTES },
+        { href: "/dashboard/platforms/telegram", label: "Telegram", icon: Send, roles: SUPERADMIN_ROUTES },
+      ],
+    });
+  }
+
+  // Conversaciones: visible for all roles
+  items.push({
     href: "/dashboard/conversations",
     label: "Conversaciones",
     icon: MessageSquare,
+    roles: ADMIN_ROUTES,
   });
 
-  return base;
+  return items;
 }
 
 /* ------------------------------------------------------------------ */
@@ -67,7 +118,8 @@ export function getNavItems(): NavItem[] {
 export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const navItems = getNavItems();
+  const effectiveRole = user?.current_role ?? user?.role ?? null;
+  const navItems = getNavItems(effectiveRole);
 
   return (
     <aside className="flex h-full w-56 flex-col border-r bg-background">

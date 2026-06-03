@@ -13,7 +13,7 @@ import {
   getProfile as apiGetProfile,
   TOKEN_KEYS,
 } from "@/lib/api";
-import type { AuthUser } from "@/lib/types";
+import type { AuthUser, UserRole } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -81,13 +81,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /* ── Login ── */
   const login = async (_email: string, _password: string) => {
     const data = await apiLogin(_email, _password);
-    setUser({ id: data.user_id, email: data.email, name: data.name });
+    setUser({
+      id: data.user_id,
+      email: data.email,
+      name: data.name,
+      role: data.role,
+      tenant_id: data.tenant_id,
+    });
   };
 
   /* ── Register ── */
   const register = async (_email: string, _password: string, _name: string) => {
     const data = await apiRegister(_email, _password, _name);
-    setUser({ id: data.user_id, email: data.email, name: data.name });
+    setUser({
+      id: data.user_id,
+      email: data.email,
+      name: data.name,
+      role: data.role,
+      tenant_id: data.tenant_id,
+    });
   };
 
   /* ── Logout ── */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getNavItems, type NavItem } from "@/components/layout/sidebar";
+import type { UserRole } from "@/lib/types";
 
 /** Recursively find a nav item by label */
 function findItem(items: NavItem[], label: string): NavItem | undefined {
@@ -25,28 +26,30 @@ function allLabels(items: NavItem[]): string[] {
   return labels;
 }
 
-describe("sidebar nav items", () => {
-  it("adds Plataformas section with children", () => {
-    const items = getNavItems();
-    // Top level: Dashboard, Negocios, Agentes, Plataformas, Conversaciones
-    expect(items.length).toBe(5);
+describe("sidebar nav items — superadmin", () => {
+  const role: UserRole = "superadmin";
+
+  it("shows all items for superadmin", () => {
+    const items = getNavItems(role);
+    expect(items.length).toBe(6);
     expect(items.map((i) => i.label)).toEqual([
       "Dashboard",
       "Negocios",
+      "Admin",
       "Agentes",
       "Plataformas",
       "Conversaciones",
     ]);
 
-    // All labels including children
     const labels = allLabels(items);
     expect(labels).toContain("WhatsApp (Evo)");
     expect(labels).toContain("WhatsApp (Meta)");
     expect(labels).toContain("Telegram");
+    expect(labels).toContain("Usuarios");
   });
 
   it("Plataformas section has collapsible structure", () => {
-    const items = getNavItems();
+    const items = getNavItems(role);
     const plataformas = items.find((i) => i.label === "Plataformas");
     expect(plataformas).toBeDefined();
     expect(plataformas!.children).toBeDefined();
@@ -59,16 +62,57 @@ describe("sidebar nav items", () => {
   });
 
   it("WhatsApp (Evo) item retains its icon", () => {
-    const items = getNavItems();
+    const items = getNavItems(role);
     const wa = findItem(items, "WhatsApp (Evo)");
     expect(wa).toBeDefined();
     expect(wa!.icon).toBeDefined();
   });
 
   it("Telegram item has an icon", () => {
-    const items = getNavItems();
+    const items = getNavItems(role);
     const tg = findItem(items, "Telegram");
     expect(tg).toBeDefined();
     expect(tg!.icon).toBeDefined();
+  });
+});
+
+describe("sidebar nav items — client", () => {
+  const role: UserRole = "client";
+
+  it("hides Negocios, Agentes and Plataformas for client role", () => {
+    const items = getNavItems(role);
+    const labels = items.map((i) => i.label);
+    expect(labels).not.toContain("Negocios");
+    expect(labels).not.toContain("Agentes");
+    expect(labels).not.toContain("Plataformas");
+  });
+
+  it("shows Dashboard and Conversaciones for client role", () => {
+    const items = getNavItems(role);
+    const labels = items.map((i) => i.label);
+    expect(labels).toContain("Dashboard");
+    expect(labels).toContain("Conversaciones");
+  });
+
+  it("shows only 2 items for client role", () => {
+    const items = getNavItems(role);
+    expect(items.length).toBe(2);
+  });
+});
+
+describe("sidebar nav items — agent", () => {
+  const role: UserRole = "agent";
+
+  it("hides Negocios, Agentes and Plataformas for agent role too", () => {
+    const items = getNavItems(role);
+    const labels = items.map((i) => i.label);
+    expect(labels).not.toContain("Negocios");
+    expect(labels).not.toContain("Agentes");
+    expect(labels).not.toContain("Plataformas");
+  });
+
+  it("shows only Dashboard and Conversaciones for agent", () => {
+    const items = getNavItems(role);
+    expect(items.length).toBe(2);
   });
 });
