@@ -6,6 +6,7 @@ const apiUrl =
   ?? "http://localhost:8000";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   images: {
     qualities: [100, 75],
     formats: ["image/avif", "image/webp"],

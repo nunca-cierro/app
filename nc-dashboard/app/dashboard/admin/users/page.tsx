@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { UserCheck, X, ExternalLink } from "lucide-react";
+import { UserCheck, X } from "lucide-react";
 import type { AdminUser, Tenant } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
@@ -15,7 +15,7 @@ import type { AdminUser, Tenant } from "@/lib/types";
 /* ------------------------------------------------------------------ */
 
 export default function AdminUsersPage() {
-  const { users, isLoading, error, refetch, assignTenant } = useUsers();
+  const { users, isLoading, error, assignTenant } = useUsers();
   const { tenants } = useTenants();
   const [assigningUserId, setAssigningUserId] = useState<string | null>(null);
 

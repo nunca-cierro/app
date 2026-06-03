@@ -83,7 +83,7 @@ export function EvolutionForm({
       } 
       // Or if there are multiple, but one is named "Default" or similar (optional logic)
       else if (!defaultValues?.agent_id) {
-        const defaultAgent = agents.find(a => a.is_default || a.name.toLowerCase().includes("default"));
+        const defaultAgent = agents.find(a => (a as { is_default?: boolean }).is_default || a.name.toLowerCase().includes("default"));
         if (defaultAgent) {
           setValue("agent_id", defaultAgent.id);
         }
