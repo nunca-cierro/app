@@ -24,11 +24,7 @@ async def get_current_user(
 ) -> User:
     """Extract and verify the current user from the JWT token.
 
-    Call this as a dependency on protected routes::
-
-        @router.get("/protected")
-        async def route(current_user: User = Depends(get_current_user)):
-            ...
+    Injects `current_role` and `current_tenant_id` into the user object.
     """
     if credentials is None:
         raise HTTPException(
@@ -44,6 +40,9 @@ async def get_current_user(
             algorithms=["HS256"],
         )
         user_id: str | None = payload.get("sub")
+        role: str | None = payload.get("role")
+        tenant_id: str | None = payload.get("tenant_id")
+
         if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -62,4 +61,29 @@ async def get_current_user(
             detail="User not found",
         )
 
+    # Attach context from token
+    # If role or tenant_id are missing in token, we might need to resolve them from DB
+    # but for now we trust the token or allow them to be None.
+    setattr(user, "current_role", role)
+    setattr(
+        user,
+        "current_tenant_id",
+        uuid.UUID(tenant_id) if tenant_id and tenant_id != "None" else None,
+    )
+
     return user
+
+
+class RoleChecker:
+    """Dependency to check if the current user has the required roles."""
+
+    def __init__(self, allowed_roles: list[str]):
+        self.allowed_roles = allowed_roles
+
+    async def __call__(self, user: User = Depends(get_current_user)) -> User:
+        if not hasattr(user, "current_role") or user.current_role not in self.allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Operation not permitted",
+            )
+        return user

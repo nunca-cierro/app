@@ -25,6 +25,7 @@ class Settings(BaseSettings):
 
     # ── Database ─────────────────────────────────────────────────────────
     database_url: str = "postgresql+asyncpg://postgres:1234@localhost:5432/nuncacierro"
+    test_database_url: str = ""  # defaults to database_url (overridable via .env)
     db_echo: bool = False
 
     @model_validator(mode="after")

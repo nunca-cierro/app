@@ -21,12 +21,16 @@ def verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
 
 
-def create_access_token(user_id: str, email: str) -> str:
-    """Create a JWT access token with 7-day expiry."""
+def create_access_token(
+    user_id: str, email: str, role: str | None = None, tenant_id: str | None = None
+) -> str:
+    """Create a JWT access token with 7-day expiry and role/tenant context."""
     expire = datetime.now(UTC) + timedelta(days=7)
     payload = {
         "sub": user_id,
         "email": email,
+        "role": role,
+        "tenant_id": tenant_id,
         "exp": expire,
         "iat": datetime.now(UTC),
     }

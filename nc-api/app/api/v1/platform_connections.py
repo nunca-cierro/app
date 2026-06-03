@@ -10,6 +10,8 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
+from app.modules.auth.deps import get_current_user
+from app.modules.auth.models import User, UserRole
 from app.modules.platform_connections.schemas import (
     PlatformConnectionCreate,
     PlatformConnectionResponse,
@@ -88,11 +90,17 @@ async def evolution_fetch_instances(
 
 @router.get("", response_model=list[PlatformConnectionResponse])
 async def list_platform_connections(
-    tenant_id: uuid.UUID | None = None,
     platform_type: str | None = None,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ) -> t.Any:
-    """List all platform connections, optionally filtered by tenant_id."""
+    """List all platform connections for the current tenant."""
+    tenant_id = None
+    if current_user.current_role != UserRole.SUPERADMIN:
+        if not current_user.current_tenant_id:
+            raise HTTPException(status_code=403, detail="No tenant context")
+        tenant_id = current_user.current_tenant_id
+        
     return await list_connections(
         session,
         tenant_id=tenant_id,
@@ -104,8 +112,16 @@ async def list_platform_connections(
 async def create_platform_connection(
     body: PlatformConnectionCreate,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ) -> t.Any:
-    """Register a new platform connection (credentials are encrypted)."""
+    """Register a new platform connection for the current tenant."""
+    if current_user.current_role != UserRole.SUPERADMIN:
+        if not current_user.current_tenant_id:
+            raise HTTPException(status_code=403, detail="No tenant context")
+        # Ensure body tenant_id matches user context
+        if body.tenant_id != current_user.current_tenant_id:
+            body.tenant_id = current_user.current_tenant_id
+
     return await create_connection(session, body)
 
 
@@ -113,11 +129,18 @@ async def create_platform_connection(
 async def get_platform_connection(
     connection_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ) -> t.Any:
-    """Get a single platform connection by ID."""
+    """Get a single platform connection by ID with isolation."""
     connection = await get_connection(session, connection_id)
     if not connection:
         raise HTTPException(status_code=404, detail="Platform connection not found")
+    
+    # Isolation
+    if current_user.current_role != UserRole.SUPERADMIN:
+        if connection.tenant_id != current_user.current_tenant_id:
+            raise HTTPException(status_code=404, detail="Platform connection not found")
+            
     return connection
 
 
@@ -126,11 +149,16 @@ async def update_platform_connection(
     connection_id: uuid.UUID,
     body: PlatformConnectionUpdate,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ) -> t.Any:
-    """Update an existing platform connection."""
+    """Update an existing platform connection with isolation."""
     connection = await get_connection(session, connection_id)
-    if not connection:
+    if not connection or (
+        current_user.current_role != UserRole.SUPERADMIN and 
+        connection.tenant_id != current_user.current_tenant_id
+    ):
         raise HTTPException(status_code=404, detail="Platform connection not found")
+        
     return await update_connection(session, connection, body)
 
 
@@ -138,11 +166,16 @@ async def update_platform_connection(
 async def delete_platform_connection(
     connection_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ):
-    """Remove a platform connection."""
+    """Remove a platform connection with isolation."""
     connection = await get_connection(session, connection_id)
-    if not connection:
+    if not connection or (
+        current_user.current_role != UserRole.SUPERADMIN and 
+        connection.tenant_id != current_user.current_tenant_id
+    ):
         raise HTTPException(status_code=404, detail="Platform connection not found")
+        
     await delete_connection(session, connection)
 
 
@@ -163,15 +196,14 @@ async def validate_telegram_token(
 async def register_telegram_webhook(
     connection_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ) -> dict[str, str]:
-    """Register (or re-register) the Telegram webhook for this connection.
-
-    Decrypts the stored ``bot_token``, calls
-    ``Telegram API /setWebhook`` with the public Railway URL,
-    and saves the webhook URL in ``extra_data``.
-    """
+    """Register (or re-register) the Telegram webhook for this connection with isolation."""
     connection = await get_connection(session, connection_id)
-    if not connection:
+    if not connection or (
+        current_user.current_role != UserRole.SUPERADMIN and 
+        connection.tenant_id != current_user.current_tenant_id
+    ):
         raise HTTPException(status_code=404, detail="Platform connection not found")
 
     if connection.platform_type != "telegram":
@@ -231,23 +263,15 @@ async def register_telegram_webhook(
 async def register_evolution_webhook(
     connection_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
     base_url_override: str | None = None,
 ) -> dict[str, str]:
-    """Register (or re-register) the Evolution API webhook for this connection.
-
-    Calls Evolution API's ``/instance/setWebhook/{instance}`` to tell
-    Evolution where to forward incoming messages.
-
-    Args:
-        connection_id: The platform connection UUID.
-        base_url_override: Optional override for the public-facing URL
-            (defaults to ``https://nunca-cierro.up.railway.app``).
-
-    Returns:
-        Dict with registration status and webhook URL.
-    """
+    """Register (or re-register) the Evolution API webhook for this connection with isolation."""
     connection = await get_connection(session, connection_id)
-    if not connection:
+    if not connection or (
+        current_user.current_role != UserRole.SUPERADMIN and 
+        connection.tenant_id != current_user.current_tenant_id
+    ):
         raise HTTPException(status_code=404, detail="Platform connection not found")
 
     if connection.platform_type != "evolution":
