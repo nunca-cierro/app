@@ -1,0 +1,92 @@
+# ── NuncaCierro Stack ──────────────────────────────────────────────────
+# Uso: docker compose up -d
+#
+# Variables de entorno requeridas (copiar .env.production a .env):
+#   POSTGRES_PASSWORD, JWT_SECRET, ENCRYPTION_KEY, GROQ_API_KEY
+#
+# SSL con Caddy (opcional — descomentar servicio caddy al final):
+#   1. Apuntá tu dominio a la IP del server
+#   2. Descomentá el servicio caddy
+#   3. Configurá CADDY_DOMAIN en .env
+#   4. docker compose up -d
+# ───────────────────────────────────────────────────────────────────────
+
+name: nuncacierro
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: nuncacierro
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Debe definir POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d nuncacierro"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "127.0.0.1:5432:5432"  # Solo localhost — no expuesto al exterior
+
+  # ── API (FastAPI) ───────────────────────────────────────────────────
+  nc-api:
+    build:
+      context: ./nc-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/nuncacierro"
+      JWT_SECRET: ${JWT_SECRET:?Debe definir JWT_SECRET}
+      ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-nuncacierro2026*}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Debe definir ENCRYPTION_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY:?Debe definir GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      APP_HOST: "0.0.0.0"
+      APP_PORT: "8000"
+    ports:
+      - "127.0.0.1:8000:8000"  # Solo localhost (Caddy proxy al exterior)
+
+  # ── Dashboard (Next.js) ─────────────────────────────────────────────
+  nc-dashboard:
+    build:
+      context: ./nc-dashboard
+      args:
+        NEXT_PUBLIC_API_URL: "http://nc-api:8000"
+    restart: unless-stopped
+    depends_on:
+      - nc-api
+    ports:
+      - "127.0.0.1:3000:3000"  # Solo localhost (Caddy proxy al exterior)
+
+  # ── Caddy (opcional — SSL automático) ───────────────────────────────
+  # Descomentá para habilitar HTTPS con Let's Encrypt.
+  # Requiere: CADDY_DOMAIN en .env (ej: CADDY_DOMAIN=example.com)
+  #
+  # caddy:
+  #   image: caddy:2-alpine
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./Caddyfile:/etc/caddy/Caddyfile:ro
+  #     - caddy_data:/data
+  #     - caddy_config:/config
+  #   environment:
+  #     - CADDY_DOMAIN=${CADDY_DOMAIN:?Debe definir CADDY_DOMAIN}
+  #   depends_on:
+  #     - nc-api
+  #     - nc-dashboard
+
+volumes:
+  pgdata:
+  # caddy_data:    # Descomentar si usás Caddy
+  # caddy_config:  # Descomentar si usás Caddy

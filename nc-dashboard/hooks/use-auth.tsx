@@ -13,7 +13,7 @@ import {
   getProfile as apiGetProfile,
   TOKEN_KEYS,
 } from "@/lib/api";
-import type { AuthUser, UserRole } from "@/lib/types";
+import type { AuthUser } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */

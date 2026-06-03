@@ -1,0 +1,24 @@
+# ── Caddyfile ──────────────────────────────────────────────────────────
+# SSL automático con Let's Encrypt.
+# Reemplazá {CADDY_DOMAIN} con tu dominio real (ej: nuncacierro.com)
+# o definí CADDY_DOMAIN en el .env
+#
+# Para probar local sin dominio: caddy run --config Caddyfile
+#
+# Estructura:
+#   app.{domain}  → Dashboard (Next.js)
+#   api.{domain}  → API (FastAPI)
+#   {domain}      → Landing (redirige a app)
+# ───────────────────────────────────────────────────────────────────────
+
+{$CADDY_DOMAIN:localhost} {
+    redir https://app.{$CADDY_DOMAIN}{uri} permanent
+}
+
+app.{$CADDY_DOMAIN:localhost} {
+    reverse_proxy nc-dashboard:3000
+}
+
+api.{$CADDY_DOMAIN:localhost} {
+    reverse_proxy nc-api:8000
+}
