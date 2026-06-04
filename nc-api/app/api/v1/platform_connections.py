@@ -561,6 +561,9 @@ async def connect_evolution(
                         )
 
                         if raw_qr:
+                            # Strip any data URI prefix — we store/send raw base64
+                            if raw_qr.startswith("data:image"):
+                                raw_qr = raw_qr.split(",", 1)[-1]
                             qrcode = raw_qr
                             logger.info(
                                 "QR code obtained for {name} | attempt={a}",

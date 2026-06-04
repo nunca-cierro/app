@@ -116,8 +116,8 @@ export default function PlatformEvolutionDetailPage({
 
     try {
       const result = await connectEvolution();
-      if (result.qr_code) {
-        setTransient({ qrCode: result.qr_code, errorMsg: null, isConnecting: false });
+      if (result.qrcode) {
+        setTransient({ qrCode: result.qrcode, errorMsg: null, isConnecting: false });
         toast.info("Escanea el código QR con WhatsApp para conectar la instancia");
       } else {
         setTransient({ qrCode: null, errorMsg: null, isConnecting: false });
