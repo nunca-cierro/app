@@ -115,6 +115,22 @@ async def delete_connection(
     session: AsyncSession,
     connection: PlatformConnection,
 ) -> None:
-    """Delete a platform connection."""
+    """Delete a platform connection and all related messages/conversations."""
+    from app.modules.conversations.models import Conversation, Message
+
+    # Delete messages referencing this connection
+    await session.execute(
+        Message.__table__.delete().where(
+            Message.platform_connection_id == connection.id
+        )
+    )
+
+    # Delete conversations referencing this connection
+    await session.execute(
+        Conversation.__table__.delete().where(
+            Conversation.platform_connection_id == connection.id
+        )
+    )
+
     await session.delete(connection)
     await session.commit()
