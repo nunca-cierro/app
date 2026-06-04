@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import json
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 
 
 class Settings(BaseSettings):
@@ -36,6 +38,16 @@ class Settings(BaseSettings):
             self.database_url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
         return self
 
+    @model_validator(mode="after")
+    def guard_jwt_secret(self) -> "Settings":
+        """Rechazar el default de JWT_SECRET en producción."""
+        if self.jwt_secret == "change-me-in-production" and not self.debug:
+            raise ValueError(
+                "JWT_SECRET no fue configurado. "
+                "Generá uno con: openssl rand -base64 48"
+            )
+        return self
+
     # ── Meta WhatsApp Cloud API ──────────────────────────────────────────
     whatsapp_token: str = ""
     whatsapp_phone_number_id: str = ""
@@ -56,6 +68,23 @@ class Settings(BaseSettings):
 
     # ── Encryption ─────────────────────────────────────────────────────────
     encryption_key: str = ""
+
+    # ── CORS ─────────────────────────────────────────────────────────────
+    # Formato: JSON array de strings, ej: '["https://app.midominio.com"]'
+    # "*" permite cualquier origen (solo para desarrollo local)
+    cors_origins: list[str] = ["*"]
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: object) -> list[str]:
+        if isinstance(v, str):
+            # Si es "*", lo dejamos como lista con "*"
+            if v.strip() == "*":
+                return ["*"]
+            return json.loads(v)
+        if isinstance(v, list):
+            return v
+        return ["*"]
 
     # ── Rate Limiting ────────────────────────────────────────────────────
     rate_limit_max_requests: int = 10

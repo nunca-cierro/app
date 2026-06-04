@@ -9,9 +9,6 @@ describe("evolution connection schema", () => {
     const data: EvolutionFormValues = {
       tenant_id: "00000000-0000-0000-0000-000000000000",
       display_name: "WhatsApp Evolution",
-      base_url: "https://api.evolution.com",
-      api_key: "secret",
-      instance_name: "my-instance",
       status: "active",
       is_primary: false,
       agent_id: "11111111-1111-4111-8111-111111111111",
@@ -30,9 +27,6 @@ describe("evolution connection schema", () => {
     const data: EvolutionFormValues = {
       tenant_id: "00000000-0000-0000-0000-000000000000",
       display_name: "WhatsApp Evolution",
-      base_url: "https://api.evolution.com",
-      api_key: "secret",
-      instance_name: "my-instance",
       status: "active",
       is_primary: false,
       agent_id: null,

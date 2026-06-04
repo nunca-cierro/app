@@ -10,6 +10,7 @@ from typing import Any
 
 # ── Must be set BEFORE any app imports ────────────────────────────────────
 os.environ.setdefault("ENCRYPTION_KEY", "dGhpcyBpcyBhIDE2LWJ5dGUgZXhhbXBsZSBrZXkgISE=")
+os.environ.setdefault("JWT_SECRET", "test-jwt-secret-not-production")
 
 import asyncpg
 import pytest_asyncio

@@ -17,7 +17,7 @@ export interface UsePlatformConnectionsReturn {
     tenant_id: string;
     platform_type: string;
     display_name: string;
-    credentials: Record<string, unknown>;
+    credentials?: Record<string, unknown>;
     extra_data?: Record<string, unknown> | null;
     status?: string;
     is_primary?: boolean;
@@ -41,6 +41,12 @@ export interface UsePlatformConnectionReturn {
   }) => Promise<PlatformConnection>;
   deleteConnection: () => Promise<void>;
   registerWebhook: (baseUrlOverride?: string) => Promise<{ webhook_url: string }>;
+  connectEvolution: () => Promise<{
+    qr_code?: string;
+    instance_name: string;
+    status: string;
+  }>;
+  refetchConnection: () => Promise<void>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -84,9 +90,10 @@ export function usePlatformConnections(
 
   const createConnection = useCallback(
     async (data: {
+      tenant_id: string;
       platform_type: string;
       display_name: string;
-      credentials: Record<string, unknown>;
+      credentials?: Record<string, unknown>;
       extra_data?: Record<string, unknown> | null;
       status?: string;
       is_primary?: boolean;
@@ -233,6 +240,30 @@ export function usePlatformConnection(
     return result;
   }, [id]);
 
+  const connectEvolution = useCallback(async () => {
+    const result = await apiClient<{
+      qr_code?: string;
+      instance_name: string;
+      status: string;
+    }>(`/api/v1/platform-connections/${id}/connect-evolution`, {
+      method: "POST",
+    });
+
+    // Refresh connection state after connecting
+    const updated = await apiClient<PlatformConnection>(
+      `/api/v1/platform-connections/${id}`,
+    );
+    setConnection(updated);
+    return result;
+  }, [id]);
+
+  const refetchConnection = useCallback(async () => {
+    const updated = await apiClient<PlatformConnection>(
+      `/api/v1/platform-connections/${id}`,
+    );
+    setConnection(updated);
+  }, [id]);
+
   return {
     connection,
     isLoading,
@@ -240,5 +271,7 @@ export function usePlatformConnection(
     updateConnection,
     deleteConnection,
     registerWebhook,
+    connectEvolution,
+    refetchConnection,
   };
 }

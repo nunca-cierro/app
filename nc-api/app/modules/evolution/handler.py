@@ -23,12 +23,62 @@ from app.modules.conversations.models import Conversation, Message
 from app.modules.agents.utils import format_business_config
 from app.modules.integrations.llm.provider import CONTEXT_WINDOW_SIZE, groq_client
 from app.modules.platform_connections.models import PlatformConnection
-from app.modules.evolution.webhook import extract_evolution_message
+from app.modules.evolution.webhook import (
+    extract_evolution_message,
+    extract_evolution_connection_update,
+)
 from app.modules.evolution.adapter import EvolutionAdapter
 
 # ── Types ───────────────────────────────────────────────────────────────────
 
 EvolutionEventT = dict[str, t.Any]
+
+
+async def handle_evolution_connection_update(
+    event: EvolutionEventT,
+    connection: PlatformConnection | None,
+    session: AsyncSession,
+) -> None:
+    """Process a ``connection.update`` event from Evolution API.
+
+    When the user scans the QR and WhatsApp connects, Evolution sends
+    a ``connection.update`` with ``state: "open"``. We update the
+    connection's ``extra_data.connection_status`` so the dashboard
+    can reflect the new state without polling Evolution directly.
+    """
+    parsed = extract_evolution_connection_update(event)
+    if parsed is None:
+        return
+
+    if connection is None:
+        logger.warning("Connection update event but no connection found")
+        return
+
+    state = parsed["connection_state"]
+
+    # Map Evolution state to our status vocabulary
+    status_map = {
+        "open": "connected",
+        "connecting": "connecting",
+        "close": "disconnected",
+    }
+    mapped = status_map.get(state, state)
+
+    extra = dict(connection.extra_data or {})
+    extra["connection_status"] = mapped
+    connection.extra_data = extra
+
+    # If connected, also set connection status to active
+    if mapped == "connected":
+        connection.status = "active"
+
+    session.add(connection)
+    logger.info(
+        "Evolution connection {id} | state={state} → status={status}",
+        id=connection.id,
+        state=state,
+        status=mapped,
+    )
 
 
 async def handle_evolution_incoming(
@@ -38,15 +88,21 @@ async def handle_evolution_incoming(
 ) -> None:
     """Process a raw Evolution API webhook event.
 
-    1. Extract the text message (ignore non-text / own messages)
-    2. Resolve tenant from *connection*
-    3. Find or create conversation
-    4. Save inbound message
-    5. Build system prompt from tenant config
-    6. Generate response via LLM (Groq)
-    7. Send via EvolutionAdapter (with composing + delay)
-    8. Save outbound message
+    1. Detect event type — route ``connection.update`` to separate handler
+    2. Extract the text message (ignore non-text / own messages)
+    3. Resolve tenant from *connection*
+    4. Find or create conversation
+    5. Save inbound message
+    6. Build system prompt from tenant config
+    7. Generate response via LLM (Groq)
+    8. Send via EvolutionAdapter (with composing + delay)
+    9. Save outbound message
     """
+    # ── 0. Route connection.update events ───────────────────────────────
+    if event.get("event") == "connection.update":
+        await handle_evolution_connection_update(event, connection, session)
+        return
+
     # ── 1. Extract message ──────────────────────────────────────────────
     parsed = extract_evolution_message(event)
     if parsed is None:
