@@ -17,7 +17,7 @@ export interface UsePlatformConnectionsReturn {
     tenant_id: string;
     platform_type: string;
     display_name: string;
-    credentials?: Record<string, unknown>;
+    credentials: Record<string, unknown>;
     extra_data?: Record<string, unknown> | null;
     status?: string;
     is_primary?: boolean;
@@ -93,7 +93,7 @@ export function usePlatformConnections(
       tenant_id: string;
       platform_type: string;
       display_name: string;
-      credentials?: Record<string, unknown>;
+      credentials: Record<string, unknown>;
       extra_data?: Record<string, unknown> | null;
       status?: string;
       is_primary?: boolean;
