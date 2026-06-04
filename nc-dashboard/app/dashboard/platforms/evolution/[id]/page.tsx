@@ -62,7 +62,9 @@ export default function PlatformEvolutionDetailPage({
       ? "error"
       : derivedState;
 
-  const qrCode = transient.qrCode;
+  // QR from extra_data survives page refreshes; transient QR overrides on fresh connect
+  const persistedQr = extraData?.qrcode_image as string | undefined;
+  const qrCode = transient.qrCode ?? persistedQr ?? null;
   const evoError = transient.errorMsg;
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
