@@ -4,17 +4,12 @@
 # Variables de entorno requeridas (copiar .env.production a .env):
 #   POSTGRES_PASSWORD, JWT_SECRET, ENCRYPTION_KEY, GROQ_API_KEY
 #
-# SSL con Caddy (opcional — descomentar servicio caddy al final):
-#   1. Apuntá tu dominio a la IP del server
-#   2. Descomentá el servicio caddy
-#   3. Configurá CADDY_DOMAIN en .env
-#   4. docker compose up -d
+# SSL con Caddy
 # ───────────────────────────────────────────────────────────────────────
 
 name: nuncacierro
 
 services:
-
   # ── PostgreSQL ──────────────────────────────────────────────────────
   postgres:
     image: postgres:16-alpine
@@ -26,12 +21,13 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Debe definir POSTGRES_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d nuncacierro"]
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d nuncacierro"]
       interval: 5s
       timeout: 5s
       retries: 10
     ports:
-      - "127.0.0.1:5432:5432"  # Solo localhost — no expuesto al exterior
+      - "127.0.0.1:5432:5432" # Solo localhost — no expuesto al exterior
 
   # ── API (FastAPI) ───────────────────────────────────────────────────
   nc-api:
@@ -49,10 +45,15 @@ services:
       GROQ_API_KEY: ${GROQ_API_KEY:?Debe definir GROQ_API_KEY}
       GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
       LOG_LEVEL: ${LOG_LEVEL:-info}
+
+      # ── Evolution API (WhatsApp Gateway - red Docker interna) ────────
+      EVO_API_KEY: ${EVO_API_KEY:?Debe definir EVO_API_KEY}
+      EVO_API_BASE_URL: "http://evolution-api:8080"
+
       APP_HOST: "0.0.0.0"
       APP_PORT: "8000"
     ports:
-      - "127.0.0.1:8000:8000"  # Solo localhost (Caddy proxy al exterior)
+      - "127.0.0.1:8000:8000"
 
   # ── Dashboard (Next.js) ─────────────────────────────────────────────
   nc-dashboard:
@@ -64,29 +65,133 @@ services:
     depends_on:
       - nc-api
     ports:
-      - "127.0.0.1:3000:3000"  # Solo localhost (Caddy proxy al exterior)
+      - "127.0.0.1:3000:3000"
 
-  # ── Caddy (opcional — SSL automático) ───────────────────────────────
-  # Descomentá para habilitar HTTPS con Let's Encrypt.
-  # Requiere: CADDY_DOMAIN en .env (ej: CADDY_DOMAIN=example.com)
-  #
-  # caddy:
-  #   image: caddy:2-alpine
-  #   restart: unless-stopped
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./Caddyfile:/etc/caddy/Caddyfile:ro
-  #     - caddy_data:/data
-  #     - caddy_config:/config
-  #   environment:
-  #     - CADDY_DOMAIN=${CADDY_DOMAIN:?Debe definir CADDY_DOMAIN}
-  #   depends_on:
-  #     - nc-api
-  #     - nc-dashboard
+  # ── Caddy (SSL automático — solo en producción) ─────────────────────
+  # Se activa con: docker compose --profile caddy up -d
+  caddy:
+    profiles: ["caddy"]
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      - CADDY_DOMAIN=${CADDY_DOMAIN:?Debe definir CADDY_DOMAIN}
+    depends_on:
+      - nc-api
+      - nc-dashboard
+
+  # ── Redis (Evolution API cache) ──────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --save "" --appendonly no
+    volumes:
+      - redis_data:/data
+
+  # ── PostgreSQL (Evolution API) ───────────────────────────────────────
+  postgres-evo:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+      - pgdata_evo:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: evolution
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: ${EVO_DB_PASSWORD:?Debe definir EVO_DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evolution -d evolution"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Evolution API (WhatsApp gateway) ─────────────────────────────────
+  evolution-api:
+    image: evoapicloud/evolution-api:latest
+    restart: unless-stopped
+    depends_on:
+      postgres-evo:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      # ── Server ──────────────────────────────────────────────────────
+      SERVER_NAME: evolution
+      SERVER_TYPE: http
+      SERVER_PORT: 8080
+      SERVER_URL: http://evolution-api:8080
+
+      # ── Auth ────────────────────────────────────────────────────────
+      AUTHENTICATION_API_KEY: ${EVO_API_KEY:?Debe definir EVO_API_KEY}
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "false"
+
+      # ── Database (PostgreSQL) ───────────────────────────────────────
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: "postgresql://evolution:${EVO_DB_PASSWORD}@postgres-evo:5432/evolution?schema=evolution_api"
+      DATABASE_CONNECTION_CLIENT_NAME: evolution_exchange
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "true"
+      DATABASE_SAVE_MESSAGE_UPDATE: "true"
+      DATABASE_SAVE_DATA_CONTACTS: "true"
+      DATABASE_SAVE_DATA_CHATS: "true"
+      DATABASE_SAVE_DATA_HISTORIC: "true"
+      DATABASE_SAVE_IS_ON_WHATSAPP: "true"
+
+      # ── Redis (cache) ───────────────────────────────────────────────
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/6
+      CACHE_REDIS_TTL: 604800
+      CACHE_REDIS_PREFIX_KEY: evolution
+      CACHE_REDIS_SAVE_INSTANCES: "false"
+
+      # ── Webhook (envía eventos a nc-api internamente) ───────────────
+      WEBHOOK_GLOBAL_ENABLED: "false"
+      # Cada instancia tendrá su propio webhook configurado vía API
+      WEBHOOK_EVENTS_QRCODE_UPDATED: "true"
+      WEBHOOK_EVENTS_MESSAGES_UPSERT: "true"
+      WEBHOOK_EVENTS_CONNECTION_UPDATE: "true"
+      WEBHOOK_EVENTS_MESSAGES_SET: "true"
+      WEBHOOK_EVENTS_SEND_MESSAGE: "true"
+      WEBHOOK_EVENTS_ERRORS: "true"
+      WEBHOOK_RETRY_MAX_ATTEMPTS: 5
+      WEBHOOK_RETRY_INITIAL_DELAY_SECONDS: 2
+      WEBHOOK_RETRY_USE_EXPONENTIAL_BACKOFF: "true"
+
+      # ── WhatsApp session ────────────────────────────────────────────
+      CONFIG_SESSION_PHONE_CLIENT: NuncaCierro
+      CONFIG_SESSION_PHONE_NAME: Chrome
+      QRCODE_LIMIT: 30
+
+      # ── Logs ────────────────────────────────────────────────────────
+      LOG_LEVEL: ERROR,WARN,INFO,LOG,WEBHOOKS
+      LOG_COLOR: "false"
+      LOG_BAILEYS: error
+
+      # ── Telemetry ───────────────────────────────────────────────────
+      TELEMETRY_ENABLED: "false"
+
+      # ── Integraciones deshabilitadas ────────────────────────────────
+      TYPEBOT_ENABLED: "false"
+      CHATWOOT_ENABLED: "false"
+      OPENAI_ENABLED: "false"
+      DIFY_ENABLED: "false"
+      N8N_ENABLED: "false"
+      SQS_ENABLED: "false"
+      RABBITMQ_ENABLED: "false"
+      KAFKA_ENABLED: "false"
+      PUSHER_ENABLED: "false"
+      WEBSOCKET_ENABLED: "false"
+      S3_ENABLED: "false"
 
 volumes:
   pgdata:
-  # caddy_data:    # Descomentar si usás Caddy
-  # caddy_config:  # Descomentar si usás Caddy
+  pgdata_evo:
+  redis_data:
+  caddy_data:
+  caddy_config:
