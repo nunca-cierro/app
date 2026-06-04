@@ -21,6 +21,6 @@ jobs:
           script: |
             cd /home/ubuntu/nuncacierro
             git pull
-            docker compose build
-            docker compose up -d
+            docker compose build nc-api nc-dashboard
+            docker compose --profile caddy up -d
             docker system prune -f

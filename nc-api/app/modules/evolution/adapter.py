@@ -22,6 +22,7 @@ The ``base_url`` is the root URL of your Evolution API server (no trailing slash
 from __future__ import annotations
 
 import asyncio
+import random
 import typing as t
 
 import httpx
@@ -29,11 +30,20 @@ from loguru import logger
 
 from app.modules.platforms.adapter import PlatformAdapter
 
-# ── Constants ───────────────────────────────────────────────────────────────
+# ── Anti-ban constants ──────────────────────────────────────────────────────
+# WhatsApp detecta patrones fijos. Usamos rangos aleatorios para simular
+# comportamiento humano realista.
 
-DEFAULT_DELAY_MS: int = 2000  # 2 seconds — WhatsApp ban mitigation
+# Rango de delay entre "composing" y el envío (ms)
+# Humano: 1.5 a 3.5 segundos típicos
+DELAY_MIN_MS: int = 1500
+DELAY_MAX_MS: int = 3500
+
 COMPOSING_PRESENCE: str = "composing"
-PRESENCE_DELAY_MS: int = 1000  # 1 second of "composing" before the message
+
+# Rango de duración del indicador "escribiendo" (ms)
+PRESENCE_MIN_MS: int = 800
+PRESENCE_MAX_MS: int = 2000
 
 
 class EvolutionAdapter(PlatformAdapter):
@@ -72,8 +82,16 @@ class EvolutionAdapter(PlatformAdapter):
 
         The flow is:
         1. Send **"composing"** presence (typing indicator)
-        2. Wait for the configured **delay** (default: 2 s)
+        2. Wait for a **randomised delay** (default: 1500-3500 ms)
         3. Send the actual **text message**
+
+        Anti-ban features:
+        - Randomised typing duration (800-2000 ms) — WhatsApp detects
+          fixed patterns
+        - Randomised delay between composing and sending (1500-3500 ms)
+          — simulates human reading + typing time
+        - Non-fatal presence: if composing fails, the message still goes
+          through (no unnecessary retries)
 
         Args:
             connection: The ``PlatformConnection`` model instance.
@@ -82,8 +100,9 @@ class EvolutionAdapter(PlatformAdapter):
             to: Recipient phone number (e.g. ``573001234567``).
             text: Message body.
             **kwargs: Optional overrides —
-                ``delay_ms`` (int): custom delay in milliseconds.
-                ``presence_ms`` (int): custom composing duration in ms.
+                ``delay_ms`` (int): force a specific delay in ms.
+                ``presence_ms`` (int): force a specific composing duration
+                in ms.
 
         Returns:
             The Evolution API response dict.
@@ -101,8 +120,14 @@ class EvolutionAdapter(PlatformAdapter):
             logger.error(msg)
             raise ValueError(msg)
 
-        delay_ms = kwargs.get("delay_ms", DEFAULT_DELAY_MS)
-        presence_ms = kwargs.get("presence_ms", PRESENCE_DELAY_MS)
+        # Usar delay aleatorio anti-patrón (a menos que se pase explícito)
+        delay_ms = kwargs.get("delay_ms")
+        if delay_ms is None:
+            delay_ms = random.randint(DELAY_MIN_MS, DELAY_MAX_MS)
+
+        presence_ms = kwargs.get("presence_ms")
+        if presence_ms is None:
+            presence_ms = random.randint(PRESENCE_MIN_MS, PRESENCE_MAX_MS)
 
         headers = {
             "Content-Type": "application/json",

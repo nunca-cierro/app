@@ -298,10 +298,14 @@ async def register_evolution_webhook(
         )
 
     # ── Build the webhook URL where Evolution should send events ───────
+    # Cuando Evolution API y nc-api están en el mismo Docker (Hetzner),
+    # usamos la URL interna de Docker. El override permite apuntar a
+    # una URL pública si Evolution está en otro servidor.
     public_url = (base_url_override or "").strip().rstrip("/")
     if not public_url:
-        public_url = "https://nunca-cierro.up.railway.app"
-    
+        # Internal Docker network (Hetzner) — Evolution API → nc-api
+        public_url = "http://nc-api:8000"
+
     webhook_url = f"{public_url}/webhook/evolution/{connection_id}"
 
     # ── Register webhook with Evolution API ────────────────────────────
@@ -360,6 +364,249 @@ async def register_evolution_webhook(
             status_code=502,
             detail=f"Evolution API unreachable: {exc}",
         ) from exc
+
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Evolution API — connect instance (create + get QR)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class EvolutionConnectResponse(BaseModel):
+    """Response from the connect-evolution endpoint."""
+
+    connection_id: str
+    instance_name: str
+    qrcode: str | None = None
+    status: str  # connecting | connected | error
+    message: str = ""
+
+
+@router.post("/{connection_id}/connect-evolution")
+async def connect_evolution(
+    connection_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+    regenerate: bool = False,  # query param: force QR regeneration
+) -> EvolutionConnectResponse:
+    """Create an Evolution API instance and return the QR code.
+
+    Flow:
+    1. Validates the PlatformConnection exists (type=evolution)
+    2. Creates the instance in Evolution API (POST /instance/create)
+    3. Polls for the QR code (GET /instance/connect/{name})
+    4. Registers the webhook so messages flow to nc-api
+    5. Returns the QR code as base64 for the frontend to display
+
+    The QR must be scanned with WhatsApp within the configured time
+    (QRCODE_LIMIT=30 generations). After scanning, the connection
+    switches to 'connected' automatically.
+    """
+    import asyncio
+
+    import httpx
+    from loguru import logger
+
+    from app.core.config import settings
+    from app.core.encryption import decrypt, encrypt
+
+    # ── 1. Get connection ───────────────────────────────────────────────
+    connection = await get_connection(session, connection_id)
+    if not connection or (
+        current_user.current_role != UserRole.SUPERADMIN
+        and connection.tenant_id != current_user.current_tenant_id
+    ):
+        raise HTTPException(status_code=404, detail="Platform connection not found")
+
+    if connection.platform_type != "evolution":
+        raise HTTPException(
+            status_code=400,
+            detail="connect-evolution is only supported for evolution connections",
+        )
+
+    # ── 2. Decrypt and prepare credentials ──────────────────────────────
+    creds = decrypt(connection.credentials)
+    if not isinstance(creds, dict):
+        raise HTTPException(status_code=500, detail="Invalid credential format")
+
+    base_url: str = (creds.get("base_url") or settings.evo_api_base_url).rstrip("/")
+    api_key: str = creds.get("api_key", "") or settings.evo_api_key
+    instance_name: str = (creds.get("instance_name") or "").strip()
+
+    # Auto-generate instance name if missing
+    if not instance_name:
+        instance_name = f"conn-{shortuuid.uuid()[:12]}"
+        # Persist the generated name back to credentials
+        creds["instance_name"] = instance_name
+        connection.credentials = encrypt(creds)
+        await session.commit()
+
+    headers = {"Content-Type": "application/json", "apikey": api_key}
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            # ── 3. Create instance in Evolution API ───────────────────────
+            # Try to create — if it already exists (409), continue to get QR
+            instance_created = False
+            webhook_url = f"http://nc-api:8000/webhook/evolution/{connection_id}"
+
+            create_payload: dict[str, t.Any] = {
+                "instanceName": instance_name,
+                "webhook": {
+                    "url": webhook_url,
+                    "enabled": True,
+                    "events": ["MESSAGES_UPSERT"],
+                },
+            }
+
+            logger.info(
+                "Creating Evolution instance | name={name} | conn={conn}",
+                name=instance_name,
+                conn=connection_id,
+            )
+
+            create_resp = await client.post(
+                f"{base_url}/instance/create",
+                json=create_payload,
+                headers=headers,
+            )
+
+            if create_resp.is_success:
+                instance_created = True
+                logger.info(
+                    "Evolution instance created | name={name}",
+                    name=instance_name,
+                )
+            elif create_resp.status_code == 409:
+                # Instance already exists — that's fine, we'll get the QR
+                logger.info(
+                    "Evolution instance already exists | name={name}",
+                    name=instance_name,
+                )
+            else:
+                logger.error(
+                    "Evolution instance creation failed | status={s} | body={b}",
+                    s=create_resp.status_code,
+                    b=create_resp.text[:300],
+                )
+                raise HTTPException(
+                    status_code=502,
+                    detail=(
+                        f"Evolution API error creating instance "
+                        f"({create_resp.status_code}): {create_resp.text[:300]}"
+                    ),
+                )
+
+            # ── 4. Wait for instance to initialise ─────────────────────────
+            if instance_created:
+                await asyncio.sleep(2)
+
+            # ── 5. Get QR code ────────────────────────────────────────────
+            # Evolution API may need a moment to generate the QR.
+            # We poll a few times with short intervals.
+            qrcode: str | None = None
+            max_attempts = 15  # ~30 seconds total
+            poll_interval = 2  # seconds
+
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    connect_resp = await client.get(
+                        f"{base_url}/instance/connect/{instance_name}",
+                        headers=headers,
+                    )
+
+                    if connect_resp.is_success:
+                        data = connect_resp.json()
+
+                        # Evolution API returns QR in different shapes
+                        # depending on the state. Common patterns:
+                        # - {"base64": "data:image/png;base64,..."}
+                        # - {"qrcode": {"base64": "..."}}
+                        # - {"status": "connecting", "qrcode": {...}}
+                        raw_qr = (
+                            data.get("base64")
+                            or (data.get("qrcode") or {}).get("base64")
+                            or (data.get("qrcode") or {}).get("code")
+                            or None
+                        )
+
+                        if raw_qr:
+                            qrcode = raw_qr
+                            logger.info(
+                                "QR code obtained for {name} | attempt={a}",
+                                name=instance_name,
+                                a=attempt,
+                            )
+                            break
+
+                        # Check if already connected (no QR needed)
+                        status = data.get("status", "")
+                        if status in ("open", "connected", "syncing"):
+                            logger.info(
+                                "Instance {name} already connected | status={s}",
+                                name=instance_name,
+                                s=status,
+                            )
+                            return EvolutionConnectResponse(
+                                connection_id=str(connection_id),
+                                instance_name=instance_name,
+                                qrcode=None,
+                                status=status,
+                                message="WhatsApp ya está conectado",
+                            )
+
+                    logger.debug(
+                        "QR not ready for {name} | attempt={a}/{max}",
+                        name=instance_name,
+                        a=attempt,
+                        m=max_attempts,
+                    )
+                except httpx.RequestError as exc:
+                    logger.warning(
+                        "Evolution API poll error for {name}: {exc}",
+                        name=instance_name,
+                        exc=exc,
+                    )
+
+                await asyncio.sleep(poll_interval)
+
+            # ── 6. Save connection state ──────────────────────────────────
+            extra = dict(connection.extra_data or {})
+            extra["instance_name"] = instance_name
+            extra["qrcode_obtained"] = bool(qrcode)
+            if qrcode:
+                extra["connection_status"] = "awaiting_scan"
+            connection.extra_data = extra
+            await session.commit()
+
+            if not qrcode:
+                logger.warning(
+                    "QR code not available for {name} after {max} attempts",
+                    name=instance_name,
+                    max=max_attempts,
+                )
+                return EvolutionConnectResponse(
+                    connection_id=str(connection_id),
+                    instance_name=instance_name,
+                    qrcode=None,
+                    status="timeout",
+                    message="El QR no se generó a tiempo. Intentá de nuevo con ?regenerate=true",
+                )
+
+            return EvolutionConnectResponse(
+                connection_id=str(connection_id),
+                instance_name=instance_name,
+                qrcode=qrcode,
+                status="connecting",
+                message="Escaneá el QR con WhatsApp para conectar",
+            )
+
+    except httpx.RequestError as exc:
+        logger.error("Evolution API unreachable: {exc}", exc=exc)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Evolution API no responde: {exc}",
+        )
 
 
 # Moved evolution-fetch-instances to the top to avoid UUID collision

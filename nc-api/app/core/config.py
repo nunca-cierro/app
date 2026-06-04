@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     rate_limit_max_requests: int = 10
     rate_limit_window_seconds: int = 60
 
+    # ── Evolution API (WhatsApp Gateway) ─────────────────────────────────
+    evo_api_key: str = ""
+    evo_api_base_url: str = "http://evolution-api:8080"
+
     # ── Paths ────────────────────────────────────────────────────────────
     businesses_dir: Path = Path("businesses")
 
