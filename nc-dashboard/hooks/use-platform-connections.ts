@@ -42,7 +42,7 @@ export interface UsePlatformConnectionReturn {
   deleteConnection: () => Promise<void>;
   registerWebhook: (baseUrlOverride?: string) => Promise<{ webhook_url: string }>;
   connectEvolution: () => Promise<{
-    qr_code?: string;
+    qrcode?: string;
     instance_name: string;
     status: string;
   }>;
@@ -243,7 +243,7 @@ export function usePlatformConnection(
 
   const connectEvolution = useCallback(async () => {
     const result = await apiClient<{
-      qr_code?: string;
+      qrcode?: string;
       instance_name: string;
       status: string;
     }>(`/api/v1/platform-connections/${id}/connect-evolution`, {
