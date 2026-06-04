@@ -452,10 +452,11 @@ async def connect_evolution(
 
             create_payload: dict[str, t.Any] = {
                 "instanceName": instance_name,
+                "qrcode": True,
+                "integration": "WHATSAPP-BAILEYS",
                 "webhook": {
                     "url": webhook_url,
                     "enabled": True,
-                    "events": ["MESSAGES_UPSERT"],
                 },
             }
 
@@ -497,11 +498,42 @@ async def connect_evolution(
                     ),
                 )
 
-            # ── 4. Wait for instance to initialise ─────────────────────────
+            # ── 4. Configure webhook (separate call, more reliable in v2) ──
+            try:
+                webhook_resp = await client.post(
+                    f"{base_url}/webhook/set/{instance_name}",
+                    json={
+                        "url": webhook_url,
+                        "enabled": True,
+                        "webhookByEvents": True,
+                        "webhookBase64": False,
+                        "events": [
+                            "MESSAGES_UPSERT",
+                            "CONNECTION_UPDATE",
+                            "QRCODE_UPDATED",
+                        ],
+                    },
+                    headers=headers,
+                )
+                if webhook_resp.is_success:
+                    logger.info(
+                        "Evolution webhook configured | name={name}",
+                        name=instance_name,
+                    )
+                else:
+                    logger.warning(
+                        "Evolution webhook set failed | status={s} | body={b}",
+                        s=webhook_resp.status_code,
+                        b=webhook_resp.text[:200],
+                    )
+            except Exception:
+                logger.exception("Error configuring Evolution webhook")
+
+            # ── 5. Wait for instance to initialise ─────────────────────────
             if instance_created:
                 await asyncio.sleep(2)
 
-            # ── 5. Get QR code ────────────────────────────────────────────
+            # ── 6. Get QR code ────────────────────────────────────────────
             # Evolution API may need a moment to generate the QR.
             # We poll a few times with short intervals.
             qrcode: str | None = None
