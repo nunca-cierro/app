@@ -1,20 +1,20 @@
 "use client";
 
 import { useState, use, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePlatformConnection } from "@/hooks/use-platform-connections";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { 
-  CheckCircle2 as CheckIcon, 
-  AlertCircle as AlertIcon, 
-  Globe as GlobeIcon,
+import {
+  CheckCircle2 as CheckIcon,
+  AlertCircle as AlertIcon,
   Loader2 as LoaderIcon,
   QrCode as QrIcon,
   ArrowLeft as BackIcon,
+  Trash2 as TrashIcon,
 } from "lucide-react";
 
 type EvolutionState = "idle" | "connecting" | "qr" | "connected" | "error";
@@ -25,9 +25,10 @@ export default function PlatformEvolutionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const params = use(paramsPromise);
-  const { connection, isLoading, error, registerWebhook, connectEvolution, refetchConnection } = usePlatformConnection(params.id);
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [baseUrlOverride, setBaseUrlOverride] = useState("");
+  const router = useRouter();
+  const { connection, isLoading, error, connectEvolution, refetchConnection, disconnectEvolution } = usePlatformConnection(params.id);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   /* ── Evolution connect state ──
    *
@@ -106,23 +107,8 @@ export default function PlatformEvolutionDetailPage({
 
   const instanceName = connection.credentials?.instance_name as string | undefined;
   const baseUrl = connection.credentials?.base_url as string | undefined;
-  const hasWebhook = !!(connection.extra_data as Record<string, unknown>)?.webhook_url;
 
   /* ── Handlers ── */
-  const handleRegisterWebhook = async () => {
-    setIsRegistering(true);
-    try {
-      await registerWebhook(baseUrlOverride || undefined);
-      toast.success("Webhook registrado correctamente en Evolution API");
-    } catch (err) {
-      console.error("Error registering webhook:", err);
-      const detail = err instanceof Error ? err.message : "Verifica la conexión.";
-      toast.error(`Error al registrar el webhook: ${detail}`);
-    } finally {
-      setIsRegistering(false);
-    }
-  };
-
   const handleConnect = async () => {
     setTransient({ qrCode: null, errorMsg: null, isConnecting: true });
 
@@ -139,6 +125,21 @@ export default function PlatformEvolutionDetailPage({
       const msg = err instanceof Error ? err.message : "Error al conectar Evolution";
       setTransient({ qrCode: null, errorMsg: msg, isConnecting: false });
       toast.error(msg);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const result = await disconnectEvolution();
+      toast.success(result.detail || "Instancia eliminada correctamente");
+      router.push("/dashboard/platforms/evolution");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error al eliminar la instancia";
+      toast.error(msg);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -257,52 +258,55 @@ export default function PlatformEvolutionDetailPage({
           </CardContent>
         </Card>
 
-        {/* ── Webhook Registration Card ── */}
-        <Card className={hasWebhook ? "border-green-200 bg-green-50/30" : "border-amber-200 bg-amber-50/30"}>
+        {/* ── Danger Zone: Delete Instance ── */}
+        <Card className="border-destructive/30 bg-destructive/5">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <CardTitle>Configuración de Webhook</CardTitle>
-              {hasWebhook ? (
-                <CheckIcon className="size-5 text-green-600" />
-              ) : (
-                <AlertIcon className="size-5 text-amber-600" />
-              )}
+              <TrashIcon className="size-5 text-destructive" />
+              <CardTitle className="text-destructive">Zona de Peligro</CardTitle>
             </div>
             <CardDescription>
-              Vincula Evolution API con este servidor para recibir mensajes.
+              Eliminar esta instancia la desconectará de WhatsApp y borrará todos los datos asociados.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground uppercase">
-                Override de URL (Opcional)
-              </label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <GlobeIcon className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-                  <Input 
-                    placeholder="https://tu-ngrok-o-dominio.com" 
-                    className="pl-9"
-                    value={baseUrlOverride}
-                    onChange={(e) => setBaseUrlOverride(e.target.value)}
-                  />
+          <CardContent>
+            {!showDeleteConfirm ? (
+              <Button
+                variant="destructive"
+                className="w-full"
+                onClick={() => setShowDeleteConfirm(true)}
+              >
+                <TrashIcon className="mr-2 size-4" />
+                Eliminar Instancia
+              </Button>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-destructive">
+                  ¿Estás seguro? Esta acción no se puede deshacer.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    disabled={isDeleting}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="flex-1"
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? (
+                      <LoaderIcon className="mr-2 size-4 animate-spin" />
+                    ) : (
+                      <TrashIcon className="mr-2 size-4" />
+                    )}
+                    Eliminar
+                  </Button>
                 </div>
-                <Button 
-                  onClick={handleRegisterWebhook} 
-                  disabled={isRegistering}
-                >
-                  {isRegistering ? <LoaderIcon className="size-4 animate-spin" /> : "Vincular"}
-                </Button>
-              </div>
-              <p className="text-[10px] text-muted-foreground">
-                Usa este campo si estás en local con ngrok. Si no, déjalo vacío para usar la URL de producción.
-              </p>
-            </div>
-
-            {hasWebhook && (
-              <div className="rounded-md bg-background p-3 border text-[11px] break-all font-mono">
-                <span className="text-muted-foreground block mb-1 font-sans">URL Registrada:</span>
-                {(connection.extra_data as Record<string, unknown>)?.webhook_url as string}
               </div>
             )}
           </CardContent>

@@ -46,6 +46,7 @@ export interface UsePlatformConnectionReturn {
     instance_name: string;
     status: string;
   }>;
+  disconnectEvolution: () => Promise<{ status: string; detail: string }>;
   refetchConnection: () => Promise<void>;
 }
 
@@ -257,6 +258,15 @@ export function usePlatformConnection(
     return result;
   }, [id]);
 
+  const disconnectEvolution = useCallback(async () => {
+    const result = await apiClient<{ status: string; detail: string }>(
+      `/api/v1/platform-connections/${id}/disconnect-evolution`,
+      { method: "POST" },
+    );
+    setConnection(null);
+    return result;
+  }, [id]);
+
   const refetchConnection = useCallback(async () => {
     const updated = await apiClient<PlatformConnection>(
       `/api/v1/platform-connections/${id}`,
@@ -272,6 +282,7 @@ export function usePlatformConnection(
     deleteConnection,
     registerWebhook,
     connectEvolution,
+    disconnectEvolution,
     refetchConnection,
   };
 }
