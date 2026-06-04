@@ -74,7 +74,7 @@ async def create_connection(
         tenant_id=data.tenant_id,
         platform_type=data.platform_type,
         display_name=data.display_name,
-        credentials=encrypt(data.credentials),
+        credentials=encrypt(data.credentials or {}),
         extra_data=data.extra_data,
         status=data.status,
         is_primary=data.is_primary,
