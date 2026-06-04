@@ -55,6 +55,21 @@ async def create_connection(
                 detail="Agent belongs to a different tenant",
             )
 
+    # ── Auto-fill Evolution API credentials from settings ─────────────
+    # El admin no necesita saber la URL interna de Docker ni la API key.
+    # El backend las completa automáticamente desde la configuración.
+    if data.platform_type == "evolution":
+        from app.core.config import settings as app_settings
+
+        creds = dict(data.credentials) if data.credentials else {}
+        if not creds.get("base_url"):
+            creds["base_url"] = app_settings.evo_api_base_url
+        if not creds.get("api_key"):
+            creds["api_key"] = app_settings.evo_api_key
+        if not creds.get("instance_name"):
+            creds["instance_name"] = f"conn-{uuid.uuid4().hex[:12]}"
+        data.credentials = creds
+
     connection = PlatformConnection(
         tenant_id=data.tenant_id,
         platform_type=data.platform_type,

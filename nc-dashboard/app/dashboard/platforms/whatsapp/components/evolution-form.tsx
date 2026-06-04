@@ -2,8 +2,7 @@
 
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState, useEffect, useCallback } from "react";
-import { usePlatformConnections } from "@/hooks/use-platform-connections";
+import { useEffect } from "react";
 import { useAgents } from "@/hooks/use-agents";
 import {
   evolutionFormSchema,
@@ -11,8 +10,7 @@ import {
 } from "@/lib/schemas/evolution";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2, Info, RefreshCw } from "lucide-react";
-import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import type { Tenant } from "@/lib/types";
 
 interface EvolutionFormProps {
@@ -24,17 +22,6 @@ interface EvolutionFormProps {
   tenantsLoading: boolean;
 }
 
-interface EvolutionInstance {
-  instance?: {
-    instanceName?: string;
-    name?: string;
-    status?: string;
-  };
-  instanceName?: string;
-  name?: string;
-  status?: string;
-}
-
 export function EvolutionForm({
   defaultValues,
   onSubmit,
@@ -43,10 +30,6 @@ export function EvolutionForm({
   tenants,
   tenantsLoading,
 }: EvolutionFormProps) {
-  const { fetchEvolutionInstances } = usePlatformConnections();
-  const [instances, setInstances] = useState<EvolutionInstance[]>([]);
-  const [isFetchingInstances, setIsFetchingInstances] = useState(false);
-
   const {
     register,
     handleSubmit,
@@ -58,159 +41,26 @@ export function EvolutionForm({
     defaultValues: {
       tenant_id: "",
       display_name: "WhatsApp Evolution",
-      base_url: "",
-      api_key: "",
-      instance_name: "",
       status: "active",
       is_primary: false,
       ...defaultValues,
     },
   });
 
-  const [watchedBaseUrl, watchedApiKey, watchedTenantId] = useWatch({
-    control,
-    name: ["base_url", "api_key", "tenant_id"],
-  });
-
+  const watchedTenantId = useWatch({ control, name: "tenant_id" });
   const { agents, isLoading: agentsLoading } = useAgents(0, 100, watchedTenantId);
 
-  // Auto-select agent if there's only one or if one matches a "primary" criteria
+  // Auto-select agent if only one exists for this tenant
   useEffect(() => {
-    if (!agentsLoading && agents.length > 0 && watchedTenantId) {
-      // If only one agent exists, select it automatically
-      if (agents.length === 1) {
-        setValue("agent_id", agents[0].id);
-      } 
-      // Or if there are multiple, but one is named "Default" or similar (optional logic)
-      else if (!defaultValues?.agent_id) {
-        const defaultAgent = agents.find(a => (a as { is_default?: boolean }).is_default || a.name.toLowerCase().includes("default"));
-        if (defaultAgent) {
-          setValue("agent_id", defaultAgent.id);
-        }
-      }
+    if (!agentsLoading && agents.length === 1 && watchedTenantId) {
+      setValue("agent_id", agents[0].id);
     }
-  }, [agents, agentsLoading, watchedTenantId, setValue, defaultValues?.agent_id]);
-
-  const handleFetchInstances = useCallback(async () => {
-    if (!watchedBaseUrl) {
-      toast.error("Ingresa la URL del servidor primero");
-      return;
-    }
-    setIsFetchingInstances(true);
-    try {
-      const data = (await fetchEvolutionInstances(watchedBaseUrl, watchedApiKey)) as EvolutionInstance[];
-      console.log("Evolution instances response:", data);
-      setInstances(data);
-      if (data.length === 0) {
-        toast.info("No se encontraron instancias en este servidor");
-      }
-    } catch (err) {
-      console.error("Error fetching instances:", err);
-      toast.error("No se pudieron obtener las instancias. Verifica la URL y API Key.");
-    } finally {
-      setIsFetchingInstances(false);
-    }
-  }, [fetchEvolutionInstances, watchedBaseUrl, watchedApiKey]);
-
-  useEffect(() => {
-    if (mode === "edit" && defaultValues?.base_url) {
-      // Use a timeout to avoid synchronous state update in effect
-      const timer = setTimeout(() => {
-        handleFetchInstances();
-      }, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [mode, defaultValues?.base_url, handleFetchInstances]);
+  }, [agents, agentsLoading, watchedTenantId, setValue]);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {/* ── 1. Evolution Server Info (Primer paso lógico) ── */}
-      <div className="grid gap-6 p-4 rounded-lg border bg-muted/30">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <label htmlFor="base_url" className="text-sm font-medium">
-              URL de Evolution API
-            </label>
-            <Info className="size-3 text-muted-foreground" />
-          </div>
-          <Input
-            id="base_url"
-            {...register("base_url")}
-            placeholder="https://tu-servidor-evolution.com"
-          />
-          {errors.base_url && (
-            <p className="text-xs text-destructive">{errors.base_url.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="api_key" className="text-sm font-medium">
-            Global API Key (Requerida para listar)
-          </label>
-          <Input
-            id="api_key"
-            type="password"
-            {...register("api_key")}
-            placeholder="Tu API Key de Evolution"
-          />
-        </div>
-
-        <div className="pt-2">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={handleFetchInstances}
-            disabled={isFetchingInstances || !watchedBaseUrl}
-          >
-            {isFetchingInstances ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 size-4" />
-            )}
-            {instances.length > 0 ? "Actualizar Instancias" : "Cargar Instancias"}
-          </Button>
-        </div>
-      </div>
-
-      {/* ── 2. Instance Selection ── */}
-      <div className="space-y-2">
-        <label htmlFor="instance_name" className="text-sm font-medium">
-          Seleccionar Instancia
-        </label>
-        {instances.length > 0 ? (
-          <select
-            id="instance_name"
-            {...register("instance_name")}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <option value="">Selecciona una instancia...</option>
-            {instances.map((item, idx) => {
-              // Handle both nested {instance: {instanceName}} and direct {instanceName} formats
-              const inst = item.instance || item;
-              const name = inst.instanceName || inst.name || `Instancia ${idx}`;
-              const status = inst.status || "unknown";
-              return (
-                <option key={name} value={name}>
-                  {name} ({status})
-                </option>
-              );
-            })}
-          </select>
-        ) : (
-          <Input
-            id="instance_name"
-            {...register("instance_name")}
-            placeholder="Carga las instancias primero o escribe el nombre"
-          />
-        )}
-        {errors.instance_name && (
-          <p className="text-xs text-destructive">{errors.instance_name.message}</p>
-        )}
-      </div>
-
-      {/* ── 3. Internal Mapping (Negocio) ── */}
-      <div className="space-y-4 pt-4 border-t">
+      {/* ── 1. Internal Mapping (Negocio) ── */
+      /* La URL de Evolution y API Key se auto-completan desde el backend. */}
         <div className="space-y-2">
           <label htmlFor="tenant_id" className="text-sm font-medium">
             ¿A qué negocio pertenece esta conexión?
@@ -282,7 +132,6 @@ export function EvolutionForm({
             placeholder="Ej: WhatsApp Local de Don Pepe"
           />
         </div>
-      </div>
 
       {/* ── Status + Primary ── */}
       <div className="grid gap-4 sm:grid-cols-2 pt-2">

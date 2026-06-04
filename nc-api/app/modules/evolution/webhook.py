@@ -38,9 +38,10 @@ ParsedMessage = dict[str, t.Any] | None
 # ── Constants ───────────────────────────────────────────────────────────────
 
 SUPPORTED_EVENTS = {"messages.upsert"}
+CONNECTION_EVENTS = {"connection.update"}
 TEXT_MESSAGE_TYPES = {"conversation", "extendedTextMessage"}
 
-# ── Extraction entry point ──────────────────────────────────────────────────
+# ── Extraction ──────────────────────────────────────────────────────────────
 
 
 def extract_evolution_message(event: EvolutionEvent) -> ParsedMessage:
@@ -136,4 +137,49 @@ def extract_evolution_message(event: EvolutionEvent) -> ParsedMessage:
         "remote_jid": remote_jid,
         "instance_name": instance_name,
         "push_name": push_name,
+    }
+
+
+def extract_evolution_connection_update(
+    event: EvolutionEvent,
+) -> dict[str, str] | None:
+    """Extract connection state change from a ``connection.update`` event.
+
+    Evolution API sends this when the WhatsApp session state changes:
+    QR scanned → state becomes "open", the instance is connected.
+    Phone lost network → state becomes "close", instance disconnected.
+
+    Payload::
+
+        {
+          "event": "connection.update",
+          "instance": "my-instance",
+          "data": {
+            "state": "open"       # open | connecting | close
+          }
+        }
+
+    Returns a dict with ``instance_name`` and ``connection_state``,
+    or ``None`` if the event is not a connection update.
+    """
+    event_name = event.get("event", "")
+    if event_name not in CONNECTION_EVENTS:
+        return None
+
+    instance_name: str = event.get("instance", "") or ""
+    data = event.get("data") or {}
+    state: str = data.get("state", "") or ""
+
+    if not instance_name or not state:
+        return None
+
+    logger.info(
+        "Evolution connection update | instance={inst} state={state}",
+        inst=instance_name,
+        state=state,
+    )
+
+    return {
+        "instance_name": instance_name,
+        "connection_state": state,
     }
