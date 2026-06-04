@@ -580,6 +580,12 @@ async def connect_evolution(
                                 name=instance_name,
                                 s=status,
                             )
+                            # Save connection status so dashboard shows it
+                            extra = dict(connection.extra_data or {})
+                            extra["connection_status"] = "connected"
+                            extra["instance_name"] = instance_name
+                            connection.extra_data = extra
+                            await session.commit()
                             return EvolutionConnectResponse(
                                 connection_id=str(connection_id),
                                 instance_name=instance_name,
