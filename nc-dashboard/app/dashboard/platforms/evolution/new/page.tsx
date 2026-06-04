@@ -69,7 +69,6 @@ export default function PlatformsNewEvolutionPage() {
         platform_type: "evolution",
         display_name: data.display_name,
         status: data.status,
-        is_primary: data.is_primary,
         credentials: {},  // backend auto-completa base_url, api_key, instance_name
         extra_data: data.agent_id
           ? { agent_id: data.agent_id }

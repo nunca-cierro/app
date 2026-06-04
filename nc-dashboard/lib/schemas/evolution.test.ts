@@ -10,7 +10,6 @@ describe("evolution connection schema", () => {
       tenant_id: "00000000-0000-0000-0000-000000000000",
       display_name: "WhatsApp Evolution",
       status: "active",
-      is_primary: false,
       agent_id: "11111111-1111-4111-8111-111111111111",
     };
     const result = evolutionFormSchema.safeParse(data);
@@ -28,7 +27,6 @@ describe("evolution connection schema", () => {
       tenant_id: "00000000-0000-0000-0000-000000000000",
       display_name: "WhatsApp Evolution",
       status: "active",
-      is_primary: false,
       agent_id: null,
     };
     const result = evolutionFormSchema.safeParse(data);
