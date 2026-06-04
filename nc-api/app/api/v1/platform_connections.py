@@ -637,4 +637,108 @@ async def connect_evolution(
         )
 
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Evolution API — disconnect / delete instance
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+@router.post("/{connection_id}/disconnect-evolution")
+async def disconnect_evolution(
+    connection_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, str]:
+    """Logout + delete the Evolution API instance AND the platform connection."""
+    import httpx
+    from loguru import logger
+
+    from app.core.config import settings
+    from app.core.encryption import decrypt
+
+    connection = await get_connection(session, connection_id)
+    if not connection or (
+        current_user.current_role != UserRole.SUPERADMIN
+        and connection.tenant_id != current_user.current_tenant_id
+    ):
+        raise HTTPException(status_code=404, detail="Platform connection not found")
+
+    if connection.platform_type != "evolution":
+        raise HTTPException(
+            status_code=400,
+            detail="disconnect-evolution is only supported for evolution connections",
+        )
+
+    # ── Decrypt credentials ────────────────────────────────────────────
+    creds = decrypt(connection.credentials)
+    if not isinstance(creds, dict):
+        raise HTTPException(status_code=500, detail="Invalid credential format")
+
+    base_url: str = (creds.get("base_url") or settings.evo_api_base_url).rstrip("/")
+    api_key: str = creds.get("api_key", "") or settings.evo_api_key
+    instance_name: str = (creds.get("instance_name") or "").strip()
+
+    if not instance_name:
+        # Nothing to delete on Evolution side
+        await delete_connection(session, connection)
+        return {"status": "deleted", "detail": "No Evolution instance to delete"}
+
+    headers = {"Content-Type": "application/json", "apikey": api_key}
+    errors: list[str] = []
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # ── 1. Logout (disconnect WhatsApp) ────────────────────────
+            try:
+                logout_resp = await client.post(
+                    f"{base_url}/instance/logout/{instance_name}",
+                    headers=headers,
+                )
+                if logout_resp.is_success:
+                    logger.info("Evolution instance logged out | name={name}", name=instance_name)
+                else:
+                    logger.warning(
+                        "Evolution logout warning | status={s} | body={b}",
+                        s=logout_resp.status_code,
+                        b=logout_resp.text[:200],
+                    )
+            except Exception as exc:
+                logger.warning("Evolution logout failed (non-fatal): {exc}", exc=exc)
+                errors.append(f"logout: {exc}")
+
+            # ── 2. Delete instance from Evolution API ──────────────────
+            try:
+                del_resp = await client.delete(
+                    f"{base_url}/instance/delete/{instance_name}",
+                    headers=headers,
+                )
+                if del_resp.is_success or del_resp.status_code == 404:
+                    logger.info("Evolution instance deleted | name={name}", name=instance_name)
+                else:
+                    logger.warning(
+                        "Evolution delete warning | status={s} | body={b}",
+                        s=del_resp.status_code,
+                        b=del_resp.text[:200],
+                    )
+            except Exception as exc:
+                logger.warning("Evolution delete failed (non-fatal): {exc}", exc=exc)
+                errors.append(f"delete: {exc}")
+
+    except httpx.RequestError as exc:
+        logger.error("Evolution API unreachable during disconnect: {exc}", exc=exc)
+        # Still delete from our DB — Evolution instance will be orphaned
+        errors.append(f"Evolution unreachable: {exc}")
+
+    # ── 3. Delete platform connection from our DB ──────────────────────
+    await delete_connection(session, connection)
+    logger.info("Platform connection deleted | id={id}", id=connection_id)
+
+    detail = "Instancia eliminada de Evolution y del sistema"
+    if errors:
+        detail += f" (con advertencias: {'; '.join(errors)})"
+
+    return {"status": "deleted", "detail": detail}
+
+
 # Moved evolution-fetch-instances to the top to avoid UUID collision
+"""⚠️ DO NOT add more routes after this line — they would collide with /{connection_id} routes."""
