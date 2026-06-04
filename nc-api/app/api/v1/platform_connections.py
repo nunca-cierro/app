@@ -474,8 +474,8 @@ async def connect_evolution(
                     "Evolution instance created | name={name}",
                     name=instance_name,
                 )
-            elif create_resp.status_code == 409:
-                # Instance already exists — that's fine, we'll get the QR
+            elif create_resp.status_code in (409, 403):
+                # 409 = already exists (v1), 403 = already in use (v2)
                 logger.info(
                     "Evolution instance already exists | name={name}",
                     name=instance_name,
@@ -499,15 +499,17 @@ async def connect_evolution(
                 webhook_resp = await client.post(
                     f"{base_url}/webhook/set/{instance_name}",
                     json={
-                        "url": webhook_url,
-                        "enabled": True,
-                        "webhookByEvents": True,
-                        "webhookBase64": False,
-                        "events": [
-                            "MESSAGES_UPSERT",
-                            "CONNECTION_UPDATE",
-                            "QRCODE_UPDATED",
-                        ],
+                        "webhook": {
+                            "url": webhook_url,
+                            "enabled": True,
+                            "webhookByEvents": True,
+                            "webhookBase64": False,
+                            "events": [
+                                "MESSAGES_UPSERT",
+                                "CONNECTION_UPDATE",
+                                "QRCODE_UPDATED",
+                            ],
+                        }
                     },
                     headers=headers,
                 )
@@ -598,12 +600,13 @@ async def connect_evolution(
 
                 await asyncio.sleep(poll_interval)
 
-            # ── 6. Save connection state ──────────────────────────────────
+            # ── 7. Save connection state (including QR image) ─────────────
             extra = dict(connection.extra_data or {})
             extra["instance_name"] = instance_name
             extra["qrcode_obtained"] = bool(qrcode)
             if qrcode:
                 extra["connection_status"] = "awaiting_scan"
+                extra["qrcode_image"] = qrcode  # persist so page refresh shows QR
             connection.extra_data = extra
             await session.commit()
 
