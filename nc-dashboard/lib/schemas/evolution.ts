@@ -13,7 +13,6 @@ export const evolutionFormSchema = z.object({
   status: z.enum(["active", "inactive"], {
     message: "Selecciona un estado válido",
   }),
-  is_primary: z.boolean(),
   agent_id: z.string().uuid().optional().nullable(),
 });
 
@@ -23,6 +22,5 @@ export const defaultEvolutionValues: EvolutionFormValues = {
   tenant_id: "",
   display_name: "WhatsApp Evolution",
   status: "active",
-  is_primary: false,
   agent_id: null,
 };

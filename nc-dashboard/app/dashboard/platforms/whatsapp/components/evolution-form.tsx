@@ -42,13 +42,24 @@ export function EvolutionForm({
       tenant_id: "",
       display_name: "WhatsApp Evolution",
       status: "active",
-      is_primary: false,
       ...defaultValues,
     },
   });
 
   const watchedTenantId = useWatch({ control, name: "tenant_id" });
+  const watchedDisplayName = useWatch({ control, name: "display_name" });
   const { agents, isLoading: agentsLoading } = useAgents(0, 100, watchedTenantId);
+
+  // Auto-fill display_name with tenant name when tenant changes
+  const selectedTenant = tenants.find((t) => t.id === watchedTenantId);
+  useEffect(() => {
+    if (selectedTenant) {
+      // Only auto-fill if the field is empty or still the default
+      if (!watchedDisplayName || watchedDisplayName === "WhatsApp Evolution") {
+        setValue("display_name", selectedTenant.name);
+      }
+    }
+  }, [selectedTenant?.id, setValue]);
 
   // Auto-select agent if only one exists for this tenant
   useEffect(() => {
@@ -133,33 +144,19 @@ export function EvolutionForm({
           />
         </div>
 
-      {/* ── Status + Primary ── */}
-      <div className="grid gap-4 sm:grid-cols-2 pt-2">
-        <div className="space-y-2">
-          <label htmlFor="status" className="text-sm font-medium">
-            Estado
-          </label>
-          <select
-            id="status"
-            {...register("status")}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <option value="active">Activo</option>
-            <option value="inactive">Inactivo</option>
-          </select>
-        </div>
-
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Principal</label>
-          <label className="flex h-10 items-center gap-2 text-sm cursor-pointer">
-            <input
-              type="checkbox"
-              {...register("is_primary")}
-              className="size-4 rounded border-gray-300 text-primary focus:ring-primary"
-            />
-            Conexión principal
-          </label>
-        </div>
+      {/* ── Status ── */}
+      <div className="space-y-2 pt-2">
+        <label htmlFor="status" className="text-sm font-medium">
+          Estado
+        </label>
+        <select
+          id="status"
+          {...register("status")}
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <option value="active">Activo</option>
+          <option value="inactive">Inactivo</option>
+        </select>
       </div>
 
       {/* ── Submit ── */}

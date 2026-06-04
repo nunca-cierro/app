@@ -612,6 +612,7 @@ async def connect_evolution(
             # ── 7. Save connection state (including QR image) ─────────────
             extra = dict(connection.extra_data or {})
             extra["instance_name"] = instance_name
+            extra["base_url"] = base_url  # needed by frontend (credentials are encrypted)
             extra["qrcode_obtained"] = bool(qrcode)
             if qrcode:
                 extra["connection_status"] = "awaiting_scan"

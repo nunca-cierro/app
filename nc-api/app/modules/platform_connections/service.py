@@ -70,6 +70,14 @@ async def create_connection(
             creds["instance_name"] = f"conn-{uuid.uuid4().hex[:12]}"
         data.credentials = creds
 
+        # Expose non-sensitive fields in extra_data so the frontend
+        # can display them (credentials are encrypted and stripped
+        # from the API response for security).
+        extra = dict(data.extra_data) if data.extra_data else {}
+        extra.setdefault("base_url", creds["base_url"])
+        extra.setdefault("instance_name", creds["instance_name"])
+        data.extra_data = extra
+
     connection = PlatformConnection(
         tenant_id=data.tenant_id,
         platform_type=data.platform_type,

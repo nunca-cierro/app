@@ -107,8 +107,10 @@ export default function PlatformEvolutionDetailPage({
     );
   }
 
-  const instanceName = connection.credentials?.instance_name as string | undefined;
-  const baseUrl = connection.credentials?.base_url as string | undefined;
+  // Credentials are encrypted server-side and NEVER returned via the API.
+  // Instead, non-sensitive fields are exposed in extra_data.
+  const instanceName = extraData?.instance_name as string | undefined;
+  const baseUrl = extraData?.base_url as string | undefined;
 
   /* ── Handlers ── */
   const handleConnect = async () => {
