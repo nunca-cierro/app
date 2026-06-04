@@ -21,7 +21,7 @@ class PlatformConnectionCreate(BaseModel):
     tenant_id: uuid.UUID
     platform_type: str
     display_name: str
-    credentials: dict[str, Any]  # plaintext — encrypted at the service layer
+    credentials: dict[str, Any] | None = None  # plaintext — encrypted at the service layer. Evolution API auto-completa desde settings.
     extra_data: dict[str, Any] | None = None
     status: str = "active"
     is_primary: bool = False
