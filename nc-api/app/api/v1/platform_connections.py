@@ -454,10 +454,6 @@ async def connect_evolution(
                 "instanceName": instance_name,
                 "qrcode": True,
                 "integration": "WHATSAPP-BAILEYS",
-                "webhook": {
-                    "url": webhook_url,
-                    "enabled": True,
-                },
             }
 
             logger.info(
