@@ -4,7 +4,7 @@ import { siteFaq } from "@/data/site";
 import { Section } from "@/components/layout/section";
 import { Card } from "@/components/ui/card";
 import { AnimatedWrapper, itemVariants } from "@/components/ui/animated-wrapper";
-import { motion } from "motion";
+import { motion } from "framer-motion";
 
 export function Faq() {
   return (

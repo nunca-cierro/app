@@ -10,7 +10,7 @@ import {
   AnimatedWrapper,
   itemVariants,
 } from "@/components/ui/animated-wrapper";
-import { motion } from "motion";
+import { motion } from "framer-motion";
 
 function getWhatsAppUrl(text: string) {
   return `https://wa.me/${siteBanner.whatsappNumber}?text=${encodeURIComponent(text)}`;
