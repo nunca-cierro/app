@@ -151,7 +151,6 @@ export const headerData = {
     { name: "Inicio", href: "#inicio" },
     { name: "Servicios", href: "#servicios" },
     { name: "Planes", href: "#planes" },
-    { name: "Ejemplos", href: "#ejemplos" },
     { name: "Contacto", href: "#contacto" },
   ],
   mobileMenu: {
@@ -176,7 +175,6 @@ export const footerData = {
     { name: "Inicio", href: "#inicio" },
     { name: "Servicios", href: "#servicios" },
     { name: "Planes", href: "#planes" },
-    { name: "Ejemplos", href: "#ejemplos" },
     { name: "Contacto", href: "#contacto" },
   ],
   socialLinks: [

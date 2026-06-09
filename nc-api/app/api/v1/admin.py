@@ -127,6 +127,10 @@ async def assign_tenant(
         )
         session.add(user_tenant)
 
+    # Sync global user role — non-superadmin roles mirror their tenant role
+    if user.role != UserRole.SUPERADMIN:
+        user.role = body.role
+
     await session.commit()
 
     return {"status": "ok", "message": "User assigned to tenant successfully"}

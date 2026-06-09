@@ -120,17 +120,17 @@ export function ConversationList({
                       />
                     </div>
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {conv.summary ?? "Sin resumen"}
+                      {conv.last_message_at
+                        ? new Date(conv.last_message_at).toLocaleDateString("es-CO", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "Sin actividad"}
                     </p>
                     <p className="text-[11px] text-muted-foreground/60">
                       {conv.message_count} mensajes
-                      {conv.last_message_at &&
-                        ` · ${new Date(conv.last_message_at).toLocaleDateString("es-CO", {
-                          day: "numeric",
-                          month: "short",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}`}
                     </p>
                   </div>
                 </div>

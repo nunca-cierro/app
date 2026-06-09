@@ -601,7 +601,7 @@ async def connect_evolution(
                             )
 
                     logger.debug(
-                        "QR not ready for {name} | attempt={a}/{max}",
+                        "QR not ready for {name} | attempt={a}/{m}",
                         name=instance_name,
                         a=attempt,
                         m=max_attempts,

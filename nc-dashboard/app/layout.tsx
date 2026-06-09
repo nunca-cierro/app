@@ -18,23 +18,46 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: siteMetadata.title,
+  title: {
+    default: siteMetadata.title,
+    template: "%s | NuncaCierro",
+  },
   description: siteMetadata.description,
+  keywords: siteMetadata.keywords,
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
   openGraph: {
     title: siteMetadata.title,
     description: siteMetadata.description,
-    locale: "es_CO",
+    url: "https://nuncacierro.com",
     siteName: "NuncaCierro",
+    locale: "es_CO",
     type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "NuncaCierro — Automatización WhatsApp para negocios",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: siteMetadata.title,
     description: siteMetadata.description,
+  },
+  alternates: {
+    canonical: "https://nuncacierro.com",
   },
 };
 

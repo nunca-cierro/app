@@ -50,28 +50,58 @@ const SUPERADMIN_ROUTES: UserRole[] = ["superadmin", "admin"];
 
 export function getNavItems(role?: UserRole | null): NavItem[] {
   const isClientOrAgent = role && CLIENT_ROUTES.includes(role);
-  const isSuperOrAdmin = role && SUPERADMIN_ROUTES.includes(role);
 
-  const items: NavItem[] = [
-    {
-      href: "/dashboard",
-      label: "Dashboard",
-      icon: LayoutDashboard,
-      roles: ADMIN_ROUTES,
-    },
-  ];
+  const items: NavItem[] = [];
 
-  // Negocios: only superadmin/admin
-  if (isSuperOrAdmin) {
+  // ── Sección: General ──
+  items.push({
+    href: "/dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    roles: ADMIN_ROUTES,
+  });
+
+  // ── Sección: Gestión (solo superadmin/admin) ──
+  if (!isClientOrAgent) {
+    // Negocios
     items.push({
       href: "/dashboard/tenants",
       label: "Negocios",
       icon: Building2,
-      roles: SUPERADMIN_ROUTES,
+      roles: ["superadmin", "admin"],
+    });
+
+    // Agentes IA
+    items.push({
+      href: "/dashboard/agents",
+      label: "Agentes",
+      icon: Bot,
+      roles: ["superadmin", "admin"],
+    });
+
+    // Conexiones (plataformas)
+    items.push({
+      href: "/dashboard/platforms",
+      label: "Conexiones",
+      icon: Phone,
+      roles: ["superadmin", "admin"],
+      children: [
+        { href: "/dashboard/platforms/evolution", label: "WhatsApp", icon: Phone, roles: ["superadmin", "admin"] },
+        { href: "/dashboard/platforms/whatsapp", label: "Meta API", icon: Phone, roles: ["superadmin", "admin"] },
+        { href: "/dashboard/platforms/telegram", label: "Telegram", icon: Send, roles: ["superadmin", "admin"] },
+      ],
     });
   }
 
-  // Admin: solo superadmin
+  // ── Sección: Comunicación ──
+  items.push({
+    href: "/dashboard/conversations",
+    label: "Conversaciones",
+    icon: MessageSquare,
+    roles: ADMIN_ROUTES,
+  });
+
+  // ── Sección: Admin (solo superadmin) ──
   if (role === "superadmin") {
     items.push({
       href: "/dashboard/admin",
@@ -83,36 +113,6 @@ export function getNavItems(role?: UserRole | null): NavItem[] {
       ],
     });
   }
-
-  // Agentes y Plataformas: hidden for client/agent
-  if (!isClientOrAgent) {
-    items.push({
-      href: "/dashboard/agents",
-      label: "Agentes",
-      icon: Bot,
-      roles: SUPERADMIN_ROUTES,
-    });
-
-    items.push({
-      href: "/dashboard/platforms",
-      label: "Plataformas",
-      icon: LayoutDashboard,
-      roles: SUPERADMIN_ROUTES,
-      children: [
-        { href: "/dashboard/platforms/evolution", label: "WhatsApp (Evo)", icon: Phone, roles: SUPERADMIN_ROUTES },
-        { href: "/dashboard/platforms/whatsapp", label: "WhatsApp (Meta)", icon: Phone, roles: SUPERADMIN_ROUTES },
-        { href: "/dashboard/platforms/telegram", label: "Telegram", icon: Send, roles: SUPERADMIN_ROUTES },
-      ],
-    });
-  }
-
-  // Conversaciones: visible for all roles
-  items.push({
-    href: "/dashboard/conversations",
-    label: "Conversaciones",
-    icon: MessageSquare,
-    roles: ADMIN_ROUTES,
-  });
 
   return items;
 }
