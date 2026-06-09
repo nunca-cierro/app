@@ -106,7 +106,7 @@ export function BusinessConfigForm({
       ...prev,
       products_services: [
         ...(prev.products_services ?? []),
-        { name: "", price: "", duration: "" },
+        { name: "", price: "" },
       ],
     }));
 
@@ -322,7 +322,7 @@ export function BusinessConfigForm({
               className="flex items-start gap-2 rounded-md border p-3"
             >
               <GripVertical className="mt-3 size-4 shrink-0 text-muted-foreground" />
-              <div className="grid flex-1 gap-2 sm:grid-cols-3">
+              <div className="grid flex-1 gap-2 sm:grid-cols-2">
                 <Input
                   placeholder="Nombre"
                   value={item.name}
@@ -332,13 +332,6 @@ export function BusinessConfigForm({
                   placeholder="Precio"
                   value={item.price}
                   onChange={(e) => updProduct(idx, { price: e.target.value })}
-                />
-                <Input
-                  placeholder="Duración"
-                  value={item.duration}
-                  onChange={(e) =>
-                    updProduct(idx, { duration: e.target.value })
-                  }
                 />
               </div>
               <Button

@@ -46,7 +46,6 @@ export interface NavItem {
 
 const CLIENT_ROUTES: UserRole[] = ["client", "agent"];
 const ADMIN_ROUTES: UserRole[] = ["superadmin", "admin", "agent", "client"];
-const SUPERADMIN_ROUTES: UserRole[] = ["superadmin", "admin"];
 
 export function getNavItems(role?: UserRole | null): NavItem[] {
   const isClientOrAgent = role && CLIENT_ROUTES.includes(role);

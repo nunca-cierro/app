@@ -10,11 +10,6 @@ export const agentFormSchema = z.object({
     .string()
     .min(2, "El nombre debe tener al menos 2 caracteres")
     .max(100, "El nombre no puede exceder 100 caracteres"),
-  description: z
-    .string()
-    .max(500, "La descripción no puede exceder 500 caracteres")
-    .optional()
-    .or(z.literal("")),
   provider: z.enum(["groq", "openai", "anthropic"], {
     message: "Selecciona un proveedor válido",
   }),
@@ -53,7 +48,6 @@ export type PromptFormValues = z.infer<typeof promptFormSchema>;
 export const defaultAgentValues: AgentFormValues = {
   tenant_id: "",
   name: "",
-  description: "",
   provider: "groq",
   model: "llama-3.3-70b-versatile",
   temperature: 0.7,
