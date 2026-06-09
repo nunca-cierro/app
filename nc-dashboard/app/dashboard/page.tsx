@@ -207,7 +207,14 @@ export default function DashboardPage() {
                       {conv.wa_user_id}
                     </p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {conv.summary ?? "Sin resumen"}
+                      {conv.last_message_at
+                        ? `Último mensaje: ${new Date(conv.last_message_at).toLocaleDateString("es-CO", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}`
+                        : "Sin actividad"}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
