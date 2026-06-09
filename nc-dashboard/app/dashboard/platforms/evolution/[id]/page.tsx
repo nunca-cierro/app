@@ -27,7 +27,7 @@ export default function PlatformEvolutionDetailPage({
 }) {
   const params = use(paramsPromise);
   const router = useRouter();
-  const { connection, isLoading, error, connectEvolution, refetchConnection, disconnectEvolution } = usePlatformConnection(params.id);
+  const { connection, isLoading, error, connectEvolution, refetchConnection, disconnectEvolution, updateConnection } = usePlatformConnection(params.id);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
