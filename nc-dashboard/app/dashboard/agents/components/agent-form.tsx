@@ -47,7 +47,6 @@ export function AgentForm({
     defaultValues: {
       tenant_id: "",
       name: "",
-      description: "",
       provider: "groq",
       model: "llama-3.3-70b-versatile",
       temperature: 0.7,
@@ -106,25 +105,6 @@ export function AgentForm({
         />
         {errors.name && (
           <p className="text-xs text-destructive">{errors.name.message}</p>
-        )}
-      </div>
-
-      {/* ── Description ── */}
-      <div className="space-y-2">
-        <label htmlFor="description" className="text-sm font-medium">
-          Descripción
-        </label>
-        <textarea
-          id="description"
-          {...register("description")}
-          rows={2}
-          placeholder="¿Qué hace este agente?"
-          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-        />
-        {errors.description && (
-          <p className="text-xs text-destructive">
-            {errors.description.message}
-          </p>
         )}
       </div>
 
