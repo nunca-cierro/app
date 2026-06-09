@@ -17,7 +17,7 @@ export interface BusinessConfig {
   products_services?: Array<{
     name: string;
     price: string;
-    duration: string;
+    duration?: string;
   }>;
   faq?: Array<{
     question: string;
