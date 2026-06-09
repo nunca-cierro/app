@@ -90,6 +90,9 @@ class Settings(BaseSettings):
     rate_limit_max_requests: int = 10
     rate_limit_window_seconds: int = 60
 
+    # ── Anti-Spam ────────────────────────────────────────────────────────
+    anti_spam_enabled: bool = True
+
     # ── Evolution API (WhatsApp Gateway) ─────────────────────────────────
     evo_api_key: str = ""
     evo_api_base_url: str = "http://evolution-api:8080"

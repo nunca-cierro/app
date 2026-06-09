@@ -320,7 +320,13 @@ async def register_evolution_webhook(
         "webhook": {
             "url": webhook_url,
             "enabled": True,
-            "events": ["MESSAGES_UPSERT"],
+            "webhookByEvents": True,
+            "webhookBase64": False,
+            "events": [
+                "MESSAGES_UPSERT",
+                "CONNECTION_UPDATE",
+                "QRCODE_UPDATED",
+            ],
         }
     }
 
