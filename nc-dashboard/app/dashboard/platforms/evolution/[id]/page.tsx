@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   CheckCircle2 as CheckIcon,
-  AlertCircle as AlertIcon,
   Loader2 as LoaderIcon,
   QrCode as QrIcon,
   ArrowLeft as BackIcon,
@@ -89,7 +88,15 @@ export default function PlatformEvolutionDetailPage({
     }
   }, [evoStatus, refetchConnection]);
 
-
+  /* ── Anti-spam state ── */
+  const antiSpamConfig = extraData?.anti_spam as Record<string, unknown> | undefined;
+  const [antiSpamEnabled, setAntiSpamEnabled] = useState(
+    antiSpamConfig?.enabled !== false,
+  );
+  const [antiSpamMode, setAntiSpamMode] = useState(
+    (antiSpamConfig?.mode as string) || "log",
+  );
+  const [isSavingAntiSpam, setIsSavingAntiSpam] = useState(false);
 
   if (isLoading) {
     return (
@@ -113,22 +120,6 @@ export default function PlatformEvolutionDetailPage({
   // Instead, non-sensitive fields are exposed in extra_data.
   const instanceName = extraData?.instance_name as string | undefined;
   const baseUrl = extraData?.base_url as string | undefined;
-
-  /* ── Anti-spam state ── */
-  const [isSavingAntiSpam, setIsSavingAntiSpam] = useState(false);
-
-  // Sync state when extra_data changes (e.g., after refetch)
-  const antiSpamConfig = extraData?.anti_spam as Record<string, unknown> | undefined;
-  const [antiSpamEnabled, setAntiSpamEnabled] = useState(
-    antiSpamConfig?.enabled !== false,
-  );
-  const [antiSpamMode, setAntiSpamMode] = useState(
-    (antiSpamConfig?.mode as string) || "log",
-  );
-  useEffect(() => {
-    setAntiSpamEnabled(antiSpamConfig?.enabled !== false);
-    setAntiSpamMode((antiSpamConfig?.mode as string) || "log");
-  }, [antiSpamConfig?.enabled, antiSpamConfig?.mode]);
 
   const handleSaveAntiSpam = async () => {
     setIsSavingAntiSpam(true);

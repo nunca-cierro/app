@@ -12,9 +12,68 @@ from app.db.session import get_session
 from app.modules.auth.deps import get_current_user
 from app.modules.auth.models import User, UserRole
 from app.modules.agents.models import AiAgent, Prompt
-from app.modules.agents.schemas import AiAgentCreate, AiAgentUpdate, AiAgentResponse, PromptCreate, PromptResponse
+from app.modules.agents.schemas import (
+    AiAgentCreate,
+    AiAgentFromTemplate,
+    AiAgentUpdate,
+    AiAgentResponse,
+    PromptCreate,
+    PromptResponse,
+)
+from app.modules.agents.template_models import AgentTemplate
+from app.modules.agents.templates import PlaceholderResolver
+from app.modules.tenants.models import Tenant
 
 router = APIRouter(prefix="/agents", tags=["agents"])
+
+
+@router.post("/from-template", response_model=AiAgentResponse, status_code=201)
+async def create_agent_from_template(
+    body: AiAgentFromTemplate,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> AiAgent:
+    """Create an AI agent from a pre-built template with placeholder resolution.
+
+    1. Loads the ``AgentTemplate`` and ``Tenant`` (with ``business_profile``)
+    2. Deep-clones the template ``content``
+    3. Resolves ``{{placeholder}}`` tokens from the tenant's profile
+    4. Merges any ``overrides`` on top
+    5. Creates and returns the ``AiAgent``
+    """
+    # Load template
+    template = await session.get(AgentTemplate, body.template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    # Load tenant
+    tenant = await session.get(Tenant, body.tenant_id)
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    # Resolve placeholders from tenant business_profile
+    resolved_content = PlaceholderResolver.resolve(
+        template.content, tenant.business_profile
+    )
+
+    # Merge overrides on top of resolved content
+    if body.overrides:
+        resolved_content.update(body.overrides)
+
+    # Build AiAgent from resolved content
+    agent = AiAgent(
+        tenant_id=body.tenant_id,
+        name=body.name or template.name,
+        business_config=resolved_content,
+        provider="groq",
+        model="llama-3.3-70b-versatile",
+        temperature=0.7,
+        max_tokens=512,
+    )
+    session.add(agent)
+    await session.commit()
+    await session.refresh(agent)
+    return agent
 
 
 @router.post("", response_model=AiAgentResponse, status_code=201)

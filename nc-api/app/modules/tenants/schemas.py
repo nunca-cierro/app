@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -15,6 +16,7 @@ class TenantCreate(BaseModel):
     timezone: str = "America/Bogota"
     locale: str = "es-CO"
     notes: str | None = None
+    category: str | None = None
 
 
 class TenantUpdate(BaseModel):
@@ -24,6 +26,7 @@ class TenantUpdate(BaseModel):
     timezone: str | None = None
     locale: str | None = None
     notes: str | None = None
+    category: str | None = None
 
 
 class TenantResponse(BaseModel):
@@ -37,5 +40,7 @@ class TenantResponse(BaseModel):
     timezone: str
     locale: str
     notes: str | None
+    category: str | None
+    business_profile: dict[str, Any] | None = None
     created_at: datetime
     updated_at: datetime

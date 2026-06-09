@@ -15,6 +15,12 @@ export interface UseAgentsReturn {
   error: string | null;
   refetch: () => void;
   createAgent: (data: AgentFormValues) => Promise<Agent>;
+  createAgentFromTemplate: (data: {
+    tenant_id: string;
+    template_id: string;
+    name?: string;
+    overrides?: Record<string, unknown>;
+  }) => Promise<Agent>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -81,5 +87,22 @@ export function useAgents(
     [],
   );
 
-  return { agents, isLoading, error, refetch, createAgent };
+  const createAgentFromTemplate = useCallback(
+    async (data: {
+      tenant_id: string;
+      template_id: string;
+      name?: string;
+      overrides?: Record<string, unknown>;
+    }): Promise<Agent> => {
+      const agent = await apiClient<Agent>("/api/v1/agents/from-template", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
+      setAgents((prev) => [agent, ...prev]);
+      return agent;
+    },
+    [],
+  );
+
+  return { agents, isLoading, error, refetch, createAgent, createAgentFromTemplate };
 }

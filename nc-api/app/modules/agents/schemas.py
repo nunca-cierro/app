@@ -9,6 +9,18 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 
+# ── AiAgent from template ────────────────────────────────────────────────
+
+
+class AiAgentFromTemplate(BaseModel):
+    """Request body for POST /agents/from-template."""
+
+    tenant_id: uuid.UUID
+    template_id: uuid.UUID
+    name: str | None = None
+    overrides: dict[str, Any] | None = None
+
+
 # ── AiAgent ─────────────────────────────────────────────────────────────
 
 
