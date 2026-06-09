@@ -15,6 +15,7 @@ from app.db.session import get_session
 from app.modules.auth.models import User, UserRole
 from app.modules.auth.user_tenant import UserTenant
 from app.modules.auth.schemas import (
+    ChangePasswordRequest,
     LoginRequest,
     RegisterRequest,
     TokenResponse,
@@ -129,3 +130,33 @@ async def me(
 ) -> t.Any:
     """Get the currently logged-in user's profile with role and tenant context."""
     return current_user
+
+
+@router.post("/change-password", status_code=200)
+async def change_password(
+    body: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, str]:
+    """Change the current user's password.
+
+    Requires the current password for verification.
+    New password must be at least 6 characters.
+    """
+    if not verify_password(body.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=401,
+            detail="La contraseña actual no es correcta",
+        )
+
+    if len(body.new_password) < 6:
+        raise HTTPException(
+            status_code=422,
+            detail="La nueva contraseña debe tener al menos 6 caracteres",
+        )
+
+    current_user.password_hash = hash_password(body.new_password)
+    session.add(current_user)
+    await session.commit()
+
+    return {"status": "ok", "detail": "Contraseña actualizada correctamente"}

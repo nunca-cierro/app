@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, type Variants } from "framer-motion";
+import { motion, type Variants } from "motion";
 import type { ReactNode } from "react";
 
 type Direction = "up" | "down" | "left" | "right" | "none";

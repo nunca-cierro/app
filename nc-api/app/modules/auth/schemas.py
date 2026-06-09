@@ -44,6 +44,11 @@ class MeResponse(UserResponse):
     current_tenant_id: str | None = None
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
 class AssignTenantRequest(BaseModel):
     user_id: uuid.UUID
     tenant_id: uuid.UUID

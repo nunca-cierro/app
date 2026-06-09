@@ -5,7 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { apiClient, ApiError } from "@/lib/api";
 import type { UserRole } from "@/lib/types";
 import {
   LayoutDashboard,
@@ -19,7 +21,11 @@ import {
   ChevronRight,
   Users,
   Shield,
+  KeyRound,
+  Loader2 as LoaderIcon,
+  X,
 } from "lucide-react";
+import { toast } from "sonner";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -121,6 +127,44 @@ export function Sidebar() {
   const effectiveRole = user?.current_role ?? user?.role ?? null;
   const navItems = getNavItems(effectiveRole);
 
+  /* ── Change password state ── */
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast.error("Las contraseñas nuevas no coinciden");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("La nueva contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    setIsChangingPassword(true);
+    try {
+      await apiClient("/api/v1/auth/change-password", {
+        method: "POST",
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      });
+      toast.success("Contraseña actualizada correctamente");
+      setShowPasswordForm(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : "Error al cambiar contraseña";
+      toast.error(msg);
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   return (
     <aside className="flex h-full w-56 flex-col border-r bg-background">
       {/* ── Logo ── */}
@@ -152,6 +196,70 @@ export function Sidebar() {
         <div className="mb-2 truncate px-3 text-xs text-muted-foreground">
           {user?.name ?? user?.email}
         </div>
+
+        {/* ── Change Password ── */}
+        {!showPasswordForm ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowPasswordForm(true)}
+            className="mb-1 w-full justify-start gap-3"
+          >
+            <KeyRound className="size-4" />
+            Cambiar Contraseña
+          </Button>
+        ) : (
+          <div className="mb-2 space-y-2 rounded-md border p-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium">Nueva contraseña</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowPasswordForm(false);
+                  setCurrentPassword("");
+                  setNewPassword("");
+                  setConfirmPassword("");
+                }}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+            <Input
+              type="password"
+              placeholder="Contraseña actual"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              className="h-8 text-xs"
+            />
+            <Input
+              type="password"
+              placeholder="Nueva contraseña"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="h-8 text-xs"
+            />
+            <Input
+              type="password"
+              placeholder="Confirmar nueva"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="h-8 text-xs"
+            />
+            <Button
+              size="sm"
+              onClick={handleChangePassword}
+              disabled={isChangingPassword || !currentPassword || !newPassword || !confirmPassword}
+              className="w-full text-xs"
+            >
+              {isChangingPassword ? (
+                <LoaderIcon className="mr-1 size-3 animate-spin" />
+              ) : null}
+              Guardar
+            </Button>
+          </div>
+        )}
+
         <Button
           variant="ghost"
           size="sm"
