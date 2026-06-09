@@ -28,6 +28,7 @@ from app.modules.evolution.webhook import (
     extract_evolution_connection_update,
 )
 from app.modules.evolution.adapter import EvolutionAdapter
+from app.modules.evolution.anti_spam import _resolve_anti_spam_config, spam_detector
 
 # ── Types ───────────────────────────────────────────────────────────────────
 
@@ -115,20 +116,6 @@ async def handle_evolution_incoming(
         )
         return
 
-    # ── Rate limiting check ─────────────────────────────────────────────
-    rate_limiter.max_requests = settings.rate_limit_max_requests
-    rate_limiter.window_seconds = settings.rate_limit_window_seconds
-
-    rl_key = f"{parsed['external_user_id']}:{connection.id}"
-    if not rate_limiter.is_allowed(rl_key):
-        logger.warning(
-            "Rate limit exceeded | user={user} | conn={conn}",
-            user=parsed["external_user_id"],
-            conn=connection.id,
-        )
-        await session.commit()
-        return
-
     # ── 2. Resolve tenant ───────────────────────────────────────────────
     tenant_id = connection.tenant_id
 
@@ -159,6 +146,63 @@ async def handle_evolution_incoming(
         session.add(conversation)
         await session.flush()
 
+    # ── 1.5. Anti-spam check (auto-reply + flood) ───────────────────────
+    spam_payload: dict | None = None
+    conn_spam_config = (connection.extra_data or {}).get("anti_spam", {})
+
+    spam_result = spam_detector.full_check(
+        text=parsed["content"],
+        user_id=parsed["external_user_id"],
+        conn_id=str(connection.id),
+        config=conn_spam_config,
+    )
+
+    if spam_result.is_spam and spam_result.action == "block":
+        inbound_msg = Message(
+            tenant_id=tenant_id,
+            conversation_id=conversation.id,
+            platform_connection_id=connection.id,
+            direction="in",
+            external_user_id=parsed["external_user_id"],
+            external_message_id=parsed["external_message_id"],
+            platform="evolution",
+            message_type="text",
+            content=parsed["content"],
+            status="received",
+            payload=spam_result.to_dict(),
+        )
+        session.add(inbound_msg)
+        conversation.last_message_at = datetime.now(UTC)
+        await session.commit()
+        logger.info(
+            "Spam blocked (auto_reply/flood) | reason={reason} | score={score}",
+            reason=spam_result.spam_reason,
+            score=spam_result.spam_score,
+        )
+        return
+
+    if spam_result.is_spam:
+        spam_payload = spam_result.to_dict()
+        logger.info(
+            "Spam logged (auto_reply/flood) | reason={reason} | score={score}",
+            reason=spam_result.spam_reason,
+            score=spam_result.spam_score,
+        )
+
+    # ── Rate limiting check ─────────────────────────────────────────────
+    rate_limiter.max_requests = settings.rate_limit_max_requests
+    rate_limiter.window_seconds = settings.rate_limit_window_seconds
+
+    rl_key = f"{parsed['external_user_id']}:{connection.id}"
+    if not rate_limiter.is_allowed(rl_key):
+        logger.warning(
+            "Rate limit exceeded | user={user} | conn={conn}",
+            user=parsed["external_user_id"],
+            conn=connection.id,
+        )
+        await session.commit()
+        return
+
     # ── 4. Save inbound message ─────────────────────────────────────────
     inbound_msg = Message(
         tenant_id=tenant_id,
@@ -171,6 +215,7 @@ async def handle_evolution_incoming(
         message_type="text",
         content=parsed["content"],
         status="received",
+        payload=spam_payload,
     )
     session.add(inbound_msg)
     await session.flush()  # ensure inbound_msg.id is populated
@@ -193,6 +238,36 @@ async def handle_evolution_incoming(
         }
         for m in past_messages
     ]
+
+    # ── 4c. Repetitive check ───────────────────────────────────────────
+    rep_result = spam_detector.check_repetitive(
+        text=parsed["content"],
+        history=[m.content or "" for m in past_messages],
+    )
+    if rep_result.is_spam:
+        # Ensure payload dict exists
+        if inbound_msg.payload is None:
+            inbound_msg.payload = {}
+        inbound_msg.payload.update(rep_result.to_dict())
+        # Merge detection layers (deduplicate)
+        all_layers = inbound_msg.payload.get("detection_layers", [])
+        inbound_msg.payload["detection_layers"] = list(dict.fromkeys(all_layers))
+
+        # Resolve mode for this connection
+        rep_mode_config = _resolve_anti_spam_config(conn_spam_config)
+        if rep_mode_config.get("mode") == "block" and rep_mode_config.get("enabled", True):
+            conversation.last_message_at = datetime.now(UTC)
+            await session.commit()
+            logger.info(
+                "Spam blocked (repetitive) | score={score}",
+                score=rep_result.spam_score,
+            )
+            return
+
+        logger.info(
+            "Spam logged (repetitive) | score={score}",
+            score=rep_result.spam_score,
+        )
 
     # ── 5. Build system prompt from tenant config ───────────────────────
     from app.modules.tenants.models import Tenant

@@ -58,5 +58,6 @@ class MemoryRateLimiter:
             self._entries.pop(key, None)
 
 
-# Singleton global
+# Singleton globals
 rate_limiter = MemoryRateLimiter()
+flood_limiter = MemoryRateLimiter(max_requests=5, window_seconds=30)

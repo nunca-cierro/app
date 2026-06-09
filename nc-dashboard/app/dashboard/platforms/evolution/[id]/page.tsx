@@ -15,6 +15,8 @@ import {
   QrCode as QrIcon,
   ArrowLeft as BackIcon,
   Trash2 as TrashIcon,
+  ShieldCheck as ShieldIcon,
+  ShieldAlert as ShieldOffIcon,
 } from "lucide-react";
 
 type EvolutionState = "idle" | "connecting" | "qr" | "connected" | "error";
@@ -111,6 +113,40 @@ export default function PlatformEvolutionDetailPage({
   // Instead, non-sensitive fields are exposed in extra_data.
   const instanceName = extraData?.instance_name as string | undefined;
   const baseUrl = extraData?.base_url as string | undefined;
+
+  /* ── Anti-spam state ── */
+  const [isSavingAntiSpam, setIsSavingAntiSpam] = useState(false);
+
+  // Sync state when extra_data changes (e.g., after refetch)
+  const antiSpamConfig = extraData?.anti_spam as Record<string, unknown> | undefined;
+  const [antiSpamEnabled, setAntiSpamEnabled] = useState(
+    antiSpamConfig?.enabled !== false,
+  );
+  const [antiSpamMode, setAntiSpamMode] = useState(
+    (antiSpamConfig?.mode as string) || "log",
+  );
+  useEffect(() => {
+    setAntiSpamEnabled(antiSpamConfig?.enabled !== false);
+    setAntiSpamMode((antiSpamConfig?.mode as string) || "log");
+  }, [antiSpamConfig?.enabled, antiSpamConfig?.mode]);
+
+  const handleSaveAntiSpam = async () => {
+    setIsSavingAntiSpam(true);
+    try {
+      const currentExtra = { ...(connection?.extra_data || {}) };
+      currentExtra.anti_spam = {
+        enabled: antiSpamEnabled,
+        mode: antiSpamMode,
+      };
+      await updateConnection({ extra_data: currentExtra });
+      toast.success("Configuración anti-spam guardada");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error al guardar";
+      toast.error(msg);
+    } finally {
+      setIsSavingAntiSpam(false);
+    }
+  };
 
   /* ── Handlers ── */
   const handleConnect = async () => {
@@ -258,6 +294,83 @@ export default function PlatformEvolutionDetailPage({
                 : evoState === "connected"
                   ? "Reconectar"
                   : "Conectar WhatsApp"}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* ── Anti-Spam Config ── */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              {antiSpamEnabled ? (
+                <ShieldIcon className="size-5 text-green-600" />
+              ) : (
+                <ShieldOffIcon className="size-5 text-muted-foreground" />
+              )}
+              <CardTitle>Anti-Spam</CardTitle>
+            </div>
+            <CardDescription>
+              Filtra mensajes automáticos, repetitivos o flooding de clientes.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* ── Enabled toggle ── */}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <label className="text-sm font-medium">Activar filtro anti-spam</label>
+                <p className="text-xs text-muted-foreground">
+                  Cuando está desactivado, todos los mensajes se procesan normalmente.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={antiSpamEnabled}
+                onClick={() => setAntiSpamEnabled(!antiSpamEnabled)}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                  antiSpamEnabled ? "bg-green-600" : "bg-input"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none block size-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${
+                    antiSpamEnabled ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* ── Mode selector ── */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Modo de acción</label>
+              <select
+                value={antiSpamMode}
+                onChange={(e) => setAntiSpamMode(e.target.value)}
+                disabled={!antiSpamEnabled}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="log">Solo registrar (log)</option>
+                <option value="block">Bloquear</option>
+              </select>
+              <p className="text-xs text-muted-foreground">
+                <strong>Log:</strong> detecta y registra, pero el bot sigue respondiendo.
+                {" "}<strong>Bloquear:</strong> ignora el mensaje sin responder.
+              </p>
+            </div>
+
+            {/* ── Save button ── */}
+            <Button
+              onClick={handleSaveAntiSpam}
+              disabled={isSavingAntiSpam}
+              variant="outline"
+              size="sm"
+              className="w-full"
+            >
+              {isSavingAntiSpam ? (
+                <LoaderIcon className="mr-2 size-4 animate-spin" />
+              ) : (
+                <ShieldIcon className="mr-2 size-4" />
+              )}
+              Guardar configuración anti-spam
             </Button>
           </CardContent>
         </Card>
