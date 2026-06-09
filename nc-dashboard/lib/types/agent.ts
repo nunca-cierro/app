@@ -61,3 +61,18 @@ export interface Prompt {
   active: boolean;
   created_at: string;
 }
+
+/* ------------------------------------------------------------------ */
+/*  AgentTemplate — 1:1 con AgentTemplateResponse del backend           */
+/* ------------------------------------------------------------------ */
+
+export interface AgentTemplate {
+  id: string;
+  category: string;
+  name: string;
+  description: string | null;
+  content: BusinessConfig;
+  is_system: boolean;
+  created_at: string;
+  updated_at: string;
+}

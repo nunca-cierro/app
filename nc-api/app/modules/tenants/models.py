@@ -6,7 +6,7 @@ import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -28,6 +28,8 @@ class Tenant(Base):
     timezone: Mapped[str] = mapped_column(String(50), nullable=False, default="America/Bogota")
     locale: Mapped[str] = mapped_column(String(10), nullable=False, default="es-CO")
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    category: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
+    business_profile: Mapped[dict | None] = mapped_column(JSONB, nullable=True, default=None)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
