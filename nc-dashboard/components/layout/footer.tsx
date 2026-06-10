@@ -104,6 +104,17 @@ export function Footer() {
           <p className="text-sm text-stone-500">
             © {currentYear} {brand.name}. {copyright.label}
           </p>
+          <nav className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-stone-500">
+            {copyright.legal.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="hover:text-amber-300 transition-colors duration-200"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
         </div>
       </div>
     </footer>

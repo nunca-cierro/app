@@ -114,7 +114,6 @@ export const headerData = {
     },
   },
   navItems: [
-    { name: "Servicios", href: "#servicios" },
     { name: "Planes", href: "#planes" },
     { name: "Contacto", href: "#contacto" },
   ],
@@ -138,8 +137,8 @@ export const footerData = {
   description: "Automatización WhatsApp para negocios en Colombia.",
   navItems: [
     { name: "Inicio", href: "#inicio" },
-    { name: "Servicios", href: "#servicios" },
     { name: "Planes", href: "#planes" },
+    { name: "FAQ", href: "#faq" },
     { name: "Contacto", href: "#contacto" },
   ],
   socialLinks: [
@@ -166,14 +165,12 @@ export const footerData = {
   ],
   copyright: {
     label: "Todos los derechos reservados.",
-    privacy: {
-      label: "Política de privacidad",
-      href: "#",
-    },
-    terms: {
-      label: "Términos de uso",
-      href: "#",
-    },
+    legal: [
+      { label: "Política de privacidad", href: "#" },
+      { label: "Términos y condiciones", href: "#" },
+      { label: "Datos y cumplimientos", href: "#" },
+      { label: "Marca y propiedad intelectual", href: "#" },
+    ],
   },
 };
 
@@ -444,8 +441,8 @@ export const siteContact = {
     {
       icon: "Mail",
       label: "Correo",
-      href: "mailto:nicolasalbertov18@gmail.com",
-      text: "nicolasalbertov18@gmail.com",
+      href: "mailto:soporte@nuncacierro.com",
+      text: "soporte@nuncacierro.com",
     },
     {
       icon: "MessageCircle",
@@ -454,7 +451,7 @@ export const siteContact = {
       text: "+57 3219615338",
     },
   ],
-  quickResponseText: "Respuesta en menos de 2 horas (horario laboral)",
+  quickResponseText: "Respuesta inmediata — te leemos al instante",
   quoteChecklist: {
     icon: "🤖",
     title: "Para ayudarte más rápido, cuéntanos:",
