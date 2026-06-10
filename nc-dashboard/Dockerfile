@@ -1,11 +1,14 @@
 # ── Stage 1: Build ────────────────────────────────────────────────────
 FROM node:22-alpine AS builder
 
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 WORKDIR /app
 
 # Copy dependency files first (layer caching)
-COPY package.json package-lock.json* ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
+RUN pnpm install --frozen-lockfile
 
 # Copy source and build
 COPY . .
@@ -14,7 +17,7 @@ COPY . .
 ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
 
-RUN npm run build
+RUN pnpm run build
 
 # ── Stage 2: Production ──────────────────────────────────────────────
 FROM node:22-alpine AS runner
