@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { headerData } from "@/data/site";
+import { cn } from "@/lib/utils";
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [language, setLanguage] = useState<"EN" | "ES">("ES");
   const { brand, navItems, mobileMenu } = headerData;
 
   // Smooth scroll handler
@@ -32,16 +35,38 @@ export function Header() {
     }
   };
 
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 8);
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const handleLanguageToggle = () => {
+    setLanguage((prev) => (prev === "EN" ? "ES" : "EN"));
+  };
+
   return (
     <header
-      className="fixed top-20 sm:top-12 left-0 right-0 z-50 transition-all duration-300 bg-[rgba(28,25,23,0.85)] shadow-lg border-b border-[rgba(251,191,36,0.12)] backdrop-blur-xl backdrop-saturate-150"
-      style={{
-        WebkitBackdropFilter: "blur(16px) saturate(150%)",
-        backdropFilter: "blur(16px) saturate(150%)",
-      }}
+      className="fixed top-4 left-0 right-0 z-50 px-3 sm:px-4 lg:px-6 transition-all duration-300"
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16">
+      <div
+        className={cn(
+          "mx-auto max-w-7xl rounded-2xl transition-all duration-300",
+          isScrolled
+            ? "border border-white/15 bg-[rgba(15,15,15,0.55)] shadow-[0_24px_70px_rgba(0,0,0,0.45)] backdrop-blur-xl backdrop-saturate-150"
+            : "border border-transparent bg-transparent shadow-none",
+        )}
+        style={
+          isScrolled
+            ? {
+                WebkitBackdropFilter: "blur(18px) saturate(150%)",
+                backdropFilter: "blur(18px) saturate(150%)",
+              }
+            : undefined
+        }
+      >
+        <div className="flex items-center justify-between h-20 px-4 sm:px-6">
           <a
             href={brand.href}
             className="flex items-center gap-2 px-3 py-1"
@@ -49,76 +74,84 @@ export function Header() {
             onClick={(e) => handleSmoothScroll(e, brand.href)}
           >
             <span
-              className="text-xl font-bold"
+              className="text-[1.55rem] font-semibold"
               style={{ letterSpacing: "-0.4px" }}
             >
               <span className="text-white">{brand.name}</span>
-              <span className="text-amber-300 ">{brand.accent}</span>
+              <span className="text-[#F2BF27]">{brand.accent}</span>
             </span>
           </a>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center w-full">
-            <div className="flex flex-1 justify-center items-center gap-8">
-              {navItems.map((item) => (
-                <a
-                  key={item.name}
-                  href={item.href}
-                  className="text-sm text-stone-200/90 hover:text-white transition-colors px-2 py-1 rounded-lg hover:bg-[rgba(56,189,248,0.12)]"
-                  onClick={(e) => handleSmoothScroll(e, item.href)}
-                >
-                  {item.name}
-                </a>
-              ))}
-            </div>
-            {/* Botón Planes y Precios Desktop */}
-            <div className="flex items-center justify-end">
+          <nav className="hidden md:flex items-center gap-6 ml-auto">
+            {navItems.map((item) => (
               <a
-                href={headerData.button.href}
-                className="px-5 py-2 rounded-lg shadow-lg bg-linear-to-r from-amber-600 via-orange-500 to-rose-500 hover:from-amber-700 hover:via-orange-600 hover:to-rose-600 text-white font-bold text-sm transition-all animate-pulse"
-                style={{
-                  letterSpacing: "0.01em",
-                  boxShadow: "0 0 16px 4px #d97706, 0 0 32px 8px #f97316",
-                }}
-                onClick={(e) => handleSmoothScroll(e, headerData.button.href)}
+                key={item.name}
+                href={item.href}
+                className="text-[0.95rem] text-white/80 hover:text-white transition-colors px-2 py-1"
+                style={{ letterSpacing: "0.06em" }}
+                onClick={(e) => handleSmoothScroll(e, item.href)}
               >
-                {headerData.button.label}
+                {item.name}
               </a>
-            </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={handleLanguageToggle}
+              className="inline-flex w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.18em] text-white/80 transition-colors hover:bg-white/20"
+              aria-label="Cambiar idioma"
+            >
+              {language}
+            </button>
+
+            <a
+              href={headerData.button.href}
+              className="rounded-full border border-white/70 bg-white px-6 py-2 text-[0.95rem] font-semibold text-stone-950 transition-all hover:shadow-[0_0_20px_rgba(242,191,39,0.35)] hover:-translate-y-0.5"
+              style={{ letterSpacing: "0.01em" }}
+              onClick={(e) => handleSmoothScroll(e, headerData.button.href)}
+            >
+              {headerData.button.label}
+            </a>
           </nav>
 
-          {/* Mobile Menu Button */}
-          <button
-            type="button"
-            className="md:hidden p-2 text-stone-100 rounded-lg bg-[rgba(251,191,36,0.14)] hover:bg-[rgba(251,191,36,0.22)] transition-colors"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            aria-label={
-              isMenuOpen ? mobileMenu.closeLabel : mobileMenu.openLabel
-            }
-          >
-            {isMenuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <span suppressHydrationWarning>
-                <Menu className="h-5 w-5" />
-              </span>
-            )}
-          </button>
+          {/* Mobile Actions */}
+          <div className="flex items-center gap-2 md:hidden">
+            <a
+              href={headerData.button.href}
+              className="rounded-full border border-white/70 bg-white px-3 py-1.5 text-xs font-semibold text-stone-950 transition-all"
+              onClick={(e) => handleSmoothScroll(e, headerData.button.href)}
+            >
+              {headerData.button.label}
+            </a>
+            <button
+              type="button"
+              className="p-2 text-white rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 transition-colors"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label={
+                isMenuOpen ? mobileMenu.closeLabel : mobileMenu.openLabel
+              }
+            >
+              {isMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <span suppressHydrationWarning>
+                  <Menu className="h-5 w-5" />
+                </span>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <nav className="md:hidden mt-2 px-4 py-6 border-t border-[rgba(251,191,36,0.12)] bg-[rgba(28,25,23,0.94)] backdrop-blur-xl rounded-b-2xl shadow-lg">
-            <div className="flex flex-col gap-5">
+          <nav className="md:hidden mt-2 px-4 py-6 border-t border-white/10 bg-[rgba(15,15,15,0.85)] backdrop-blur-xl rounded-b-2xl shadow-lg">
+            <div className="flex flex-col gap-4">
               {navItems.map((item) => (
                 <a
                   key={item.name}
                   href={item.href}
-                  className="text-sm text-stone-100 hover:text-white transition-colors px-4 py-2 rounded-xl border border-[rgba(251,191,36,0.14)] bg-[rgba(251,191,36,0.08)] backdrop-blur-md hover:bg-[rgba(251,191,36,0.18)] shadow-sm"
-                  style={{
-                    WebkitBackdropFilter: "blur(8px)",
-                    backdropFilter: "blur(8px)",
-                  }}
+                  className="text-[0.95rem] text-white/80 hover:text-white transition-colors px-4 py-2 rounded-xl border border-white/10 bg-white/5"
                   onClick={(e) => {
                     handleSmoothScroll(e, item.href);
                     setIsMenuOpen(false);
@@ -127,21 +160,14 @@ export function Header() {
                   {item.name}
                 </a>
               ))}
-              {/* Botón Planes y Precios Mobile */}
-              <a
-                href={headerData.button.href}
-                className="w-full mt-2 px-8 py-2 rounded-lg shadow-lg bg-linear-to-r from-amber-600 via-orange-500 to-rose-500 hover:from-amber-700 hover:via-orange-600 hover:to-rose-600 text-white font-bold text-base transition-all animate-pulse text-center"
-                style={{
-                  letterSpacing: "0.01em",
-                  boxShadow: "0 0 16px 4px #d97706, 0 0 32px 8px #f97316",
-                }}
-                onClick={(e) => {
-                  handleSmoothScroll(e, headerData.button.href);
-                  setIsMenuOpen(false);
-                }}
+              <button
+                type="button"
+                onClick={handleLanguageToggle}
+                className="inline-flex w-12 items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white/80"
+                aria-label="Cambiar idioma"
               >
-                {headerData.button.label}
-              </a>
+                {language}
+              </button>
             </div>
           </nav>
         )}

@@ -7,9 +7,15 @@ type SectionProps = {
   id?: string;
   children: ReactNode;
   className?: string;
+  containerClassName?: string;
 };
 
-export function Section({ id, children, className }: SectionProps) {
+export function Section({
+  id,
+  children,
+  className,
+  containerClassName,
+}: SectionProps) {
   return (
     <section
       id={id}
@@ -18,7 +24,7 @@ export function Section({ id, children, className }: SectionProps) {
         className,
       )}
     >
-      <Container>{children}</Container>
+      <Container className={containerClassName}>{children}</Container>
     </section>
   );
 }
