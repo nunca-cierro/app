@@ -70,10 +70,11 @@ export function WhatsAppMockup() {
   return (
     <div className="relative w-full max-w-[320px] mx-auto">
       {/* Phone frame */}
-      <div className="relative rounded-[2.5rem] bg-gray-900 p-2 shadow-2xl shadow-black/50">
+      <div className="relative rounded-[2.5rem] bg-gray-900 shadow-2xl shadow-black/50"
+           style={{ padding: '3px' }}>
         {/* Screen */}
-        <div className="relative rounded-[2rem] overflow-hidden bg-[#E5DDD5]">
-          {/* Status bar */}
+        <div className="relative rounded-[2.3rem] overflow-hidden bg-[#E5DDD5]">
+          {/* Status bar — extends to full top with green */}
           <div className="bg-[#075E54] px-4 py-2 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <svg

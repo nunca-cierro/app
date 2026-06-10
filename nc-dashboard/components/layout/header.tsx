@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [language, setLanguage] = useState<"EN" | "ES">("ES");
   const { brand, navItems, mobileMenu } = headerData;
 
   // Smooth scroll handler
@@ -41,10 +40,6 @@ export function Header() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  const handleLanguageToggle = () => {
-    setLanguage((prev) => (prev === "EN" ? "ES" : "EN"));
-  };
 
   return (
     <header
@@ -95,15 +90,6 @@ export function Header() {
                 {item.name}
               </a>
             ))}
-
-            <button
-              type="button"
-              onClick={handleLanguageToggle}
-              className="inline-flex w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.18em] text-white/80 transition-colors hover:bg-white/20"
-              aria-label="Cambiar idioma"
-            >
-              {language}
-            </button>
 
             <a
               href={headerData.button.href}
@@ -168,14 +154,7 @@ export function Header() {
                   {item.name}
                 </a>
               ))}
-              <button
-                type="button"
-                onClick={handleLanguageToggle}
-                className="inline-flex w-12 items-center justify-center rounded-full border border-white/15 bg-white/5 px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white/80"
-                aria-label="Cambiar idioma"
-              >
-                {language}
-              </button>
+
             </div>
           </nav>
         )}
