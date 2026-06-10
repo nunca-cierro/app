@@ -5,7 +5,6 @@ import { Section } from "@/components/layout/section";
 import { Button } from "@/components/ui/button";
 import { siteBanner, sitePlans } from "@/data/site";
 import { AnimatedWrapper } from "@/components/ui/animated-wrapper";
-import { Check } from "lucide-react";
 
 function getWhatsAppUrl(text: string) {
   return `https://wa.me/${siteBanner.whatsappNumber}?text=${encodeURIComponent(text)}`;
