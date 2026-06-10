@@ -11,4 +11,5 @@ from app.modules.agents.models import AiAgent, Prompt  # noqa: F401
 from app.modules.agents.template_models import AgentTemplate  # noqa: F401
 from app.modules.conversations.models import Conversation, Message  # noqa: F401
 from app.modules.platform_connections.models import PlatformConnection  # noqa: F401
+from app.modules.auto_reply.models import AutoReply  # noqa: F401
 from app.db.base import Base  # noqa: F401 — ensure Base is loaded too

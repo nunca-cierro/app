@@ -57,6 +57,10 @@ class Tenant(Base):
         "Conversation", back_populates="tenant", lazy="selectin",
         cascade="all, delete-orphan",
     )
+    auto_replies = relationship(
+        "AutoReply", back_populates="tenant", lazy="selectin",
+        cascade="all, delete-orphan",
+    )
     user_associations: Mapped[list["UserTenant"]] = relationship(
         "UserTenant", back_populates="tenant", cascade="all, delete-orphan"
     )
