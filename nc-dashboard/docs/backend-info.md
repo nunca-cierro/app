@@ -11,7 +11,7 @@
 | **Backend Framework**  | FastAPI (Python 3.12)                                                     |
 | **Frontend Framework** | Next.js 16 (App Router, Turbopack)                                        |
 | **Runtime (Backend)**  | uv + uvicorn                                                              |
-| **Runtime (Frontend)** | Node.js 22 + npm                                                          |
+| **Runtime (Frontend)** | Node.js 22 + pnpm                                                         |
 | **WhatsApp**           | Meta WhatsApp Cloud API v22.0                                             |
 | **IA**                 | Groq API — LLaMA 3 70B                                                    |
 | **HTTP Client**        | httpx (async)                                                             |
@@ -404,7 +404,7 @@ Precios de referencia (desde `BRAND.md`):
 - **Backend**: Railway auto-detecta Python y usa `Procfile` para arrancar
   - Comando: `uvicorn main:app --host 0.0.0.0 --port $PORT`
 - **Frontend**: Desplegable en Vercel / Railway / cualquier host Node.js
-  - Comando: `npm run build && npm start`
+  - Comando: `pnpm run build && pnpm start`
 
 ### Costos
 

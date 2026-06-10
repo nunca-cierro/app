@@ -62,8 +62,8 @@ uv run uvicorn app.main:app --reload
 cd nc-dashboard
 # crear .env si no existe:
 # NEXT_PUBLIC_API_URL=http://localhost:8000
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 **Dashboard:** http://localhost:3000  
@@ -76,7 +76,7 @@ npm run dev
 cd nc-api && uv run pytest
 
 # Frontend (62 tests)
-cd nc-dashboard && npm test
+cd nc-dashboard && pnpm test
 ```
 
 ## Despliegue

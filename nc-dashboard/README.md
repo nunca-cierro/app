@@ -44,7 +44,7 @@ Flujo guiado para poner en marcha un negocio en minutos:
 ### Prerrequisitos
 
 - **Node.js 22+**
-- **npm** o **pnpm**
+- **pnpm** (recomendado)
 - **nc-api** corriendo (ver [nc-api README](../nc-api/README.md))
 
 ### Configuración
@@ -59,8 +59,8 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ### Desarrollo
 
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
 
 Abrir [http://localhost:3000](http://localhost:3000).
