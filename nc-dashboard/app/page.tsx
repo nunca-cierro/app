@@ -1,3 +1,5 @@
+import { Businesses } from "@/components/sections/businesses";
+import { HowItWorks } from "@/components/sections/how-it-works";
 import { WhatsappFloat } from "@/components/ui/whatsapp-float";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
@@ -13,8 +15,10 @@ export default function Home() {
     <div className="flex min-h-screen flex-col justify-between bg-background font-sans text-foreground">
       <Header />
       <Hero />
+      <HowItWorks />
       <Services />
       <Process />
+      <Businesses />
       <Plans />
       <Faq />
       <Contact />
