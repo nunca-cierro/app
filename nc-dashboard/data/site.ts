@@ -165,12 +165,11 @@ export const footerData = {
   ],
   copyright: {
     label: "Todos los derechos reservados.",
-    legal: [
-      { label: "Política de privacidad", href: "#" },
-      { label: "Términos y condiciones", href: "#" },
-      { label: "Datos y cumplimientos", href: "#" },
-      { label: "Marca y propiedad intelectual", href: "#" },
-    ],
+      legal: [
+        { label: "Privacidad", href: "/legal#privacidad" },
+        { label: "Términos", href: "/legal#terminos" },
+        { label: "Datos y cumplimiento", href: "/legal#datos" },
+      ],
   },
 };
 
