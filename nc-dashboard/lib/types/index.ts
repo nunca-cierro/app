@@ -5,3 +5,4 @@ export type { AuthUser, LoginResponse, UserRole, AdminUser, TenantAssociation } 
 export type { Agent, Prompt, AgentTemplate } from "./agent";
 export type { WhatsAppNumber } from "./whatsapp";
 export type { Platform, PlatformConnection } from "./platform";
+export type { AutoReply, AutoReplyCreate, AutoReplyUpdate } from "./auto-reply";
