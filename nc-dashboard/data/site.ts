@@ -123,8 +123,8 @@ export const headerData = {
     closeLabel: "Cerrar menú",
   },
   button: {
-    label: "Agendar una llamada",
-    href: "#contacto",
+    label: "Escríbenos",
+    href: "https://wa.me/573219615338",
   },
 };
 
