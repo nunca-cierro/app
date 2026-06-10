@@ -347,13 +347,13 @@ export const sitePlans = {
         "Inteligencia artificial que entiende lo que preguntan tus clientes. Para negocios con volumen constante.",
       features: [
         "Todo lo del Plan Básico",
-        "Inteligencia artificial con Groq (entiende contexto)",
-        "Respuestas ILIMITADAS",
+        "Inteligencia artificial (entiende contexto)",
+        "Respuestas ilimitadas",
         "Hasta 50 productos/servicios en catálogo",
         "Hasta 5.000 conversaciones al mes",
         "Hasta 3 negocios",
         "Dashboard en vivo con métricas",
-        "Soporte por WhatsApp y correo",
+        "Soporte por WhatsApp",
       ],
       featured: true,
     },
@@ -364,9 +364,9 @@ export const sitePlans = {
         "Todo incluido: inteligencia artificial, dashboard avanzado y múltiples negocios.",
       features: [
         "Todo lo del Plan Profesional",
-        "Productos/servicios ILIMITADOS en catálogo",
-        "Conversaciones ILIMITADAS",
-        "Negocios ILIMITADOS",
+        "Productos/servicios ilimitados en catálogo",
+        "Conversaciones ilimitadas",
+        "Negocios ilimitados",
         "Conexión personalizada para integrar con tus sistemas",
         "Soporte prioritario 24/7",
         "Tiempo de respuesta garantizado",
@@ -376,14 +376,13 @@ export const sitePlans = {
   ],
   // Comparison table rows (without prices)
   comparisonRows: [
-    { label: "Tipo de respuestas", basic: "Programadas", pro: "IA con Groq", enterprise: "IA con Groq" },
+    { label: "Tipo de respuestas", basic: "Programadas", pro: "IA", enterprise: "IA" },
     { label: "Productos/Servicios", basic: "Hasta 10", pro: "Hasta 50", enterprise: "Ilimitado" },
     { label: "Conversaciones al mes", basic: "500", pro: "5.000", enterprise: "Ilimitadas" },
     { label: "Negocios", basic: "1", pro: "3", enterprise: "Ilimitados" },
     { label: "Métricas semanales", basic: "✅", pro: "✅", enterprise: "✅" },
     { label: "Dashboard en vivo", basic: "—", pro: "✅", enterprise: "✅" },
-    { label: "Modelo de IA", basic: "—", pro: "Llama 3.3 70B", enterprise: "Llama 3.3 70B" },
-    { label: "Soporte", basic: "WhatsApp", pro: "WhatsApp + Correo", enterprise: "Prioritario 24/7" },
+    { label: "Soporte", basic: "WhatsApp", pro: "WhatsApp", enterprise: "Prioritario 24/7" },
   ],
   // Bot-readable plan info (no prices)
   planInfo: {
@@ -427,7 +426,7 @@ export const sitePlans = {
   },
   trialInfo: {
     label: "Prueba gratis",
-    description: "7 días de prueba con respuestas programadas. Sin tarjeta. Cancela cuando quieras.",
+    description: "7 días de prueba con respuestas programadas. Cancela cuando quieras.",
     days: 7,
     type: "programmed",
   },
@@ -453,7 +452,7 @@ export const siteFaq = {
       question:
         "¿Qué pasa con mi WhatsApp cuando configuran el bot? ¿Dejo de recibir mensajes?",
       answer:
-        "No, todo lo contrario. Sigues recibiendo mensajes normal. El bot solo responde automáticamente preguntas frecuentes y fuera de horario. Cuando estés disponible, tomas el control cuando quieras.",
+        "No, todo lo contrario. Sigues recibiendo mensajes normal. El bot solo responde automáticamente las preguntas frecuentes y los mensajes que llegan fuera de horario. Cuando estés disponible, tomas el control cuando quieras.",
     },
     {
       question: "¿El bot entiende lo que los clientes preguntan?",
