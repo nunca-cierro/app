@@ -215,6 +215,19 @@ export function Contact() {
           <ContactChatMockup />
         </AnimatedWrapper>
       </div>
+
+      {/* Privacy notice */}
+      <p className="mt-12 text-center text-xs text-stone-400">
+        Al contactarnos, confirmas que aceptas nuestra{" "}
+        <a href="/legal#privacidad" className="text-amber-600 hover:text-amber-700 underline underline-offset-2">
+          política de privacidad
+        </a>
+        {" "}y nuestros{" "}
+        <a href="/legal#terminos" className="text-amber-600 hover:text-amber-700 underline underline-offset-2">
+          términos y condiciones
+        </a>
+        .
+      </p>
     </Section>
   );
 }
