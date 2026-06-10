@@ -7,8 +7,6 @@ import { Contact } from "@/components/sections/contact";
 import { Faq } from "@/components/sections/faq";
 import { Hero } from "@/components/sections/hero";
 import { Plans } from "@/components/sections/plans";
-import { Process } from "@/components/sections/process";
-import { Services } from "@/components/sections/services";
 
 export default function Home() {
   return (
@@ -16,8 +14,6 @@ export default function Home() {
       <Header />
       <Hero />
       <HowItWorks />
-      <Services />
-      <Process />
       <Businesses />
       <Plans />
       <Faq />

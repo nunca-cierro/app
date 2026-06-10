@@ -249,7 +249,7 @@ export function HowItWorks() {
       <div className="sticky top-0 h-screen overflow-hidden">
         {/* Horizontal track */}
         <motion.div className="flex h-full will-change-transform" style={{ x }}>
-          {slides.map((slide, index) => (
+          {slides.map((slide) => (
             <div
               key={slide.number}
               className="relative flex-shrink-0 w-full h-full flex items-center justify-center px-6"
