@@ -355,12 +355,12 @@ function ClientDashboard() {
                 </p>
               )}
               {!myAgent.business_config.business_info?.description && (
-                <p>Sin información configurada. Hacé clic en Editar para agregar los datos de tu negocio.</p>
+                <p>Sin información configurada. Haz clic en Editar para agregar los datos de tu negocio.</p>
               )}
             </CardContent>
           ) : (
             <CardContent className="text-sm text-muted-foreground">
-              Sin configuración. Hacé clic en Editar para empezar.
+              Sin configuración. Haz clic en Editar para empezar.
             </CardContent>
           )}
         </Card>
