@@ -58,9 +58,12 @@ export function WhatsAppMockup() {
 
     messages.forEach((_, index) => {
       timers.push(
-        setTimeout(() => {
-          setVisibleMessages(index + 1);
-        }, 300 + index * 300)
+        setTimeout(
+          () => {
+            setVisibleMessages(index + 1);
+          },
+          300 + index * 300,
+        ),
       );
     });
 
@@ -70,8 +73,10 @@ export function WhatsAppMockup() {
   return (
     <div className="relative w-full max-w-[320px] mx-auto">
       {/* Phone frame */}
-      <div className="relative rounded-[2.5rem] bg-gray-900 shadow-2xl shadow-black/50"
-           style={{ padding: '3px' }}>
+      <div
+        className="relative rounded-[2.5rem] bg-gray-900 shadow-2xl shadow-black/50"
+        style={{ padding: "3px" }}
+      >
         {/* Screen */}
         <div className="relative rounded-[2.3rem] overflow-hidden bg-[#E5DDD5]">
           {/* Status bar — extends to full top with green */}
@@ -135,7 +140,7 @@ export function WhatsAppMockup() {
           </div>
 
           {/* Chat background pattern */}
-          <div className="px-3 py-4 min-h-[380px] relative">
+          <div className="px-3 py-4 min-h-95 relative">
             {/* WhatsApp chat wallpaper pattern */}
             <div
               className="absolute inset-0 opacity-10"
@@ -156,7 +161,8 @@ export function WhatsAppMockup() {
                       index < visibleMessages
                         ? "translateY(0)"
                         : "translateY(16px)",
-                    transition: "opacity 0.3s ease-out, transform 0.3s ease-out",
+                    transition:
+                      "opacity 0.3s ease-out, transform 0.3s ease-out",
                   }}
                 >
                   <div
