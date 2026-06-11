@@ -67,7 +67,7 @@ async def create_agent_from_template(
         business_config=resolved_content,
         provider="groq",
         model="llama-3.3-70b-versatile",
-        temperature=0.7,
+        temperature=0,
         max_tokens=512,
     )
     session.add(agent)

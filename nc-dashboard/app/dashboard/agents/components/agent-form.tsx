@@ -5,7 +5,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   agentFormSchema,
   type AgentFormValues,
-  MODELS_BY_PROVIDER,
 } from "@/lib/schemas/agent";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -57,10 +56,8 @@ export function AgentForm({
     },
   });
 
-  const selectedProvider = useWatch({ control, name: "provider" });
   const selectedTenantId = useWatch({ control, name: "tenant_id" });
   const currentTemperature = useWatch({ control, name: "temperature" });
-  const availableModels = MODELS_BY_PROVIDER[selectedProvider] ?? [];
 
   /* ── Detect plan ── */
   const plan =
@@ -69,6 +66,7 @@ export function AgentForm({
       ? tenants.find((t) => t.id === selectedTenantId)?.plan ?? null
       : null);
   const isBasicOrTrial = plan === "basic" || plan === "trial";
+  const planMaxTokens = plan === "enterprise" ? 1024 : 512;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -122,98 +120,85 @@ export function AgentForm({
 
       {isBasicOrTrial ? (
         /* ── Plan básico/trial: sin IA ── */
-        <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-          Plan {plan === "basic" ? "Básico" : "Trial"}: respuestas
-          programadas sin IA. Configurá las respuestas en{" "}
-          <strong>&ldquo;Respuestas programadas&rdquo;</strong>.
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 space-y-2">
+          <p>
+            <strong>Plan {plan === "basic" ? "Básico" : "Trial"}</strong> — sin
+            inteligencia artificial.
+          </p>
+          <p className="text-amber-700">
+            Las respuestas se generan automáticamente buscando coincidencias
+            entre lo que pregunta el cliente y las{" "}
+            <strong>Preguntas Frecuentes (FAQ)</strong> que configures en la
+            pestaña <strong>Negocio</strong>. También se usan las palabras clave
+            de derivación para escalar a un humano cuando sea necesario.
+          </p>
         </div>
       ) : (
         <>
-          {/* ── Provider + Model ── */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <label htmlFor="provider" className="text-sm font-medium">
-                Proveedor
-              </label>
-              <select
-                id="provider"
-                {...register("provider")}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <option value="groq">Groq</option>
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic</option>
-              </select>
-              {errors.provider && (
-                <p className="text-xs text-destructive">
-                  {errors.provider.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="model" className="text-sm font-medium">
-                Modelo
-              </label>
-              <select
-                id="model"
-                {...register("model")}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {availableModels.length === 0 && (
-                  <option value="">Sin modelos disponibles</option>
-                )}
-                {availableModels.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
-              </select>
-              {errors.model && (
-                <p className="text-xs text-destructive">{errors.model.message}</p>
-              )}
+          {/* Provider — fixed */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Proveedor</label>
+            <div className="flex h-10 items-center rounded-md border bg-muted/50 px-3 text-sm text-muted-foreground">
+              Groq
             </div>
           </div>
 
-          {/* ── Temperature + Max Tokens ── */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <label htmlFor="temperature" className="text-sm font-medium">
-                Temperatura ({currentTemperature})
-              </label>
-              <input
-                id="temperature"
-                type="range"
-                min="0"
-                max="2"
-                step="0.1"
-                {...register("temperature", { valueAsNumber: true })}
-                className="w-full"
-              />
-              {errors.temperature && (
-                <p className="text-xs text-destructive">
-                  {errors.temperature.message}
-                </p>
-              )}
+          {/* Model — fixed */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Modelo</label>
+            <div className="flex h-10 items-center rounded-md border bg-muted/50 px-3 text-sm text-muted-foreground">
+              llama-3.3-70b-versatile
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <label htmlFor="max_tokens" className="text-sm font-medium">
-                Máx. tokens
-              </label>
-              <Input
-                id="max_tokens"
-                type="number"
-                {...register("max_tokens", { valueAsNumber: true })}
-                min={64}
-                max={8192}
-              />
-              {errors.max_tokens && (
-                <p className="text-xs text-destructive">
-                  {errors.max_tokens.message}
-                </p>
-              )}
-            </div>
+          <input type="hidden" {...register("provider")} value="groq" />
+          <input type="hidden" {...register("model")} value="llama-3.3-70b-versatile" />
+
+          {/* Temperature */}
+          <div className="space-y-2">
+            <label htmlFor="temperature" className="text-sm font-medium">
+              Temperatura ({currentTemperature})
+            </label>
+            <input
+              id="temperature"
+              type="range"
+              min="0"
+              max="2"
+              step="0.1"
+              {...register("temperature", { valueAsNumber: true })}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              0 = respuestas precisas y consistentes (recomendado para info de negocio).
+            </p>
+            {errors.temperature && (
+              <p className="text-xs text-destructive">
+                {errors.temperature.message}
+              </p>
+            )}
+          </div>
+
+          {/* Max tokens — plan-aware */}
+          <div className="space-y-2">
+            <label htmlFor="max_tokens" className="text-sm font-medium">
+              Máx. tokens
+            </label>
+            <Input
+              id="max_tokens"
+              type="number"
+              value={planMaxTokens}
+              disabled
+              className="bg-muted/50 text-muted-foreground"
+            />
+            <input
+              type="hidden"
+              {...register("max_tokens", { valueAsNumber: true })}
+              value={planMaxTokens}
+            />
+            <p className="text-xs text-muted-foreground">
+              Automático según plan: {planMaxTokens} tokens (plan{" "}
+              {plan === "professional" ? "Profesional" : "Empresarial"}).
+            </p>
           </div>
         </>
       )}

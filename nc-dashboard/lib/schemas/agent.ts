@@ -10,8 +10,8 @@ export const agentFormSchema = z.object({
     .string()
     .min(2, "El nombre debe tener al menos 2 caracteres")
     .max(100, "El nombre no puede exceder 100 caracteres"),
-  provider: z.enum(["groq", "openai", "anthropic"], {
-    message: "Selecciona un proveedor válido",
+  provider: z.enum(["groq"], {
+    message: "Proveedor no disponible",
   }),
   model: z.string().min(1, "Selecciona un modelo"),
   temperature: z.number()
@@ -50,7 +50,7 @@ export const defaultAgentValues: AgentFormValues = {
   name: "",
   provider: "groq",
   model: "llama-3.3-70b-versatile",
-  temperature: 0.7,
+  temperature: 0,
   max_tokens: 512,
 };
 

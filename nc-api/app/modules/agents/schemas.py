@@ -30,7 +30,7 @@ class AiAgentCreate(BaseModel):
     description: str | None = None
     provider: str = "groq"
     model: str = "llama-3.3-70b-versatile"
-    temperature: float = 0.7
+    temperature: float = 0
     max_tokens: int = 512
     enabled: bool = True
     business_config: dict[str, Any] | None = None
