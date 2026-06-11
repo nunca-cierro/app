@@ -8,7 +8,7 @@ generates an AI response, and sends it back via ``TelegramAdapter``.
 from __future__ import annotations
 
 import typing as t
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from loguru import logger
 from sqlalchemy import select
@@ -142,6 +142,19 @@ async def handle_telegram_incoming(
         logger.warning("Tenant {tid} not found for Telegram message", tid=tenant_id)
         await session.commit()
         return
+
+    # ── 4e. Trial expiration check ──────────────────────────────────────
+    TRIAL_DAYS = 7
+    
+    if tenant.plan == "trial":
+        trial_end = tenant.created_at.replace(tzinfo=UTC) + timedelta(days=TRIAL_DAYS)
+        if datetime.now(UTC) >= trial_end:
+            if tenant.status != "inactive":
+                tenant.status = "inactive"
+                session.add(tenant)
+            await session.commit()
+            logger.info("Trial expired for tenant {tid}, message ignored", tid=tenant_id)
+            return
 
     # ── 5a. Auto-reply check for Basic/Trial plans ────────────────────────
     from app.modules.auto_reply.models import AutoReply

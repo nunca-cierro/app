@@ -9,7 +9,7 @@ export const tenantFormSchema = z.object({
     .string()
     .min(2, "El nombre debe tener al menos 2 caracteres")
     .max(100, "El nombre no puede exceder 100 caracteres"),
-  plan: z.enum(["basic", "pro", "enterprise"], {
+  plan: z.enum(["basic", "professional", "enterprise", "trial"], {
     message: "Selecciona un plan válido",
   }),
   timezone: z.string().min(1, "Selecciona una zona horaria"),

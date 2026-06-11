@@ -26,9 +26,10 @@ interface TenantFormProps {
 /* ------------------------------------------------------------------ */
 
 const PLANS = [
-  { value: "basic", label: "Basic" },
-  { value: "pro", label: "Pro" },
-  { value: "enterprise", label: "Enterprise" },
+  { value: "trial", label: "Prueba (7 días)" },
+  { value: "basic", label: "Básico" },
+  { value: "professional", label: "Profesional" },
+  { value: "enterprise", label: "Empresarial" },
 ];
 
 const TIMEZONES = [
