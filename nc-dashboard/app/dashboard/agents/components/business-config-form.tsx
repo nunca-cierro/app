@@ -71,6 +71,7 @@ interface BusinessConfigFormProps {
   config: BusinessConfig | null;
   onSave: (config: BusinessConfig) => Promise<void>;
   isSaving: boolean;
+  canAdd?: boolean; // true = can add new products/FAQ, false = edit only
 }
 
 /* ------------------------------------------------------------------ */
@@ -81,6 +82,7 @@ export function BusinessConfigForm({
   config,
   onSave,
   isSaving,
+  canAdd = true,
 }: BusinessConfigFormProps) {
   const [form, setForm] = useState<BusinessConfig>(
     config ?? emptyConfig(),
@@ -300,15 +302,17 @@ export function BusinessConfigForm({
           <CardTitle className="text-sm font-medium">
             Productos / Servicios
           </CardTitle>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addProduct}
-          >
-            <Plus className="mr-1 size-3" />
-            Agregar
-          </Button>
+          {canAdd && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addProduct}
+            >
+              <Plus className="mr-1 size-3" />
+              Agregar
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-3">
           {(form.products_services ?? []).length === 0 && (
@@ -354,15 +358,17 @@ export function BusinessConfigForm({
           <CardTitle className="text-sm font-medium">
             Preguntas Frecuentes
           </CardTitle>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addFaq}
-          >
-            <Plus className="mr-1 size-3" />
-            Agregar
-          </Button>
+          {canAdd && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addFaq}
+            >
+              <Plus className="mr-1 size-3" />
+              Agregar
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="space-y-3">
           {(form.faq ?? []).length === 0 && (

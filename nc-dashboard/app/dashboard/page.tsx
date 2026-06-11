@@ -1,11 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTenants } from "@/hooks/use-tenants";
 import { useMetrics } from "@/hooks/use-metrics";
 import { useConversations } from "@/hooks/use-conversations";
+import { useAgents } from "@/hooks/use-agents";
+import { useAgent } from "@/hooks/use-agent";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BusinessConfigForm } from "@/app/dashboard/agents/components/business-config-form";
 import {
   Building2,
   MessageSquare,
@@ -16,7 +21,11 @@ import {
   Clock,
   Shield,
   Sparkles,
+  Pencil,
 } from "lucide-react";
+import { toast } from "sonner";
+import { ApiError } from "@/lib/api";
+import type { BusinessConfig } from "@/lib/types/agent";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                             */
@@ -168,11 +177,33 @@ function AdminDashboard() {
 function ClientDashboard() {
   const { user } = useAuth();
   const { tenants } = useTenants();
+  const { agents } = useAgents();
   const plan = user?.plan ?? null;
   const tid = user?.current_tenant_id ?? user?.tenant_id;
+  const canEdit = plan === "professional" || plan === "enterprise";
 
   const myTenant = tid ? tenants.find((t) => t.id === tid) : null;
+  const myAgent = agents.find((a) => a.tenant_id === tid) ?? null;
   const remaining = myTenant?.created_at ? daysRemaining(myTenant.created_at) : 0;
+
+  // Business config save
+  const { updateBusinessConfig } = useAgent(myAgent?.id ?? "");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  const handleSaveConfig = async (config: BusinessConfig) => {
+    if (!myAgent?.id) return;
+    setIsSaving(true);
+    try {
+      await updateBusinessConfig(config);
+      toast.success("Información del negocio actualizada");
+      setIsEditing(false);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Error al guardar");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -279,6 +310,59 @@ function ClientDashboard() {
               </div>
             )}
           </CardContent>
+        </Card>
+      )}
+
+      {/* Edit business info — Pro/Enterprise only */}
+      {canEdit && myAgent && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-medium">
+              <Pencil className="inline size-4 mr-2" />
+              Información del Negocio
+            </CardTitle>
+            {!isEditing && (
+              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                <Pencil className="size-3 mr-1" /> Editar
+              </Button>
+            )}
+          </CardHeader>
+          {isEditing ? (
+            <CardContent>
+              <BusinessConfigForm
+                config={myAgent.business_config}
+                onSave={handleSaveConfig}
+                isSaving={isSaving}
+                canAdd={plan === "enterprise"}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2"
+                onClick={() => setIsEditing(false)}
+              >
+                Cancelar
+              </Button>
+            </CardContent>
+          ) : myAgent.business_config ? (
+            <CardContent className="text-sm text-muted-foreground">
+              {myAgent.business_config.business_info?.description && (
+                <p>{myAgent.business_config.business_info.description}</p>
+              )}
+              {myAgent.business_config.products_services && myAgent.business_config.products_services.length > 0 && (
+                <p className="mt-1">
+                  {myAgent.business_config.products_services.length} productos/servicios · {myAgent.business_config.faq?.length ?? 0} preguntas frecuentes
+                </p>
+              )}
+              {!myAgent.business_config.business_info?.description && (
+                <p>Sin información configurada. Hacé clic en Editar para agregar los datos de tu negocio.</p>
+              )}
+            </CardContent>
+          ) : (
+            <CardContent className="text-sm text-muted-foreground">
+              Sin configuración. Hacé clic en Editar para empezar.
+            </CardContent>
+          )}
         </Card>
       )}
 
