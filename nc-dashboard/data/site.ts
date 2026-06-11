@@ -41,64 +41,6 @@ export const siteDevicePreview = {
   },
 };
 
-// Services section data
-export const siteServices = {
-  sectionId: "servicios",
-  label: "Servicios",
-  title: "Tu negocio atendiendo clientes sin que estés pendiente del celular",
-  badge: "Sin conocimientos técnicos. Nosotros configuramos todo.",
-  services: [
-    {
-      icon: "Bot",
-      title: "Bot WhatsApp",
-      description:
-        "Responde automáticamente cuando preguntan por horarios, precios o ubicación. Atiende clientes aunque estés durmiendo, en reunión o de día libre. El cliente escribe 'menú' y recibe el catálogo al instante.",
-    },
-    {
-      icon: "Sparkles",
-      title: "Asistente Inteligente",
-      description:
-        "Agenda citas automáticas sin estar preguntando 'qué día te queda bien'. El bot hace seguimiento a clientes interesados que se enfriaron y recuerda citas automáticamente para que menos gente se desconecte.",
-    },
-    {
-      icon: "LayoutDashboard",
-      title: "Sistema Completo",
-      description:
-        "Página web profesional con tu marca + automatización completa de WhatsApp. Panel de control para ver cuántos clientes potenciales entraron, cuántos compraron y encuestas automáticas después de cada venta.",
-    },
-  ],
-};
-
-// Process section data
-export const siteProcess = {
-  sectionId: "proceso",
-  label: "Proceso",
-  title: "Así de simple empezamos",
-  subtitle: "Tres pasos claros para que tu negocio empiece a atender 24/7.",
-  stepLabelPrefix: "Paso",
-  footerText: "Te mostramos avances y una versión de prueba antes de activar.",
-  steps: [
-    {
-      number: "01",
-      title: "Analizamos tu negocio",
-      description:
-        "Vemos qué preguntas recibes siempre, qué horario manejas y qué necesita automatizar tu negocio.",
-    },
-    {
-      number: "02",
-      title: "Configuramos el bot",
-      description:
-        "Personalizamos las respuestas, conectamos tu WhatsApp y dejamos todo listo para que empiece a funcionar.",
-    },
-    {
-      number: "03",
-      title: "Empiezas a recibir clientes 24/7",
-      description:
-        "Tu negocio nunca cierra. Los clientes te escriben, el bot responde y tú solo te encargas de vender.",
-    },
-  ],
-};
-
 // Header data layout
 export const headerData = {
   brand: {
