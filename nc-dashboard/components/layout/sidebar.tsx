@@ -62,7 +62,7 @@ export function getNavItems(role?: UserRole | null, plan?: string | null): NavIt
 
   // Clients with Basic plan: no dashboard access
   if (role === "client" && plan === "basic") {
-    return items; // Only show minimal items
+    return []; // No navigation items — access denied
   }
 
   // ── Sección: Gestión (solo superadmin/admin) ──
@@ -98,12 +98,15 @@ export function getNavItems(role?: UserRole | null, plan?: string | null): NavIt
   }
 
   // ── Sección: Comunicación ──
-  items.push({
-    href: "/dashboard/conversations",
-    label: "Conversaciones",
-    icon: MessageSquare,
-    roles: ADMIN_ROUTES,
-  });
+  // Hide conversations for trial plan clients (view-only)
+  if (!(role === "client" && plan === "trial")) {
+    items.push({
+      href: "/dashboard/conversations",
+      label: "Conversaciones",
+      icon: MessageSquare,
+      roles: ADMIN_ROUTES,
+    });
+  }
 
   // ── Sección: Admin (solo superadmin) ──
   if (role === "superadmin") {
