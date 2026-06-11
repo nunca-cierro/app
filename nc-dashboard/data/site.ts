@@ -381,6 +381,7 @@ export const sitePlans = {
     { label: "Negocios", basic: "1", pro: "3", enterprise: "Ilimitados" },
     { label: "Métricas semanales", basic: "✅", pro: "✅", enterprise: "✅" },
     { label: "Dashboard en vivo", basic: "—", pro: "✅", enterprise: "✅" },
+    { label: "Acceso cliente", basic: "—", pro: "Solo lectura", enterprise: "Editar + agregar" },
     { label: "Soporte", basic: "WhatsApp", pro: "WhatsApp", enterprise: "Prioritario 24/7" },
   ],
   // Bot-readable plan info (no prices)
@@ -394,6 +395,7 @@ export const sitePlans = {
       hasAI: false,
       hasDashboard: false,
       hasMetrics: true,
+      hasClientAccess: false,
       supportLevel: "whatsapp",
     },
     professional: {
@@ -405,6 +407,8 @@ export const sitePlans = {
       hasAI: true,
       hasDashboard: true,
       hasMetrics: true,
+      hasClientAccess: true,
+      clientAccessType: "read",
       supportLevel: "whatsapp_email",
       model: "llama-3.3-70b-versatile",
       maxTokens: 512,
@@ -418,6 +422,8 @@ export const sitePlans = {
       hasAI: true,
       hasDashboard: true,
       hasMetrics: true,
+      hasClientAccess: true,
+      clientAccessType: "full",
       supportLevel: "priority_24_7",
       model: "llama-3.3-70b-versatile",
       maxTokens: 1024,
@@ -425,7 +431,7 @@ export const sitePlans = {
   },
   trialInfo: {
     label: "Prueba gratis",
-    description: "7 días de prueba con respuestas programadas. Cancela cuando quieras.",
+    description: "7 días de prueba con respuestas programadas, dashboard propio y acceso a conversaciones. Cancela cuando quieras.",
     days: 7,
     type: "programmed",
   },
