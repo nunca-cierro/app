@@ -215,7 +215,7 @@ export default function AgentDetailPage() {
 
         {/* ── Tab: Info ── */}
         <TabsContent value="info" className="mt-6">
-          <AgentInfo agent={agent} />
+          <AgentInfo agent={agent} plan={tenants.find(t => t.id === agent.tenant_id)?.plan} />
         </TabsContent>
 
         {/* ── Tab: Negocio ── */}
@@ -239,7 +239,7 @@ export default function AgentDetailPage() {
               <AgentForm
                 defaultValues={{
                   name: agent.name,
-                  provider: agent.provider as "groq" | "openai" | "anthropic",
+                  provider: "groq",
                   model: agent.model,
                   temperature: agent.temperature,
                   max_tokens: agent.max_tokens,
@@ -249,6 +249,7 @@ export default function AgentDetailPage() {
                 mode="edit"
                 tenants={tenants}
                 tenantsLoading={loadingTenants}
+                selectedPlan={tenants.find(t => t.id === agent.tenant_id)?.plan}
               />
             </CardContent>
           </Card>

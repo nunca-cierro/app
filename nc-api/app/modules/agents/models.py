@@ -29,7 +29,7 @@ class AiAgent(Base):
     model: Mapped[str] = mapped_column(
         String(100), nullable=False, default="llama-3.3-70b-versatile"
     )
-    temperature: Mapped[float] = mapped_column(Float, default=0.7)
+    temperature: Mapped[float] = mapped_column(Float, default=0)
     max_tokens: Mapped[int] = mapped_column(Integer, default=512)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     business_config: Mapped[dict | None] = mapped_column(
