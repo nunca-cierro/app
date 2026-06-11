@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_session
 from app.modules.auth.models import User, UserRole
 from app.modules.auth.user_tenant import UserTenant
+from app.modules.tenants.models import Tenant
 from app.modules.auth.schemas import (
     ChangePasswordRequest,
     LoginRequest,
@@ -97,6 +98,7 @@ async def login(
 
     role = user.role
     tenant_id = None
+    tenant_plan = None
 
     if role != UserRole.SUPERADMIN:
         # Fetch primary tenant
@@ -109,6 +111,10 @@ async def login(
         if ut:
             role = ut.role
             tenant_id = str(ut.tenant_id)
+            # Resolve tenant plan
+            tenant = await session.get(Tenant, ut.tenant_id)
+            if tenant:
+                tenant_plan = tenant.plan
 
     token = create_access_token(
         str(user.id), user.email, role=role, tenant_id=tenant_id
@@ -121,15 +127,27 @@ async def login(
         name=user.name,
         role=role,
         tenant_id=tenant_id,
+        tenant_plan=tenant_plan,
     )
 
 
 @router.get("/me", response_model=MeResponse)
 async def me(
     current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
 ) -> t.Any:
-    """Get the currently logged-in user's profile with role and tenant context."""
-    return current_user
+    """Get the currently logged-in user's profile with role, tenant context, and plan."""
+    # Resolve current plan from tenant
+    current_plan = None
+    current_tid = getattr(current_user, "current_tenant_id", None)
+    if current_tid:
+        tenant = await session.get(Tenant, current_tid)
+        if tenant:
+            current_plan = tenant.plan
+
+    response = MeResponse.model_validate(current_user)
+    response.current_plan = current_plan
+    return response
 
 
 @router.post("/change-password", status_code=200)

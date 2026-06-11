@@ -31,39 +31,39 @@ describe("sidebar nav items — superadmin", () => {
 
   it("shows all items for superadmin", () => {
     const items = getNavItems(role);
-    expect(items.length).toBe(6);
+    expect(items.length).toBe(7);
     expect(items.map((i) => i.label)).toEqual([
       "Dashboard",
       "Negocios",
-      "Admin",
       "Agentes",
-      "Plataformas",
+      "Respuestas programadas",
+      "Conexiones",
       "Conversaciones",
+      "Admin",
     ]);
 
     const labels = allLabels(items);
-    expect(labels).toContain("WhatsApp (Evo)");
-    expect(labels).toContain("WhatsApp (Meta)");
+    expect(labels).toContain("WhatsApp");
     expect(labels).toContain("Telegram");
     expect(labels).toContain("Usuarios");
   });
 
-  it("Plataformas section has collapsible structure", () => {
+  it("Conexiones section has collapsible structure", () => {
     const items = getNavItems(role);
-    const plataformas = items.find((i) => i.label === "Plataformas");
-    expect(plataformas).toBeDefined();
-    expect(plataformas!.children).toBeDefined();
-    expect(plataformas!.children!.length).toBe(3);
-    expect(plataformas!.children!.map((c) => c.label)).toEqual([
-      "WhatsApp (Evo)",
-      "WhatsApp (Meta)",
+    const conexiones = items.find((i) => i.label === "Conexiones");
+    expect(conexiones).toBeDefined();
+    expect(conexiones!.children).toBeDefined();
+    expect(conexiones!.children!.length).toBe(3);
+    expect(conexiones!.children!.map((c) => c.label)).toEqual([
+      "WhatsApp",
+      "Meta API",
       "Telegram",
     ]);
   });
 
-  it("WhatsApp (Evo) item retains its icon", () => {
+  it("WhatsApp item retains its icon", () => {
     const items = getNavItems(role);
-    const wa = findItem(items, "WhatsApp (Evo)");
+    const wa = findItem(items, "WhatsApp");
     expect(wa).toBeDefined();
     expect(wa!.icon).toBeDefined();
   });

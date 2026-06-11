@@ -12,6 +12,7 @@ export interface AuthUser {
   tenant_id: string | null;
   current_role?: UserRole;
   current_tenant_id?: string | null;
+  plan?: string | null;
 }
 
 export interface LoginResponse {
@@ -22,6 +23,7 @@ export interface LoginResponse {
   name: string;
   role: UserRole;
   tenant_id: string | null;
+  tenant_plan?: string | null;
 }
 
 export interface TenantAssociation {
