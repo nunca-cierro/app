@@ -47,7 +47,7 @@ export interface NavItem {
 const CLIENT_ROUTES: UserRole[] = ["client", "agent"];
 const ADMIN_ROUTES: UserRole[] = ["superadmin", "admin", "agent", "client"];
 
-export function getNavItems(role?: UserRole | null): NavItem[] {
+export function getNavItems(role?: UserRole | null, plan?: string | null): NavItem[] {
   const isClientOrAgent = role && CLIENT_ROUTES.includes(role);
 
   const items: NavItem[] = [];
@@ -59,6 +59,11 @@ export function getNavItems(role?: UserRole | null): NavItem[] {
     icon: LayoutDashboard,
     roles: ADMIN_ROUTES,
   });
+
+  // Clients with Basic plan: no dashboard access
+  if (role === "client" && plan === "basic") {
+    return items; // Only show minimal items
+  }
 
   // ── Sección: Gestión (solo superadmin/admin) ──
   if (!isClientOrAgent) {
@@ -132,7 +137,8 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const effectiveRole = user?.current_role ?? user?.role ?? null;
-  const navItems = getNavItems(effectiveRole);
+  const plan = user?.plan ?? null;
+  const navItems = getNavItems(effectiveRole, plan);
 
   /* ── Change password state ── */
   const [showPasswordForm, setShowPasswordForm] = useState(false);

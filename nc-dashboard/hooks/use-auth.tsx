@@ -87,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: data.name,
       role: data.role,
       tenant_id: data.tenant_id,
+      plan: data.tenant_plan ?? null,
     });
   };
 
@@ -99,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: data.name,
       role: data.role,
       tenant_id: data.tenant_id,
+      plan: data.tenant_plan ?? null,
     });
   };
 
