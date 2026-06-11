@@ -98,15 +98,12 @@ export function getNavItems(role?: UserRole | null, plan?: string | null): NavIt
   }
 
   // ── Sección: Comunicación ──
-  // Hide conversations for trial plan clients (view-only)
-  if (!(role === "client" && plan === "trial")) {
-    items.push({
-      href: "/dashboard/conversations",
-      label: "Conversaciones",
-      icon: MessageSquare,
-      roles: ADMIN_ROUTES,
-    });
-  }
+  items.push({
+    href: "/dashboard/conversations",
+    label: "Conversaciones",
+    icon: MessageSquare,
+    roles: ADMIN_ROUTES,
+  });
 
   // ── Sección: Admin (solo superadmin) ──
   if (role === "superadmin") {
