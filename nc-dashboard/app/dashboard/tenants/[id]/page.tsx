@@ -193,7 +193,7 @@ export default function TenantDetailPage() {
             <TenantForm
               defaultValues={{
                 name: tenant.name,
-                plan: tenant.plan as "basic" | "pro" | "enterprise",
+                plan: tenant.plan as TenantFormValues["plan"],
                 timezone: tenant.timezone,
                 locale: tenant.locale,
                 notes: tenant.notes ?? "",

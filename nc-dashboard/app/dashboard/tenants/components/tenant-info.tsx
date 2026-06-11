@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TenantStatusBadge } from "@/app/dashboard/tenants/components/tenant-status-badge";
+import { TenantPlanBadge } from "@/app/dashboard/tenants/components/tenant-plan-badge";
 import { Calendar, Globe, Clock, FileText } from "lucide-react";
 import type { Tenant } from "@/lib/types";
 
@@ -50,7 +51,7 @@ export function TenantInfo({ tenant }: TenantInfoProps) {
           <h1 className="text-2xl font-bold tracking-tight">{tenant.name}</h1>
           <div className="mt-1 flex items-center gap-2">
             <TenantStatusBadge status={tenant.status} />
-            <span className="text-sm text-muted-foreground">{tenant.plan}</span>
+            <TenantPlanBadge plan={tenant.plan} createdAt={tenant.created_at} />
           </div>
         </div>
       </div>
