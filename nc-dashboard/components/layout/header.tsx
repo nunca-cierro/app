@@ -66,7 +66,6 @@ export function Header() {
             href={brand.href}
             className="flex items-center gap-2 px-3 py-1"
             style={{ letterSpacing: "0.01em" }}
-            onClick={(e) => handleSmoothScroll(e, brand.href)}
           >
             <span
               className="text-[1.55rem] font-semibold"

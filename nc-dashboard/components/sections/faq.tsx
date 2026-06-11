@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Search } from "lucide-react";
 import { Section } from "@/components/layout/section";
 import { AnimatedWrapper } from "@/components/ui/animated-wrapper";
@@ -17,11 +17,6 @@ export function Faq() {
       item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.answer.toLowerCase().includes(searchQuery.toLowerCase()),
   );
-
-  useEffect(() => {
-    // Focus input on mount
-    inputRef.current?.focus();
-  }, []);
 
   return (
     <Section
