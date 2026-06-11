@@ -252,7 +252,7 @@ export function HowItWorks() {
           {slides.map((slide) => (
             <div
               key={slide.number}
-              className="relative flex-shrink-0 w-full h-full flex items-center justify-center px-6"
+              className="relative shrink-0 w-full h-full flex items-center justify-center px-6"
             >
               {/* Step number — large decorative background */}
               <span
