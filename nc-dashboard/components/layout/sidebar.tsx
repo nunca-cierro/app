@@ -83,14 +83,6 @@ export function getNavItems(role?: UserRole | null, plan?: string | null): NavIt
       roles: ["superadmin", "admin"],
     });
 
-    // Respuestas programadas
-    items.push({
-      href: "/dashboard/auto-replies",
-      label: "Respuestas programadas",
-      icon: MessageSquare,
-      roles: ["superadmin", "admin", "client"],
-    });
-
     // Conexiones (plataformas)
     items.push({
       href: "/dashboard/platforms",

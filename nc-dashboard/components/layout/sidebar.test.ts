@@ -31,12 +31,11 @@ describe("sidebar nav items — superadmin", () => {
 
   it("shows all items for superadmin", () => {
     const items = getNavItems(role);
-    expect(items.length).toBe(7);
+    expect(items.length).toBe(6);
     expect(items.map((i) => i.label)).toEqual([
       "Dashboard",
       "Negocios",
       "Agentes",
-      "Respuestas programadas",
       "Conexiones",
       "Conversaciones",
       "Admin",

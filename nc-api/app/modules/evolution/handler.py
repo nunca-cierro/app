@@ -280,85 +280,9 @@ async def handle_evolution_incoming(
         await session.commit()
         return
 
-    # ── 5a. Trial expiration check ──────────────────────────────────────
-    TRIAL_DAYS = 7
-    
-    if tenant.plan == "trial":
-        trial_end = tenant.created_at.replace(tzinfo=UTC) + timedelta(days=TRIAL_DAYS)
-        if datetime.now(UTC) >= trial_end:
-            if tenant.status != "inactive":
-                tenant.status = "inactive"
-                session.add(tenant)
-            await session.commit()
-            logger.info("Trial expired for tenant {tid}, message ignored", tid=tenant_id)
-            return
+    # ── 5a. Resolve agent (needed for both AI and programmed plans) ────
+    from app.modules.agents.models import AiAgent
 
-    # ── 5b. Auto-reply check for Basic/Trial plans ────────────────────────
-    from app.modules.auto_reply.models import AutoReply
-
-    if tenant.plan in ("basic", "trial"):
-        auto_replies_result = await session.execute(
-            select(AutoReply).where(
-                AutoReply.tenant_id == tenant.id,
-                AutoReply.enabled == True,
-            ).order_by(AutoReply.priority.desc())
-        )
-        auto_replies = list(auto_replies_result.scalars().all())
-
-        if auto_replies:
-            user_text = parsed["content"].lower().strip()
-            matched_reply = None
-
-            for reply in auto_replies:
-                if reply.match_type == "exact":
-                    if any(user_text == kw.lower().strip() for kw in reply.keywords):
-                        matched_reply = reply
-                        break
-                elif reply.match_type == "all":
-                    if all(kw.lower() in user_text for kw in reply.keywords):
-                        matched_reply = reply
-                        break
-                else:
-                    if any(kw.lower() in user_text for kw in reply.keywords):
-                        matched_reply = reply
-                        break
-
-            if matched_reply:
-                adapter = EvolutionAdapter()
-                try:
-                    evo_response = await adapter.send_message(
-                        connection=connection,
-                        to=parsed["external_user_id"],
-                        text=matched_reply.response_text,
-                    )
-                    evo_msg_id = evo_response.get("key", {}).get("id") or evo_response.get("id")
-                    outbound_status = "sent"
-                except Exception:
-                    evo_msg_id = None
-                    outbound_status = "failed"
-
-                outbound_msg = Message(
-                    tenant_id=tenant_id,
-                    conversation_id=conversation.id,
-                    platform_connection_id=connection.id,
-                    direction="out",
-                    external_user_id=parsed["external_user_id"],
-                    external_message_id=evo_msg_id,
-                    platform="evolution",
-                    message_type="text",
-                    content=matched_reply.response_text,
-                    status=outbound_status,
-                )
-                session.add(outbound_msg)
-                conversation.last_message_at = datetime.now(UTC)
-                await session.commit()
-                logger.info("Auto-reply sent | id={id}", id=matched_reply.id)
-                return
-
-    # ── 5b. Build system prompt from tenant config ──────────────────────
-    from app.modules.agents.models import AiAgent, Prompt
-
-    # Resolve agent: linked > tenant default
     agent = None
     if connection.agent_id:
         agent_result = await session.execute(
@@ -378,6 +302,106 @@ async def handle_evolution_incoming(
             )
         )
         agent = agent_result.scalar_one_or_none()
+
+    # ── 5b. Trial expiration check ──────────────────────────────────────
+    TRIAL_DAYS = 7
+    
+    if tenant.plan == "trial":
+        trial_end = tenant.created_at.replace(tzinfo=UTC) + timedelta(days=TRIAL_DAYS)
+        if datetime.now(UTC) >= trial_end:
+            if tenant.status != "inactive":
+                tenant.status = "inactive"
+                session.add(tenant)
+            await session.commit()
+            logger.info("Trial expired for tenant {tid}, message ignored", tid=tenant_id)
+            return
+
+    # ── 5c. Programmed responses for Basic/Trial plans ──────────────────────
+    if tenant.plan in ("basic", "trial"):
+        # Use agent's business_config FAQ + keywords for matching
+        biz_config = agent.business_config if agent else {}
+        faq = biz_config.get("faq") or []
+        keywords_to_escalate = biz_config.get("keywords_to_escalate") or []
+        user_text = parsed["content"].lower().strip()
+        matched_answer = None
+
+        # 1. Check FAQ: match user message against FAQ questions
+        if faq:
+            user_words = set(user_text.split())
+            best_match = None
+            best_score = 0
+            
+            for item in faq:
+                q = (item.get("question") or item.get("q", "")).lower()
+                a = item.get("answer") or item.get("a", "")
+                if not q or not a:
+                    continue
+                q_words = set(q.split())
+                # Score: how many question words appear in user message
+                score = len(user_words & q_words)
+                if score > best_score:
+                    best_score = score
+                    best_match = a
+            
+            if best_score >= 2 and best_match:
+                matched_answer = best_match
+        
+        # 2. Check escalate keywords (human handoff)
+        if not matched_answer and keywords_to_escalate:
+            if any(kw.lower() in user_text for kw in keywords_to_escalate):
+                matched_answer = (
+                    "Un asesor nuestro revisará tu mensaje y te contactará "
+                    "pronto. Mientras tanto, ¿hay algo más en lo que pueda ayudarte?"
+                )
+
+        # 3. Default response
+        if not matched_answer:
+            matched_answer = (
+                "¡Hola! 👋 Soy el asistente automático de {name}. "
+                "Estoy aquí para ayudarte con información sobre horarios, "
+                "productos, precios y servicios. "
+                "¿En qué puedo ayudarte hoy?"
+            ).format(name=tenant.name)
+
+        # Send and return
+        adapter = EvolutionAdapter()
+        try:
+            evo_response = await adapter.send_message(
+                connection=connection,
+                to=parsed["external_user_id"],
+                text=matched_answer,
+            )
+            evo_msg_id = evo_response.get("key", {}).get("id") or evo_response.get("id")
+            outbound_status = "sent"
+        except Exception:
+            evo_msg_id = None
+            outbound_status = "failed"
+
+        outbound_msg = Message(
+            tenant_id=tenant_id,
+            conversation_id=conversation.id,
+            platform_connection_id=connection.id,
+            direction="out",
+            external_user_id=parsed["external_user_id"],
+            external_message_id=evo_msg_id,
+            platform="evolution",
+            message_type="text",
+            content=matched_answer,
+            status=outbound_status,
+        )
+        session.add(outbound_msg)
+        conversation.last_message_at = datetime.now(UTC)
+        await session.commit()
+        logger.info(
+            "Programmed response sent | tenant={t} | plan={p}",
+            t=tenant_id, p=tenant.plan,
+        )
+        return
+
+    # ── 6. Build system prompt from tenant config ──────────────────────
+    from app.modules.agents.models import Prompt
+
+    # agent already resolved in step 5a — reused here
 
     prompts_result = await session.execute(
         select(Prompt).where(

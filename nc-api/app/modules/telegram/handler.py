@@ -143,7 +143,30 @@ async def handle_telegram_incoming(
         await session.commit()
         return
 
-    # ── 4e. Trial expiration check ──────────────────────────────────────
+    # ── 5a. Resolve agent (needed for both AI and programmed plans) ────
+    from app.modules.agents.models import AiAgent
+
+    agent = None
+    if connection.agent_id:
+        agent_result = await session.execute(
+            select(AiAgent).where(
+                AiAgent.id == connection.agent_id,
+                AiAgent.tenant_id == tenant.id,
+                AiAgent.enabled == True,
+            )
+        )
+        agent = agent_result.scalar_one_or_none()
+
+    if agent is None:
+        agent_result = await session.execute(
+            select(AiAgent).where(
+                AiAgent.tenant_id == tenant.id,
+                AiAgent.enabled == True,
+            )
+        )
+        agent = agent_result.scalar_one_or_none()
+
+    # ── 5b. Trial expiration check ──────────────────────────────────────
     TRIAL_DAYS = 7
     
     if tenant.plan == "trial":
@@ -156,80 +179,85 @@ async def handle_telegram_incoming(
             logger.info("Trial expired for tenant {tid}, message ignored", tid=tenant_id)
             return
 
-    # ── 5a. Auto-reply check for Basic/Trial plans ────────────────────────
-    from app.modules.auto_reply.models import AutoReply
-
+    # ── 5c. Programmed responses for Basic/Trial plans ────────────────────
     if tenant.plan in ("basic", "trial"):
-        auto_replies_result = await session.execute(
-            select(AutoReply).where(
-                AutoReply.tenant_id == tenant.id,
-                AutoReply.enabled == True,
-            ).order_by(AutoReply.priority.desc())
-        )
-        auto_replies = list(auto_replies_result.scalars().all())
+        biz_config = agent.business_config if agent else {}
+        faq = biz_config.get("faq") or []
+        keywords_to_escalate = biz_config.get("keywords_to_escalate") or []
+        user_text = parsed["content"].lower().strip()
+        matched_answer = None
 
-        if auto_replies:
-            user_text = parsed["content"].lower().strip()
-            matched_reply = None
+        if faq:
+            user_words = set(user_text.split())
+            best_match = None
+            best_score = 0
+            
+            for item in faq:
+                q = (item.get("question") or item.get("q", "")).lower()
+                a = item.get("answer") or item.get("a", "")
+                if not q or not a:
+                    continue
+                q_words = set(q.split())
+                score = len(user_words & q_words)
+                if score > best_score:
+                    best_score = score
+                    best_match = a
+            
+            if best_score >= 2 and best_match:
+                matched_answer = best_match
 
-            for reply in auto_replies:
-                if reply.match_type == "exact":
-                    if user_text == reply.response_text.lower().strip():
-                        matched_reply = reply
-                        break
-                elif reply.match_type == "all":
-                    if all(kw.lower() in user_text for kw in reply.keywords):
-                        matched_reply = reply
-                        break
-                else:
-                    if any(kw.lower() in user_text for kw in reply.keywords):
-                        matched_reply = reply
-                        break
-
-            if matched_reply:
-                adapter = TelegramAdapter()
-                try:
-                    tg_response = await adapter.send_message(
-                        connection=connection,
-                        to=parsed["external_user_id"],
-                        text=matched_reply.response_text,
-                    )
-                    tg_msg_id = tg_response.get("result", {}).get("message_id", None)
-                    if tg_msg_id is not None:
-                        tg_msg_id = str(tg_msg_id)
-                    outbound_status = "sent"
-                except Exception:
-                    tg_msg_id = None
-                    outbound_status = "failed"
-
-                outbound_msg = Message(
-                    tenant_id=tenant_id,
-                    conversation_id=conversation.id,
-                    platform_connection_id=connection.id,
-                    direction="out",
-                    external_user_id=parsed["external_user_id"],
-                    external_message_id=tg_msg_id,
-                    platform="telegram",
-                    message_type="text",
-                    content=matched_reply.response_text,
-                    status=outbound_status,
+        if not matched_answer and keywords_to_escalate:
+            if any(kw.lower() in user_text for kw in keywords_to_escalate):
+                matched_answer = (
+                    "Un asesor nuestro revisará tu mensaje y te contactará "
+                    "pronto. Mientras tanto, ¿hay algo más en lo que pueda ayudarte?"
                 )
-                session.add(outbound_msg)
-                conversation.last_message_at = datetime.now(UTC)
-                await session.commit()
-                logger.info("Auto-reply sent | id={id}", id=matched_reply.id)
-                return
 
-    # ── 5b. Build system prompt from tenant config ──────────────────────
-    from app.modules.agents.models import AiAgent, Prompt
+        if not matched_answer:
+            matched_answer = (
+                "¡Hola! 👋 Soy el asistente automático de {name}. "
+                "Estoy aquí para ayudarte con información sobre horarios, "
+                "productos, precios y servicios. "
+                "¿En qué puedo ayudarte hoy?"
+            ).format(name=tenant.name)
 
-    agent_result = await session.execute(
-        select(AiAgent).where(
-            AiAgent.tenant_id == tenant.id,
-            AiAgent.enabled == True,
+        adapter = TelegramAdapter()
+        try:
+            tg_response = await adapter.send_message(
+                connection=connection,
+                to=parsed["external_user_id"],
+                text=matched_answer,
+            )
+            tg_msg_id = tg_response.get("result", {}).get("message_id", None)
+            if tg_msg_id is not None:
+                tg_msg_id = str(tg_msg_id)
+            outbound_status = "sent"
+        except Exception:
+            tg_msg_id = None
+            outbound_status = "failed"
+
+        outbound_msg = Message(
+            tenant_id=tenant_id,
+            conversation_id=conversation.id,
+            platform_connection_id=connection.id,
+            direction="out",
+            external_user_id=parsed["external_user_id"],
+            external_message_id=tg_msg_id,
+            platform="telegram",
+            message_type="text",
+            content=matched_answer,
+            status=outbound_status,
         )
-    )
-    agent = agent_result.scalar_one_or_none()
+        session.add(outbound_msg)
+        conversation.last_message_at = datetime.now(UTC)
+        await session.commit()
+        logger.info("Programmed response sent | tenant={t} | plan={p}", t=tenant_id, p=tenant.plan)
+        return
+
+    # ── 6. Build system prompt from tenant config ──────────────────────
+    from app.modules.agents.models import Prompt
+
+    # agent already resolved in step 5a — reused here
 
     prompts_result = await session.execute(
         select(Prompt).where(
