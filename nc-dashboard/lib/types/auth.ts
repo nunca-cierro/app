@@ -25,6 +25,8 @@ export interface LoginResponse {
   role: UserRole;
   tenant_id: string | null;
   tenant_plan?: string | null;
+  payment_status?: string | null;
+  plan_activated_at?: string | null;
 }
 
 export interface TenantAssociation {
