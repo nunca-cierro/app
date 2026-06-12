@@ -1,6 +1,7 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { PLAN_LABELS } from "@/lib/plans";
 
 const TRIAL_DAYS = 7;
 
@@ -16,13 +17,6 @@ const PLAN_STYLES: Record<string, string> = {
   basic: "border-stone-500/30 bg-stone-500/10 text-stone-300",
   professional: "border-amber-500/30 bg-amber-500/10 text-amber-300",
   enterprise: "border-purple-500/30 bg-purple-500/10 text-purple-300",
-};
-
-const PLAN_LABELS: Record<string, string> = {
-  trial: "Prueba",
-  basic: "Básico",
-  professional: "Profesional",
-  enterprise: "Empresarial",
 };
 
 interface TenantPlanBadgeProps {

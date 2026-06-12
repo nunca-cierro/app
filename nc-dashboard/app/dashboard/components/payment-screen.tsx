@@ -6,6 +6,7 @@ import { ArrowLeft, Copy, Check, Loader2, AlertCircle, Wallet } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useBilling } from "@/hooks/use-billing";
+import { PLAN_LABELS } from "@/lib/plans";
 import { toast } from "sonner";
 
 /* ------------------------------------------------------------------ */
@@ -16,12 +17,6 @@ const PLAN_QR_MAP: Record<string, string> = {
   basic: "/payment/QRBasico.jpeg",
   professional: "/payment/QRProfesional.jpeg",
   enterprise: "/payment/QREmpresarial.jpeg",
-};
-
-const PLAN_LABELS: Record<string, string> = {
-  basic: "Básico",
-  professional: "Profesional",
-  enterprise: "Empresarial",
 };
 
 /* ------------------------------------------------------------------ */
