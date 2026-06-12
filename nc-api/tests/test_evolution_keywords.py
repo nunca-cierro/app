@@ -346,6 +346,261 @@ class TestActivationWhatsAppConfirmation:
         assert result.payment_status == "active"
 
 
+# ── Post-escalation silence ───────────────────────────────────────────────────
+
+
+class TestEscalationSilence:
+    """Tests for post-escalation behavior: 1 courtesy reply then silence."""
+
+    @pytest.mark.asyncio
+    async def test_escalated_first_message_gets_response(
+        self, client: AsyncClient, db_session: AsyncSession
+    ):
+        """When escalated but NOT yet responded, bot responds (uses credit)."""
+        tenant, connection = await _create_test_evolution_connection(db_session)
+
+        from app.modules.conversations.models import Conversation
+
+        conv = Conversation(
+            tenant_id=tenant.id,
+            platform_connection_id=connection.id,
+            external_user_id="573001234567",
+            status="escalated",
+            extra_data={},  # NOT escalation_responded
+        )
+        db_session.add(conv)
+        await db_session.commit()
+
+        with patch(
+            "app.modules.evolution.handler.EvolutionAdapter.send_message",
+            new_callable=AsyncMock,
+        ) as mock_send:
+            mock_send.return_value = {"key": {"id": "mock-evo-msg-id"}}
+
+            with patch(
+                "app.modules.evolution.handler.groq_client.generate",
+                new_callable=AsyncMock,
+            ) as mock_groq:
+                mock_groq.return_value = "Respuesta de cortesía."
+
+                from app.modules.evolution.handler import handle_evolution_incoming
+
+                event = _make_evolution_event("hola")
+                await handle_evolution_incoming(
+                    event=event,
+                    connection=connection,
+                    session=db_session,
+                )
+
+                # Bot responded (used the courtesy credit)
+                mock_send.assert_awaited_once()
+                mock_groq.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_escalated_second_message_silence(
+        self, client: AsyncClient, db_session: AsyncSession
+    ):
+        """When escalated AND already responded, bot saves silently."""
+        from datetime import datetime, timezone
+
+        tenant, connection = await _create_test_evolution_connection(db_session)
+
+        from app.modules.conversations.models import Conversation, Message
+
+        conv = Conversation(
+            tenant_id=tenant.id,
+            platform_connection_id=connection.id,
+            external_user_id="573001234567",
+            status="escalated",
+            extra_data={
+                "escalation_responded": True,
+                "escalated_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+        db_session.add(conv)
+        await db_session.flush()
+
+        # A prior outbound (courtesy response already sent)
+        prior_out = Message(
+            tenant_id=tenant.id,
+            conversation_id=conv.id,
+            platform_connection_id=connection.id,
+            direction="out",
+            external_user_id="573001234567",
+            platform="evolution",
+            message_type="text",
+            content="Un asesor te contactará.",
+            status="sent",
+        )
+        db_session.add(prior_out)
+        await db_session.commit()
+
+        with patch(
+            "app.modules.evolution.handler.EvolutionAdapter.send_message",
+            new_callable=AsyncMock,
+        ) as mock_send:
+            with patch(
+                "app.modules.evolution.handler.groq_client.generate",
+                new_callable=AsyncMock,
+            ) as mock_groq:
+                mock_groq.return_value = "NO DEBERÍA LLAMARSE"
+
+                from app.modules.evolution.handler import handle_evolution_incoming
+
+                event = _make_evolution_event("otro mensaje")
+                await handle_evolution_incoming(
+                    event=event,
+                    connection=connection,
+                    session=db_session,
+                )
+
+                # Bot did NOT respond
+                mock_send.assert_not_awaited()
+                mock_groq.assert_not_awaited()
+
+                # But inbound message WAS saved
+                from sqlalchemy import select as sa_select
+
+                result = await db_session.execute(
+                    sa_select(Message).where(
+                        Message.conversation_id == conv.id,
+                        Message.direction == "in",
+                    )
+                )
+                in_msgs = result.scalars().all()
+                assert any(m.content == "otro mensaje" for m in in_msgs)
+
+    @pytest.mark.asyncio
+    async def test_non_escalated_normal_flow_unaffected(
+        self, client: AsyncClient, db_session: AsyncSession
+    ):
+        """Non-escalated conversation continues working normally."""
+        tenant, connection = await _create_test_evolution_connection(db_session)
+
+        with patch(
+            "app.modules.evolution.handler.EvolutionAdapter.send_message",
+            new_callable=AsyncMock,
+        ) as mock_send:
+            mock_send.return_value = {"key": {"id": "mock-evo-msg-id"}}
+
+            with patch(
+                "app.modules.evolution.handler.groq_client.generate",
+                new_callable=AsyncMock,
+            ) as mock_groq:
+                mock_groq.return_value = "Hola, soy un asistente."
+
+                from app.modules.evolution.handler import handle_evolution_incoming
+
+                event = _make_evolution_event("me gustaria saber el horario")
+                await handle_evolution_incoming(
+                    event=event,
+                    connection=connection,
+                    session=db_session,
+                )
+
+                mock_groq.assert_awaited_once()
+                mock_send.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_basic_trial_escalation_sets_status_and_second_silent(
+        self, client: AsyncClient, db_session: AsyncSession
+    ):
+        """Basic/Trial: escalate keywords set status + responded flag; next msg silent."""
+        from app.modules.tenants.models import Tenant
+        from app.modules.platform_connections.models import PlatformConnection
+        from app.modules.agents.models import AiAgent
+        from app.modules.conversations.models import Conversation, Message
+
+        tenant = Tenant(
+            id=uuid.uuid4(),
+            name="Test Basic",
+            slug=f"test-basic-{uuid.uuid4().hex[:6]}",
+            plan="basic",
+            timezone="America/Bogota",
+            locale="es-CO",
+        )
+        db_session.add(tenant)
+        await db_session.flush()
+
+        agent = AiAgent(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            name="Test Agent",
+            model="llama3-70b",
+            enabled=True,
+            business_config={
+                "faq": [],
+                "keywords_to_escalate": ["hablar con asesor", "humano", "contactar"],
+            },
+        )
+        db_session.add(agent)
+        await db_session.flush()
+
+        connection = PlatformConnection(
+            tenant_id=tenant.id,
+            agent_id=agent.id,
+            platform_type="evolution",
+            display_name="Test Evolution",
+            credentials="{}",
+            status="active",
+            is_primary=True,
+        )
+        db_session.add(connection)
+        await db_session.commit()
+
+        with patch(
+            "app.modules.evolution.handler.EvolutionAdapter.send_message",
+            new_callable=AsyncMock,
+        ) as mock_send:
+            mock_send.return_value = {"key": {"id": "mock-evo-msg-id"}}
+
+            from app.modules.evolution.handler import handle_evolution_incoming
+
+            # ── First message: escalation trigger ──────────────────
+            event = _make_evolution_event("necesito contactar un asesor")
+            await handle_evolution_incoming(
+                event=event,
+                connection=connection,
+                session=db_session,
+            )
+
+            # Bot sent response (courtesy)
+            mock_send.assert_awaited_once()
+
+            # Verify escalation state
+            from sqlalchemy import select as sa_select
+
+            result = await db_session.execute(
+                sa_select(Conversation).where(
+                    Conversation.tenant_id == tenant.id,
+                )
+            )
+            conv = result.scalar_one()
+            assert conv.status == "escalated"
+            assert conv.extra_data is not None
+            assert conv.extra_data.get("escalation_responded") is True
+
+            # ── Second message: should be silent ───────────────────
+            mock_send.reset_mock()
+            event2 = _make_evolution_event("otra consulta")
+            await handle_evolution_incoming(
+                event=event2,
+                connection=connection,
+                session=db_session,
+            )
+            mock_send.assert_not_awaited()
+
+            # Verify second inbound was saved
+            result2 = await db_session.execute(
+                sa_select(Message).where(
+                    Message.conversation_id == conv.id,
+                    Message.direction == "in",
+                )
+            )
+            in_msgs = result2.scalars().all()
+            assert any(m.content == "otra consulta" for m in in_msgs)
+
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 

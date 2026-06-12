@@ -142,12 +142,13 @@ async def handle_evolution_incoming(
     )
 
     # ── 3. Find or create conversation ──────────────────────────────────
+    # Include "escalated" so the escalation silence gate can find it
     conv_result = await session.execute(
         select(Conversation).where(
             Conversation.tenant_id == tenant_id,
             Conversation.platform_connection_id == connection.id,
             Conversation.external_user_id == parsed["external_user_id"],
-            Conversation.status == "open",
+            Conversation.status.in_(["open", "escalated"]),
         )
     )
     conversation = conv_result.scalar_one_or_none()
@@ -161,7 +162,34 @@ async def handle_evolution_incoming(
         session.add(conversation)
         await session.flush()
 
-    # ── 1.5. Anti-spam check (auto-reply + flood) ───────────────────────
+    # ── 1.5. Escalation silence gate ──────────────────────────────────────
+    # If conversation is escalated and bot already sent its courtesy
+    # response, save the inbound message silently and return.
+    if conversation.status == "escalated":
+        extra = conversation.extra_data or {}
+        if extra.get("escalation_responded"):
+            silent_inbound = Message(
+                tenant_id=tenant_id,
+                conversation_id=conversation.id,
+                platform_connection_id=connection.id,
+                direction="in",
+                external_user_id=parsed["external_user_id"],
+                external_message_id=parsed["external_message_id"],
+                platform="evolution",
+                message_type="text",
+                content=parsed["content"],
+                status="received",
+            )
+            session.add(silent_inbound)
+            conversation.last_message_at = datetime.now(UTC)
+            await session.commit()
+            logger.info(
+                "Escalated conversation — silent save | conv={cid}",
+                cid=conversation.id,
+            )
+            return
+
+    # ── 2. Anti-spam check (auto-reply + flood) ─────────────────────────
     spam_payload: dict | None = None
     conn_spam_config = (connection.extra_data or {}).get("anti_spam", {})
 
@@ -337,6 +365,13 @@ async def handle_evolution_incoming(
             status=outbound_status,
         )
         session.add(outbound_msg)
+
+        # Mark escalation as responded if this message consumed the courtesy credit
+        if conversation.status == "escalated":
+            extra = dict(conversation.extra_data or {})
+            extra["escalation_responded"] = True
+            conversation.extra_data = extra
+
         conversation.last_message_at = datetime.now(UTC)
         await session.commit()
         logger.info(
@@ -458,6 +493,13 @@ async def handle_evolution_incoming(
             status=outbound_status,
         )
         session.add(outbound_msg)
+
+        # Mark escalation as responded if this message consumed the courtesy credit
+        if conversation.status == "escalated":
+            extra = dict(conversation.extra_data or {})
+            extra["escalation_responded"] = True
+            conversation.extra_data = extra
+
         conversation.last_message_at = datetime.now(UTC)
         await session.commit()
         logger.info(
@@ -561,8 +603,15 @@ async def handle_evolution_incoming(
     )
     session.add(outbound_msg)
 
+    # Mark escalation as responded if this message consumed the courtesy credit
+    if conversation.status == "escalated":
+        extra = dict(conversation.extra_data or {})
+        extra["escalation_responded"] = True
+        conversation.extra_data = extra
+
     # ── Update conversation ─────────────────────────────────────────────
     conversation.last_message_at = datetime.now(UTC)
-    conversation.status = "open"
+    if conversation.status != "escalated":
+        conversation.status = "open"
 
     await session.commit()
