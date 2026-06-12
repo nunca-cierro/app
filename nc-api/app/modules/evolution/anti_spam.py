@@ -199,7 +199,7 @@ class SpamDetector:
         count = sum(
             1
             for msg in history
-            if msg == text and len(msg.strip()) >= 5
+            if msg.lower() == text.lower() and len(msg.strip()) >= 5
         )
 
         if count >= 3:

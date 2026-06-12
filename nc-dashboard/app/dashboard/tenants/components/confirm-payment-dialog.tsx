@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { PaymentStatusBadge } from "@/app/dashboard/tenants/components/payment-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { apiClient, ApiError } from "@/lib/api";
+import { PLAN_LABELS } from "@/lib/plans";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import type { Tenant } from "@/lib/types";
@@ -31,13 +32,6 @@ const PLAN_OPTIONS = [
 function formatPrice(price: number): string {
   return `$${price.toLocaleString("es-CO")}`;
 }
-
-const planLabels: Record<string, string> = {
-  basic: "Básico",
-  professional: "Profesional",
-  enterprise: "Empresarial",
-  trial: "Prueba",
-};
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -109,7 +103,7 @@ export function ConfirmPaymentDialog({
             <span className="text-sm text-muted-foreground">Plan actual</span>
             <div className="flex items-center gap-2">
               <Badge variant="outline">
-                {planLabels[tenant.plan] ?? tenant.plan}
+                {PLAN_LABELS[tenant.plan] ?? tenant.plan}
               </Badge>
               <PaymentStatusBadge status={tenant.payment_status} />
             </div>

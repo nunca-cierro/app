@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
+import { PLAN_LABELS } from "@/lib/plans";
 import type { BusinessConfig } from "@/lib/types/agent";
 
 /* ------------------------------------------------------------------ */
@@ -39,13 +40,6 @@ function daysRemaining(createdAt: string): number {
   const end = new Date(start.getTime() + TRIAL_DAYS * 86400000);
   return Math.max(0, Math.ceil((end.getTime() - Date.now()) / 86400000));
 }
-
-const planLabels: Record<string, string> = {
-  basic: "Básico",
-  professional: "Profesional",
-  enterprise: "Empresarial",
-  trial: "Prueba",
-};
 
 /* ------------------------------------------------------------------ */
 /*  Stat card                                                        */
@@ -99,8 +93,54 @@ function AdminDashboard() {
 
   if (error) return <ErrorBanner message={error} />;
 
+  // Compute attention-needed tenants
+  // eslint-disable-next-line react-hooks/purity
+  const _now = Date.now();
+  const _trialMs = TRIAL_DAYS * 86400000;
+  const expiredTrials = (tenants ?? []).filter(
+    (t) => t.plan === "trial" && new Date(t.created_at).getTime() + _trialMs < _now,
+  );
+  const pendingPayments = (tenants ?? []).filter(
+    (t) => t.payment_status === "pending",
+  );
+  const needsAttention = expiredTrials.length + pendingPayments.length > 0;
+
   return (
     <div className="space-y-8">
+      {/* Requiere atención */}
+      {needsAttention && (
+        <section>
+          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            <AlertCircle className="size-4 text-amber-500" />
+            Requiere atención
+          </h2>
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {expiredTrials.map((t) => (
+              <Card key={t.id} className="shrink-0 border-yellow-300/50">
+                <CardContent className="py-3 px-4 text-sm">
+                  <div className="flex items-center gap-2 font-medium text-yellow-800">
+                    <Clock className="size-3.5" />
+                    Prueba vencida
+                  </div>
+                  <p className="text-yellow-700 mt-0.5">{t.name}</p>
+                </CardContent>
+              </Card>
+            ))}
+            {pendingPayments.map((t) => (
+              <Card key={t.id} className="shrink-0 border-amber-300/50">
+                <CardContent className="py-3 px-4 text-sm">
+                  <div className="flex items-center gap-2 font-medium text-amber-800">
+                    <Clock className="size-3.5" />
+                    Pago pendiente
+                  </div>
+                  <p className="text-amber-700 mt-0.5">{t.name} · {PLAN_LABELS[t.plan] ?? t.plan}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {isLoading ? (
@@ -135,7 +175,7 @@ function AdminDashboard() {
                 <CardContent>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span className={`inline-block size-1.5 rounded-full ${t.status === "active" ? "bg-green-500" : "bg-yellow-500"}`} />
-                    {t.status === "active" ? "Activo" : "Inactivo"} · {planLabels[t.plan] ?? t.plan}
+                    {t.status === "active" ? "Activo" : "Inactivo"} · {PLAN_LABELS[t.plan] ?? t.plan}
                   </div>
                 </CardContent>
               </Card>
@@ -181,7 +221,8 @@ function ClientDashboard() {
   const { agents } = useAgents();
   const plan = user?.plan ?? null;
   const tid = user?.current_tenant_id ?? user?.tenant_id;
-  const canEdit = plan === "professional" || plan === "enterprise";
+  const canEdit = plan === "enterprise";
+  const canView = plan === "professional" || plan === "enterprise";
 
   const myTenant = tid ? tenants.find((t) => t.id === tid) : null;
   const myAgent = agents.find((a) => a.tenant_id === tid) ?? null;
@@ -192,10 +233,16 @@ function ClientDashboard() {
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
-  // If payment is not active (trial expired, overdue, suspended, or pending), show payment overlay
+  // Payment status handling
   const paymentStatus = myTenant?.payment_status;
-  if (!isLoadingTenants && paymentStatus !== "active") {
-    return <ExpiredTrialOverlay />;
+  if (!isLoadingTenants) {
+    // Pending payment — show banner instead of blocking
+    if (paymentStatus === "pending" && plan !== "trial") {
+      // Show banner below, don't block dashboard access
+    } else if (paymentStatus !== "active" && paymentStatus !== "pending") {
+      // Overdue, suspended, trial expired, or null — block with overlay
+      return <ExpiredTrialOverlay />;
+    }
   }
 
   const handleSaveConfig = async (config: BusinessConfig) => {
@@ -224,6 +271,16 @@ function ClientDashboard() {
         </p>
       </div>
 
+      {/* Pending payment banner — shown only when payment is pending and plan is not trial */}
+      {paymentStatus === "pending" && plan !== "trial" && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          <p className="font-medium">⏳ Pago pendiente</p>
+          <p className="mt-1 text-amber-700">
+            Tu pago está siendo verificado. Te activaremos el plan apenas se confirme.
+          </p>
+        </div>
+      )}
+
       {/* Plan card */}
       <Card>
         <CardHeader>
@@ -236,7 +293,7 @@ function ClientDashboard() {
           <div className="flex items-center gap-2">
             <Badge variant={plan === "trial" ? "outline" : "default"}>
               {plan === "professional" && <Sparkles className="size-3 mr-1" />}
-              {planLabels[plan ?? ""] ?? plan ?? "—"}
+              {PLAN_LABELS[plan ?? ""] ?? plan ?? "—"}
             </Badge>
             {plan === "trial" && (
               <span className="text-xs text-yellow-600">
@@ -320,21 +377,21 @@ function ClientDashboard() {
         </Card>
       )}
 
-      {/* Edit business info — Pro/Enterprise only */}
-      {canEdit && myAgent && (
+      {/* Business info — Professional sees read-only, Enterprise can edit */}
+      {canView && myAgent && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-medium">
-              <Pencil className="inline size-4 mr-2" />
+              <Building2 className="inline size-4 mr-2" />
               Información del Negocio
             </CardTitle>
-            {!isEditing && (
+            {canEdit && !isEditing && (
               <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
                 <Pencil className="size-3 mr-1" /> Editar
               </Button>
             )}
           </CardHeader>
-          {isEditing ? (
+          {isEditing && canEdit ? (
             <CardContent>
               <BusinessConfigForm
                 config={myAgent.business_config}
@@ -362,12 +419,17 @@ function ClientDashboard() {
                 </p>
               )}
               {!myAgent.business_config.business_info?.description && (
-                <p>Sin información configurada. Haz clic en Editar para agregar los datos de tu negocio.</p>
+                <p>Sin información configurada.</p>
+              )}
+              {!canEdit && (
+                <p className="mt-2 text-xs text-muted-foreground/70">
+                  Solo lectura. Contacta a tu administrador para realizar cambios.
+                </p>
               )}
             </CardContent>
           ) : (
             <CardContent className="text-sm text-muted-foreground">
-              Sin configuración. Haz clic en Editar para empezar.
+              Sin configuración.
             </CardContent>
           )}
         </Card>
