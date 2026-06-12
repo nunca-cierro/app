@@ -40,7 +40,6 @@ services:
     environment:
       DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/nuncacierro"
       JWT_SECRET: ${JWT_SECRET:?Debe definir JWT_SECRET}
-      ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-nuncacierro2026*}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Debe definir ENCRYPTION_KEY}
       GROQ_API_KEY: ${GROQ_API_KEY:?Debe definir GROQ_API_KEY}
       GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}

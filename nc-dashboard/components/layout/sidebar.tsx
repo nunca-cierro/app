@@ -93,8 +93,8 @@ export function getNavItems(role?: UserRole | null, plan?: string | null): NavIt
       roles: ["superadmin", "admin"],
       children: [
         { href: "/dashboard/platforms/evolution", label: "WhatsApp", icon: Phone, roles: ["superadmin", "admin"] },
-        { href: "/dashboard/platforms/whatsapp", label: "Meta API", icon: Phone, roles: ["superadmin", "admin"] },
-        { href: "/dashboard/platforms/telegram", label: "Telegram", icon: Send, roles: ["superadmin", "admin"] },
+        { href: "/dashboard/platforms/whatsapp", label: "Meta API", icon: Phone, roles: ["superadmin"] },
+        { href: "/dashboard/platforms/telegram", label: "Telegram", icon: Send, roles: ["superadmin"] },
       ],
     });
   }
@@ -120,7 +120,15 @@ export function getNavItems(role?: UserRole | null, plan?: string | null): NavIt
     });
   }
 
-  return items;
+  return items.map((item) => {
+    if (item.children) {
+      return {
+        ...item,
+        children: item.children.filter((child) => !child.roles || child.roles.includes(role ?? "")),
+      };
+    }
+    return item;
+  });
 }
 
 /* ------------------------------------------------------------------ */
