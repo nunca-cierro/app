@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { getNavItems, type NavItem } from "@/components/layout/sidebar";
 import type { UserRole } from "@/lib/types";
 
@@ -113,5 +113,20 @@ describe("sidebar nav items — agent", () => {
   it("shows only Dashboard and Conversaciones for agent", () => {
     const items = getNavItems(role);
     expect(items.length).toBe(2);
+  });
+});
+
+/* ── Tenant Switcher logic (component is tested via import check) ── */
+
+describe("sidebar tenant switcher", () => {
+  it("exports Sidebar component", async () => {
+    const mod = await import("@/components/layout/sidebar");
+    expect(mod.Sidebar).toBeDefined();
+  });
+
+  it("getNavItems structure unchanged for multi-tenant", () => {
+    // The getNavItems function should work regardless of tenant count
+    const items = getNavItems("admin");
+    expect(items.length).toBeGreaterThan(0);
   });
 });

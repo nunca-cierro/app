@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   getRoleLandingRoute,
   isRouteAllowed,
+  isTenantless,
 } from "@/lib/rbac";
 import type { UserRole } from "@/lib/types";
 
@@ -111,5 +112,33 @@ describe("RBAC route matrix", () => {
 
   it("lands on /dashboard/tenants for admin", () => {
     expect(getRoleLandingRoute("admin")).toBe("/dashboard/tenants");
+  });
+
+  /* ── Onboarding route accessible to tenantless users ── */
+
+  it("allows /dashboard/onboarding for tenantless users regardless of role", () => {
+    // Tenantless users should be able to access onboarding
+    expect(isRouteAllowed("client", "/dashboard/onboarding", null)).toBe(true);
+    expect(isRouteAllowed("client", "/dashboard/onboarding", undefined)).toBe(true);
+  });
+
+  it("blocks /dashboard/onboarding for users with a tenant", () => {
+    // Users with a tenant should NOT see onboarding (they'd get role-guarded)
+    expect(isRouteAllowed("admin", "/dashboard/onboarding", "some-tenant-id")).toBe(false);
+    expect(isRouteAllowed("agent", "/dashboard/onboarding", "some-tenant-id")).toBe(false);
+  });
+
+  /* ── isTenantless ── */
+
+  it("detects tenantless user", () => {
+    expect(isTenantless({ tenant_id: null })).toBe(true);
+    expect(isTenantless({ tenant_id: undefined })).toBe(true);
+    expect(isTenantless({ current_tenant_id: null })).toBe(true);
+    expect(isTenantless({ current_tenant_id: null, tenant_id: undefined })).toBe(true);
+  });
+
+  it("detects user with tenant", () => {
+    expect(isTenantless({ tenant_id: "abc-123" })).toBe(false);
+    expect(isTenantless({ current_tenant_id: "abc-123" })).toBe(false);
   });
 });

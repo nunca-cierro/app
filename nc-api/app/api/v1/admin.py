@@ -10,8 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db.session import get_session
-from app.modules.auth.deps import get_current_user
+from app.modules.auth.deps import RoleChecker, get_current_user
 from app.modules.auth.models import User, UserRole
+
+admin_or_super = RoleChecker(allowed_roles=[UserRole.ADMIN, UserRole.SUPERADMIN])
 from app.modules.auth.schemas import AdminUserOut, AssignTenantRequest, TenantAssociationOut
 from app.modules.auth.user_tenant import UserTenant
 from app.modules.tenants.models import Tenant
@@ -75,19 +77,13 @@ async def list_users(
 @router.post("/assign-tenant", status_code=200)
 async def assign_tenant(
     body: AssignTenantRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(admin_or_super),
     session: AsyncSession = Depends(get_session),
 ) -> t.Any:
     """Assign a user to a tenant with a specific role.
 
-    Only SUPERADMIN can perform this action.
+    Requires admin or superadmin role.
     """
-    # Authorization check
-    if getattr(current_user, "current_role", current_user.role) != UserRole.SUPERADMIN:
-        raise HTTPException(
-            status_code=403,
-            detail="Only superadmins can assign tenants",
-        )
 
     # Verify user exists
     user_result = await session.execute(select(User).where(User.id == body.user_id))

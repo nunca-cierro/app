@@ -10,6 +10,7 @@ import {
 import {
   login as apiLogin,
   register as apiRegister,
+  switchTenant as apiSwitchTenant,
   getProfile as apiGetProfile,
   TOKEN_KEYS,
 } from "@/lib/api";
@@ -24,7 +25,8 @@ export interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  register: (email: string, password: string, name: string, tenant_name?: string) => Promise<void>;
+  switchTenant: (tenantId: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -93,8 +95,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   /* ── Register ── */
-  const register = async (_email: string, _password: string, _name: string) => {
-    const data = await apiRegister(_email, _password, _name);
+  const register = async (_email: string, _password: string, _name: string, _tenant_name?: string) => {
+    const data = await apiRegister(_email, _password, _name, _tenant_name);
+    setUser({
+      id: data.user_id,
+      email: data.email,
+      name: data.name,
+      role: data.role,
+      tenant_id: data.tenant_id,
+      plan: data.tenant_plan ?? null,
+      payment_status: data.payment_status ?? null,
+    });
+  };
+
+  /* ── Switch Tenant ── */
+  const switchTenant = async (tenantId: string) => {
+    const data = await apiSwitchTenant(tenantId);
     setUser({
       id: data.user_id,
       email: data.email,
@@ -124,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         login,
         register,
+        switchTenant,
         logout,
       }}
     >
