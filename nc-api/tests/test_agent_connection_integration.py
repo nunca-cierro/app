@@ -16,7 +16,7 @@ async def _create_tenant(db_session) -> Tenant:
         name="Integration Test Tenant",
         slug=f"integration-test-{uuid.uuid4().hex[:6]}",
         status="active",
-        plan="basic",
+        plan="professional",
         timezone="UTC",
         locale="en",
     )

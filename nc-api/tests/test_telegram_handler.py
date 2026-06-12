@@ -29,7 +29,7 @@ class TestHandleTelegramIncoming:
             name="Telegram Tenant",
             slug="tg-tenant",
             status="active",
-            plan="basic",
+            plan="professional",
             timezone="UTC",
             locale="en",
         )

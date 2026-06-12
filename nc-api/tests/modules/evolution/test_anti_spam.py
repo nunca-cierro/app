@@ -62,13 +62,13 @@ class TestAutoReplyDetection:
         [
             "Gracias por contactarnos, en breve te atenderemos",
             "gracias por escribir, pronto nos pondremos en contacto",
-            "Gracias por comunicarte con nosotros",
-            "Bienvenido a nuestro servicio de atención al cliente",
-            "gracias por tu mensaje, te responderemos pronto",
-            "Te atenderemos en breve, gracias por tu paciencia",
-            "Pronto nos pondremos en contacto con usted",
-            "Recibirás una respuesta en las próximas horas",
-            "Hemos recibido tu solicitud correctamente",
+            "Gracias por comunicarte con nosotros, bienvenido a nuestra tienda",
+            "Bienvenido a nuestro servicio, gracias por tu mensaje",
+            "gracias por tu mensaje, te atenderemos en breve",
+            "Te atenderemos en breve, pronto nos pondremos en contacto",
+            "Pronto nos pondremos en contacto, gracias por comunicarte",
+            "Recibirás una respuesta, gracias por tu mensaje",
+            "Hemos recibido tu solicitud, te atenderemos en breve",
         ],
         ids=[
             "gracias_por_contactar",
@@ -222,8 +222,8 @@ class TestRepetitiveDetection:
 
     def test_three_repetitions_detected(self) -> None:
         """Same text 3+ times in history must be flagged."""
-        history = ["Hola", "¿Qué tal?", "Hola", "Bien", "Hola", "Quiero info"]
-        result = self.detector.check_repetitive("Hola", history)
+        history = ["Hola mundo", "¿Qué tal?", "Hola mundo", "Bien", "Hola mundo", "Quiero info"]
+        result = self.detector.check_repetitive("Hola mundo", history)
         assert result.is_spam is True
         assert result.spam_reason == "repetitive"
         assert "repetitive" in result.detection_layers
@@ -231,8 +231,8 @@ class TestRepetitiveDetection:
 
     def test_two_repetitions_allowed(self) -> None:
         """Only 2 matches in history must NOT be flagged."""
-        history = ["Hola", "Hola"]
-        result = self.detector.check_repetitive("Hola", history)
+        history = ["Hola mundo", "Hola mundo"]
+        result = self.detector.check_repetitive("Hola mundo", history)
         assert result.is_spam is False
 
     def test_short_messages_ignored(self) -> None:
@@ -243,23 +243,23 @@ class TestRepetitiveDetection:
 
     def test_empty_history_passes(self) -> None:
         """No history means no repetitive detection possible."""
-        result = self.detector.check_repetitive("Hola", [])
+        result = self.detector.check_repetitive("Hola mundo", [])
         assert result.is_spam is False
 
     def test_only_last_10_considered(self) -> None:
         """Only the last 10 messages are examined."""
-        # 10 messages: 9 "Hola" + 1 "Adiós" — last 10 includes current text's count
-        history = ["Hola"] * 9 + ["Adiós"]
-        # In the last 10, "Hola" appears 9 times
-        result = self.detector.check_repetitive("Hola", history)
+        # 10 messages: 9 "Reclamo" + 1 "Adiós" — last 10 includes current text's count
+        history = ["Reclamo"] * 9 + ["Adiós"]
+        # In the last 10, "Reclamo" appears 9 times
+        result = self.detector.check_repetitive("Reclamo", history)
         assert result.is_spam is True
 
     def test_short_message_in_history_excluded(self) -> None:
         """Short history messages (<5 chars) must not count toward repetition."""
-        history = ["ok", "ok", "Hola", "ok", "si", "Hola"]
+        history = ["ok", "ok", "Hola mundo", "ok", "si", "Hola mundo"]
         # "ok" and "si" are <5 chars and excluded from count
-        # "Hola" appears 2 times in history → not enough
-        result = self.detector.check_repetitive("Hola", history)
+        # "Hola mundo" appears 2 times in history → not enough
+        result = self.detector.check_repetitive("Hola mundo", history)
         assert result.is_spam is False
 
     def test_long_text_repetition(self) -> None:
@@ -268,6 +268,7 @@ class TestRepetitiveDetection:
         history = [
             "Quiero cancelar mi pedido por favor",
             "Necesito ayuda",
+            "Quiero cancelar mi pedido por favor",
             "Quiero cancelar mi pedido por favor",
         ]
         result = self.detector.check_repetitive(text, history)
