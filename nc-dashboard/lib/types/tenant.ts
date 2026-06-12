@@ -13,4 +13,6 @@ export interface Tenant {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  payment_status?: string | null;
+  plan_activated_at?: string | null;
 }

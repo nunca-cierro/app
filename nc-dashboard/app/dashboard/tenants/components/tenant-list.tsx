@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TenantStatusBadge } from "@/app/dashboard/tenants/components/tenant-status-badge";
 import { TenantPlanBadge } from "@/app/dashboard/tenants/components/tenant-plan-badge";
+import { PaymentStatusBadge } from "@/app/dashboard/tenants/components/payment-status-badge";
 import { Plus, ExternalLink } from "lucide-react";
 import type { Tenant } from "@/lib/types";
 
@@ -134,6 +135,7 @@ export function TenantList({ tenants, isLoading, error }: TenantListProps) {
                     </span>
                     <TenantStatusBadge status={tenant.status} />
                     <TenantPlanBadge plan={tenant.plan} createdAt={tenant.created_at} />
+                    <PaymentStatusBadge status={tenant.payment_status} />
                   </div>
                   <p className="mt-0.5 truncate text-xs text-muted-foreground">
                     {tenant.slug}

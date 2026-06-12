@@ -97,6 +97,11 @@ class Settings(BaseSettings):
     evo_api_key: str = ""
     evo_api_base_url: str = "http://evolution-api:8080"
 
+    # ── Billing / Payment ────────────────────────────────────────────────
+    payment_breb_number: str = ""
+    payment_account_holder: str = ""
+    payment_dashboard_url: str = "https://nuncacierro.com/dashboard"
+
     # ── Paths ────────────────────────────────────────────────────────────
     businesses_dir: Path = Path("businesses")
 

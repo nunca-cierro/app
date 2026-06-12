@@ -11,6 +11,9 @@ from typing import Any
 # ── Must be set BEFORE any app imports ────────────────────────────────────
 os.environ.setdefault("ENCRYPTION_KEY", "dGhpcyBpcyBhIDE2LWJ5dGUgZXhhbXBsZSBrZXkgISE=")
 os.environ.setdefault("JWT_SECRET", "test-jwt-secret-not-production")
+os.environ.setdefault("PAYMENT_NEQUI_NUMBER", "3001234567")
+os.environ.setdefault("PAYMENT_BREB_NUMBER", "3007654321")
+os.environ.setdefault("PAYMENT_ACCOUNT_HOLDER", "NuncaCierro SAS")
 
 import asyncpg
 import pytest_asyncio

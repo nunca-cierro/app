@@ -13,6 +13,7 @@ from app.api.v1.conversations import router as conversations_router
 from app.api.v1.metrics import router as metrics_router
 from app.api.v1.platform_connections import router as platform_connections_router
 from app.api.v1.agent_templates import router as agent_templates_router
+from app.api.v1.billing import router as billing_router
 from app.modules.auth.deps import get_current_user
 
 router = APIRouter(prefix="/api/v1")
@@ -34,3 +35,4 @@ router.include_router(conversations_router, dependencies=admin_deps)
 router.include_router(metrics_router, dependencies=admin_deps)
 router.include_router(platform_connections_router, dependencies=admin_deps)
 router.include_router(agent_templates_router, dependencies=admin_deps)
+router.include_router(billing_router, dependencies=admin_deps)

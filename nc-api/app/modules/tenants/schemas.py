@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TenantCreate(BaseModel):
@@ -42,5 +42,30 @@ class TenantResponse(BaseModel):
     notes: str | None
     category: str | None
     business_profile: dict[str, Any] | None = None
+    payment_status: str | None = None
+    plan_activated_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+
+
+# ── Billing / Activation ─────────────────────────────────────────────────────
+
+
+class ActivatePlanRequest(BaseModel):
+    plan: str = Field(
+        ...,
+        description="Plan to activate: basic, professional, or enterprise",
+        pattern=r"^(basic|professional|enterprise)$",
+    )
+
+
+class PaymentMethod(BaseModel):
+    name: str
+    number: str
+    logo: str
+
+
+class BillingInfoResponse(BaseModel):
+    qr_urls: dict[str, str]
+    methods: list[PaymentMethod]
+    account_holder: str

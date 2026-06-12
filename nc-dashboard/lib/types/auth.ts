@@ -13,6 +13,7 @@ export interface AuthUser {
   current_role?: UserRole;
   current_tenant_id?: string | null;
   plan?: string | null;
+  payment_status?: string | null;
 }
 
 export interface LoginResponse {

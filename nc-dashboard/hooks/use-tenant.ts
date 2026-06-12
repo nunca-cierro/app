@@ -16,6 +16,7 @@ export interface UseTenantReturn {
   error: string | null;
   updateTenant: (data: TenantFormValues) => Promise<Tenant>;
   deleteTenant: () => Promise<void>;
+  refetch: () => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -26,6 +27,7 @@ export function useTenant(id: string): UseTenantReturn {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refetchCount, setRefetchCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,7 +50,7 @@ export function useTenant(id: string): UseTenantReturn {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, refetchCount]);
 
   const updateTenant = useCallback(
     async (data: TenantFormValues): Promise<Tenant> => {
@@ -70,5 +72,11 @@ export function useTenant(id: string): UseTenantReturn {
     setTenant(null);
   }, [id]);
 
-  return { tenant, isLoading, error, updateTenant, deleteTenant };
+  const refetch = useCallback(() => {
+    setError(null);
+    setIsLoading(true);
+    setRefetchCount((c) => c + 1);
+  }, []);
+
+  return { tenant, isLoading, error, updateTenant, deleteTenant, refetch };
 }
