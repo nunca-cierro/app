@@ -284,10 +284,24 @@ async def handle_evolution_incoming(
             score=rep_result.spam_score,
         )
 
-    # ── 4d. Payment keyword pre-processing ───────────────────────────────
+    # ── 4d. Load tenant (early, needed for payment guard + escalation) ──
+    from app.modules.tenants.models import Tenant
+
+    tenant = await session.get(Tenant, tenant_id)
+    if tenant is None:
+        logger.warning(
+            "Tenant {tid} not found for Evolution message", tid=tenant_id
+        )
+        await session.commit()
+        return
+
+    # ── 4e. Payment keyword pre-processing ───────────────────────────────
     # If the user is asking about payment (pagos, QR, Nequi, etc.), reply
     # with account info immediately and skip the AI pipeline entirely.
-    if _has_payment_keyword(parsed["content"]):
+    # Skip for NuncaCierro itself — let its AI respond with the sales template.
+    if tenant.slug == "nuncacierro":
+        pass  # fall through to AI pipeline
+    elif _has_payment_keyword(parsed["content"]):
         payment_msg = (
             "¡Claro! Podés pagar tu plan por:\n"
             f"• Bre-B: {settings.payment_breb_number}\n"
@@ -333,17 +347,6 @@ async def handle_evolution_incoming(
         )
         return
 
-    # ── 5. Load tenant ──────────────────────────────────────────────────
-    from app.modules.tenants.models import Tenant
-
-    tenant = await session.get(Tenant, tenant_id)
-    if tenant is None:
-        logger.warning(
-            "Tenant {tid} not found for Evolution message", tid=tenant_id
-        )
-        await session.commit()
-        return
-
     # ── 5a. Resolve agent (needed for both AI and programmed plans) ────
     from app.modules.agents.models import AiAgent
 
@@ -383,7 +386,7 @@ async def handle_evolution_incoming(
     # ── 5c. Programmed responses for Basic/Trial plans ──────────────────────
     if tenant.plan in ("basic", "trial"):
         # Use agent's business_config FAQ + keywords for matching
-        biz_config = agent.business_config if agent else {}
+        biz_config = (agent.business_config or {}) if agent else {}
         faq = biz_config.get("faq") or []
         keywords_to_escalate = biz_config.get("keywords_to_escalate") or []
         user_text = parsed["content"].lower().strip()
@@ -413,6 +416,7 @@ async def handle_evolution_incoming(
         # 2. Check escalate keywords (human handoff)
         if not matched_answer and keywords_to_escalate:
             if any(kw.lower() in user_text for kw in keywords_to_escalate):
+                conversation.status = "escalated"
                 matched_answer = (
                     "Un asesor nuestro revisará tu mensaje y te contactará "
                     "pronto. Mientras tanto, ¿hay algo más en lo que pueda ayudarte?"
@@ -510,6 +514,18 @@ async def handle_evolution_incoming(
             "En este momento tengo problemas técnicos. "
             "Por favor intenta de nuevo en unos minutos. ¡Gracias!"
         )
+
+    # ── 6b. Escalation check for Professional+ plans ──────────────────────
+    # If the incoming message matches escalation keywords, mark the
+    # conversation as escalated so the frontend can prioritize it.
+    if agent and agent.business_config:
+        esc_keywords = agent.business_config.get("keywords_to_escalate") or []
+        if any(kw.lower() in parsed["content"].lower() for kw in esc_keywords):
+            conversation.status = "escalated"
+            logger.info(
+                "Conversation escalated | conv={cid} | tenant={tid} | plan={plan}",
+                cid=conversation.id, tid=tenant_id, plan=tenant.plan,
+            )
 
     # ── 7. Send via EvolutionAdapter (composing + delay + text) ─────────
     adapter = EvolutionAdapter()
