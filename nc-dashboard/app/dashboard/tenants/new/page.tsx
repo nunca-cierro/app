@@ -27,7 +27,7 @@ export default function NewTenantPage() {
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) {
-          toast.error("El slug ya está en uso. Elige otro.");
+          toast.error("Ya existe un negocio con ese nombre. Elige otro nombre.");
         } else {
           toast.error("Error al crear el negocio. Intenta de nuevo.");
         }

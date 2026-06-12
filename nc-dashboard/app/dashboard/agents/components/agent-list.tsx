@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, ExternalLink, Bot } from "lucide-react";
 import type { Agent } from "@/lib/types";
+import { useAuth } from "@/hooks/use-auth";
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -20,7 +21,7 @@ interface AgentListProps {
 /*  Empty state                                                         */
 /* ------------------------------------------------------------------ */
 
-function EmptyState() {
+function EmptyState({ canCreate = true }: { canCreate?: boolean }) {
   return (
     <Card>
       <CardContent className="flex flex-col items-center gap-3 py-12">
@@ -28,12 +29,14 @@ function EmptyState() {
         <p className="text-muted-foreground text-sm">
           No hay agentes creados aún.
         </p>
-        <Button asChild variant="default" size="sm">
-          <Link href="/dashboard/agents/new">
-            <Plus className="mr-2 size-4" />
-            Crear Agente
-          </Link>
-        </Button>
+        {canCreate && (
+          <Button asChild variant="default" size="sm">
+            <Link href="/dashboard/agents/new">
+              <Plus className="mr-2 size-4" />
+              Crear Agente
+            </Link>
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
@@ -63,6 +66,10 @@ function Skeleton() {
 /* ------------------------------------------------------------------ */
 
 export function AgentList({ agents, isLoading, error }: AgentListProps) {
+  const { user } = useAuth();
+  const role = user?.current_role ?? user?.role;
+  const canCreate = role === "superadmin";
+
   if (isLoading) {
     return <Skeleton />;
   }
@@ -78,7 +85,7 @@ export function AgentList({ agents, isLoading, error }: AgentListProps) {
   }
 
   if (agents.length === 0) {
-    return <EmptyState />;
+    return <EmptyState canCreate={canCreate} />;
   }
 
   return (

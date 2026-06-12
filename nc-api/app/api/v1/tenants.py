@@ -6,6 +6,9 @@ import uuid
 import typing as t
 
 from fastapi import APIRouter, Depends, HTTPException, Response
+from loguru import logger
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
@@ -34,46 +37,55 @@ async def create_new_tenant(
 ) -> Tenant:
     """Register a new tenant (business).
 
-    Admin/superadmin can create tenants directly.
+    Superadmin can create tenants directly.
     Tenantless users (no existing UserTenant) can create their first tenant,
     which auto-assigns them as admin with is_primary=True.
+    Admin users cannot create new tenants — only edit existing ones.
     """
     role = getattr(current_user, "current_role", current_user.role)
     is_tenantless = not getattr(current_user, "current_tenant_id", None)
 
     # Check if user can create a tenant
-    if role not in (UserRole.ADMIN, UserRole.SUPERADMIN) and not is_tenantless:
+    if role != UserRole.SUPERADMIN and not is_tenantless:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    tenant = Tenant(**body.model_dump())
-    session.add(tenant)
-    await session.flush()
+    try:
+        tenant = Tenant(**body.model_dump())
+        session.add(tenant)
+        await session.flush()
 
-    # If tenantless, auto-assign as admin
-    if is_tenantless:
-        # Verify user has no existing tenant
-        existing = await session.execute(
-            select(UserTenant).where(UserTenant.user_id == current_user.id)
+        # If tenantless, auto-assign as admin
+        if is_tenantless:
+            # Verify user has no existing tenant
+            existing = await session.execute(
+                select(UserTenant).where(UserTenant.user_id == current_user.id)
+            )
+            if existing.first():
+                # User already has a tenant — requires superadmin
+                if role != UserRole.SUPERADMIN:
+                    await session.delete(tenant)
+                    await session.commit()
+                    raise HTTPException(status_code=403, detail="Forbidden")
+
+            ut = UserTenant(
+                user_id=current_user.id,
+                tenant_id=tenant.id,
+                role=UserRole.ADMIN,
+                is_primary=True,
+            )
+            session.add(ut)
+            current_user.role = UserRole.ADMIN
+
+        await session.commit()
+        await session.refresh(tenant)
+        return tenant
+    except IntegrityError as e:
+        await session.rollback()
+        logger.error(f"IntegrityError creating tenant: {e}")
+        raise HTTPException(
+            status_code=409,
+            detail="Ya existe un negocio con ese nombre o slug.",
         )
-        if existing.first():
-            # User already has a tenant — requires admin/superadmin
-            if role not in (UserRole.ADMIN, UserRole.SUPERADMIN):
-                await session.delete(tenant)
-                await session.commit()
-                raise HTTPException(status_code=403, detail="Forbidden")
-
-        ut = UserTenant(
-            user_id=current_user.id,
-            tenant_id=tenant.id,
-            role=UserRole.ADMIN,
-            is_primary=True,
-        )
-        session.add(ut)
-        current_user.role = UserRole.ADMIN
-
-    await session.commit()
-    await session.refresh(tenant)
-    return tenant
 
 
 @router.get("", response_model=t.List[TenantResponse])
@@ -167,7 +179,7 @@ async def activate_tenant_plan_endpoint(
     )
 
 
-@router.delete("/{tenant_id}", status_code=204, response_class=Response)
+@router.delete("/{tenant_id}", status_code=204, response_model=None)
 async def delete_tenant(
     tenant_id: uuid.UUID,
     current_user: User = Depends(superadmin_check),

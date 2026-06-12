@@ -8,6 +8,7 @@ import { TenantPlanBadge } from "@/app/dashboard/tenants/components/tenant-plan-
 import { PaymentStatusBadge } from "@/app/dashboard/tenants/components/payment-status-badge";
 import { Plus, ExternalLink } from "lucide-react";
 import type { Tenant } from "@/lib/types";
+import { useAuth } from "@/hooks/use-auth";
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -23,19 +24,21 @@ interface TenantListProps {
 /*  Empty state                                                         */
 /* ------------------------------------------------------------------ */
 
-function EmptyState() {
+function EmptyState({ canCreate = true }: { canCreate?: boolean }) {
   return (
     <Card>
       <CardContent className="flex flex-col items-center gap-3 py-12">
         <p className="text-muted-foreground text-sm">
           No hay negocios registrados aún.
         </p>
-        <Button asChild variant="default" size="sm">
-          <Link href="/dashboard/tenants/new">
-            <Plus className="mr-2 size-4" />
-            Crear Negocio
-          </Link>
-        </Button>
+        {canCreate && (
+          <Button asChild variant="default" size="sm">
+            <Link href="/dashboard/tenants/new">
+              <Plus className="mr-2 size-4" />
+              Crear Negocio
+            </Link>
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
@@ -78,16 +81,18 @@ function Skeleton() {
 /*  Table header                                                        */
 /* ------------------------------------------------------------------ */
 
-function TableHeader() {
+function TableHeader({ canCreate = true }: { canCreate?: boolean }) {
   return (
     <div className="mb-4 flex items-center justify-between">
       <h2 className="text-lg font-semibold">Negocios</h2>
-      <Button asChild size="sm">
-        <Link href="/dashboard/tenants/new">
-          <Plus className="mr-2 size-4" />
-          Nuevo
-        </Link>
-      </Button>
+      {canCreate && (
+        <Button asChild size="sm">
+          <Link href="/dashboard/tenants/new">
+            <Plus className="mr-2 size-4" />
+            Nuevo
+          </Link>
+        </Button>
+      )}
     </div>
   );
 }
@@ -97,10 +102,14 @@ function TableHeader() {
 /* ------------------------------------------------------------------ */
 
 export function TenantList({ tenants, isLoading, error }: TenantListProps) {
+  const { user } = useAuth();
+  const role = user?.current_role ?? user?.role;
+  const canCreate = role === "superadmin";
+
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <TableHeader />
+        <TableHeader canCreate={canCreate} />
         <Skeleton />
       </div>
     );
@@ -109,19 +118,19 @@ export function TenantList({ tenants, isLoading, error }: TenantListProps) {
   if (error) {
     return (
       <div className="space-y-4">
-        <TableHeader />
+        <TableHeader canCreate={canCreate} />
         <ErrorState message={error} />
       </div>
     );
   }
 
   if (tenants.length === 0) {
-    return <EmptyState />;
+    return <EmptyState canCreate={canCreate} />;
   }
 
   return (
     <div className="space-y-4">
-      <TableHeader />
+      <TableHeader canCreate={canCreate} />
 
       <div className="space-y-2">
         {tenants.map((tenant) => (

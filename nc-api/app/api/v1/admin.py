@@ -132,7 +132,7 @@ async def create_user(
     )
 
 
-@router.delete("/users/{user_id}", status_code=204, response_class=Response)
+@router.delete("/users/{user_id}", status_code=204, response_model=None)
 async def delete_user(
     user_id: UUID,
     current_user: User = Depends(get_current_user),

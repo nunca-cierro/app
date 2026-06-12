@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { toast } from "sonner";
-import type { AgentFormValues } from "@/lib/schemas/agent";
+import type { AgentEditFormValues } from "@/lib/schemas/agent";
 import type { BusinessConfig } from "@/lib/types/agent";
 
 export default function AgentDetailPage() {
@@ -105,7 +105,7 @@ export default function AgentDetailPage() {
   }
 
   /* ── Handle update ── */
-  const handleUpdate = async (data: AgentFormValues) => {
+  const handleUpdate = async (data: AgentEditFormValues) => {
     setIsSubmitting(true);
     try {
       await updateAgent(data);

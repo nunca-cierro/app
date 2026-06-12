@@ -25,6 +25,10 @@ export const agentFormSchema = z.object({
 
 export type AgentFormValues = z.infer<typeof agentFormSchema>;
 
+/** Schema para edición: omite `tenant_id` (no se puede cambiar el negocio de un agente). */
+export const agentEditFormSchema = agentFormSchema.omit({ tenant_id: true });
+export type AgentEditFormValues = z.infer<typeof agentEditFormSchema>;
+
 /* ------------------------------------------------------------------ */
 /*  Prompt form schema                                                 */
 /* ------------------------------------------------------------------ */
