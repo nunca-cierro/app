@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BusinessConfigForm } from "@/app/dashboard/agents/components/business-config-form";
+import { ExpiredTrialOverlay } from "@/app/dashboard/components/expired-trial-overlay";
 import {
   Building2,
   MessageSquare,
@@ -176,7 +177,7 @@ function AdminDashboard() {
 
 function ClientDashboard() {
   const { user } = useAuth();
-  const { tenants } = useTenants();
+  const { tenants, isLoading: isLoadingTenants } = useTenants();
   const { agents } = useAgents();
   const plan = user?.plan ?? null;
   const tid = user?.current_tenant_id ?? user?.tenant_id;
@@ -186,10 +187,16 @@ function ClientDashboard() {
   const myAgent = agents.find((a) => a.tenant_id === tid) ?? null;
   const remaining = myTenant?.created_at ? daysRemaining(myTenant.created_at) : 0;
 
-  // Business config save
+  // Business config hooks (must be before early return for React hooks rules)
   const { updateBusinessConfig } = useAgent(myAgent?.id ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+
+  // If payment is not active (trial expired, overdue, suspended, or pending), show payment overlay
+  const paymentStatus = myTenant?.payment_status;
+  if (!isLoadingTenants && paymentStatus !== "active") {
+    return <ExpiredTrialOverlay />;
+  }
 
   const handleSaveConfig = async (config: BusinessConfig) => {
     if (!myAgent?.id) return;

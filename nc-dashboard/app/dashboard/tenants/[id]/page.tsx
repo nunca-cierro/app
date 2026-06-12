@@ -22,14 +22,18 @@ import {
 import { ArrowLeft, Pencil, Trash2, Loader2, AlertCircle } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+import { ConfirmPaymentDialog } from "@/app/dashboard/tenants/components/confirm-payment-dialog";
 import type { TenantFormValues } from "@/lib/schemas/tenant";
 
 export default function TenantDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const { tenant, isLoading, error, updateTenant, deleteTenant } =
+  const { user } = useAuth();
+  const { tenant, isLoading, error, updateTenant, deleteTenant, refetch } =
     useTenant(id);
+  const isSuperadmin = user?.role === "superadmin";
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -142,6 +146,10 @@ export default function TenantDetailPage() {
               <Pencil className="mr-2 size-4" />
               Editar
             </Button>
+          )}
+
+          {!isEditing && isSuperadmin && (
+            <ConfirmPaymentDialog tenant={tenant} onSuccess={refetch} />
           )}
 
           <AlertDialog>

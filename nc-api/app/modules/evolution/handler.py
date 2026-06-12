@@ -30,6 +30,21 @@ from app.modules.evolution.webhook import (
 from app.modules.evolution.adapter import EvolutionAdapter
 from app.modules.evolution.anti_spam import _resolve_anti_spam_config, spam_detector
 
+# ── Constants ────────────────────────────────────────────────────────────────
+
+PAYMENT_KEYWORDS: list[str] = [
+    "pago", "pagar", "qr", "daviplata", "bre-b",
+]
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+
+def _has_payment_keyword(text: str) -> bool:
+    """Check if *text* contains any payment-related keyword (case-insensitive)."""
+    lower = text.lower().strip()
+    return any(kw in lower for kw in PAYMENT_KEYWORDS)
+
+
 # ── Types ───────────────────────────────────────────────────────────────────
 
 EvolutionEventT = dict[str, t.Any]
@@ -268,6 +283,55 @@ async def handle_evolution_incoming(
             "Spam logged (repetitive) | score={score}",
             score=rep_result.spam_score,
         )
+
+    # ── 4d. Payment keyword pre-processing ───────────────────────────────
+    # If the user is asking about payment (pagos, QR, Nequi, etc.), reply
+    # with account info immediately and skip the AI pipeline entirely.
+    if _has_payment_keyword(parsed["content"]):
+        payment_msg = (
+            "¡Claro! Podés pagar tu plan por:\n"
+            f"• Bre-B: {settings.payment_breb_number}\n"
+            f"Titular: {settings.payment_account_holder}\n\n"
+            "También podés ver los QR y gestionar tu pago desde el dashboard:\n"
+            f"{settings.payment_dashboard_url}\n\n"
+            "Envíame el comprobante por acá cuando hayas pagado y activo tu plan enseguida."
+        )
+
+        adapter = EvolutionAdapter()
+        try:
+            evo_response = await adapter.send_message(
+                connection=connection,
+                to=parsed["external_user_id"],
+                text=payment_msg,
+            )
+            evo_msg_id = evo_response.get("key", {}).get("id") or evo_response.get("id")
+            outbound_status = "sent"
+        except Exception:
+            evo_msg_id = None
+            outbound_status = "failed"
+
+        outbound_msg = Message(
+            tenant_id=tenant_id,
+            conversation_id=conversation.id,
+            platform_connection_id=connection.id,
+            direction="out",
+            external_user_id=parsed["external_user_id"],
+            external_message_id=evo_msg_id,
+            platform="evolution",
+            message_type="text",
+            content=payment_msg,
+            status=outbound_status,
+        )
+        session.add(outbound_msg)
+        conversation.last_message_at = datetime.now(UTC)
+        await session.commit()
+        logger.info(
+            "Payment info sent | conn={conn} | user={user} | matched_keyword={kw}",
+            conn=connection.id,
+            user=parsed["external_user_id"],
+            kw=parsed["content"][:80],
+        )
+        return
 
     # ── 5. Load tenant ──────────────────────────────────────────────────
     from app.modules.tenants.models import Tenant

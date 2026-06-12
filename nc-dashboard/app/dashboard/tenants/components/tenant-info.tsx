@@ -3,7 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TenantStatusBadge } from "@/app/dashboard/tenants/components/tenant-status-badge";
 import { TenantPlanBadge } from "@/app/dashboard/tenants/components/tenant-plan-badge";
-import { Calendar, Globe, Clock, FileText } from "lucide-react";
+import { PaymentStatusBadge } from "@/app/dashboard/tenants/components/payment-status-badge";
+import { Calendar, Globe, Clock, FileText, ShieldCheck } from "lucide-react";
 import type { Tenant } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
@@ -52,6 +53,7 @@ export function TenantInfo({ tenant }: TenantInfoProps) {
           <div className="mt-1 flex items-center gap-2">
             <TenantStatusBadge status={tenant.status} />
             <TenantPlanBadge plan={tenant.plan} createdAt={tenant.created_at} />
+            <PaymentStatusBadge status={tenant.payment_status} />
           </div>
         </div>
       </div>
@@ -74,6 +76,17 @@ export function TenantInfo({ tenant }: TenantInfoProps) {
           />
           <InfoRow icon={Clock} label="Zona horaria" value={tenant.timezone} />
           <InfoRow icon={Globe} label="Región" value={tenant.locale} />
+          {tenant.plan_activated_at && (
+            <InfoRow
+              icon={ShieldCheck}
+              label="Plan activado"
+              value={new Date(tenant.plan_activated_at).toLocaleDateString("es-CO", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            />
+          )}
         </CardContent>
       </Card>
 

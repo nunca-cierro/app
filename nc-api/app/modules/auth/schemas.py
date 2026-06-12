@@ -28,6 +28,8 @@ class TokenResponse(BaseModel):
     role: str
     tenant_id: str | None = None
     tenant_plan: str | None = None
+    payment_status: str | None = None
+    plan_activated_at: datetime | None = None
 
 
 class UserResponse(BaseModel):
@@ -44,6 +46,8 @@ class MeResponse(UserResponse):
     current_role: str | None = None
     current_tenant_id: str | None = None
     current_plan: str | None = None
+    payment_status: str | None = None
+    plan_activated_at: datetime | None = None
 
 
 class ChangePasswordRequest(BaseModel):

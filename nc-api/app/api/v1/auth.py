@@ -99,6 +99,8 @@ async def login(
     role = user.role
     tenant_id = None
     tenant_plan = None
+    payment_status = None
+    plan_activated_at = None
 
     if role != UserRole.SUPERADMIN:
         # Fetch primary tenant
@@ -111,10 +113,12 @@ async def login(
         if ut:
             role = ut.role
             tenant_id = str(ut.tenant_id)
-            # Resolve tenant plan
+            # Resolve tenant plan + payment info
             tenant = await session.get(Tenant, ut.tenant_id)
             if tenant:
                 tenant_plan = tenant.plan
+                payment_status = getattr(tenant, "payment_status", None)
+                plan_activated_at = getattr(tenant, "plan_activated_at", None)
 
     token = create_access_token(
         str(user.id), user.email, role=role, tenant_id=tenant_id
@@ -128,6 +132,8 @@ async def login(
         role=role,
         tenant_id=tenant_id,
         tenant_plan=tenant_plan,
+        payment_status=payment_status,
+        plan_activated_at=plan_activated_at,
     )
 
 
@@ -137,16 +143,22 @@ async def me(
     session: AsyncSession = Depends(get_session),
 ) -> t.Any:
     """Get the currently logged-in user's profile with role, tenant context, and plan."""
-    # Resolve current plan from tenant
+    # Resolve current plan + payment info from tenant
     current_plan = None
+    payment_status = None
+    plan_activated_at = None
     current_tid = getattr(current_user, "current_tenant_id", None)
     if current_tid:
         tenant = await session.get(Tenant, current_tid)
         if tenant:
             current_plan = tenant.plan
+            payment_status = getattr(tenant, "payment_status", None)
+            plan_activated_at = getattr(tenant, "plan_activated_at", None)
 
     response = MeResponse.model_validate(current_user)
     response.current_plan = current_plan
+    response.payment_status = payment_status
+    response.plan_activated_at = plan_activated_at
     return response
 
 

@@ -88,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: data.role,
       tenant_id: data.tenant_id,
       plan: data.tenant_plan ?? null,
+      payment_status: (data as Record<string, unknown>).payment_status as string | undefined ?? null,
     });
   };
 
@@ -101,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role: data.role,
       tenant_id: data.tenant_id,
       plan: data.tenant_plan ?? null,
+      payment_status: (data as Record<string, unknown>).payment_status as string | undefined ?? null,
     });
   };
 

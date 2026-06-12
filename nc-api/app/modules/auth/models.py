@@ -26,6 +26,13 @@ class TenantStatus(str, enum.Enum):
     SUSPENDED = "suspended"
 
 
+class PaymentStatus(str, enum.Enum):
+    PENDING = "pending"
+    ACTIVE = "active"
+    OVERDUE = "overdue"
+    SUSPENDED = "suspended"
+
+
 class User(Base):
     __tablename__ = "users"
 

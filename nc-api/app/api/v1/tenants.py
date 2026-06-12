@@ -9,11 +9,17 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
-from app.modules.auth.deps import get_current_user
+from app.modules.auth.deps import RoleChecker, get_current_user
 from app.modules.auth.models import User, UserRole
 from app.modules.auth.user_tenant import UserTenant
 from app.modules.tenants.models import Tenant
-from app.modules.tenants.schemas import TenantCreate, TenantUpdate, TenantResponse
+from app.modules.tenants.schemas import (
+    ActivatePlanRequest,
+    TenantCreate,
+    TenantUpdate,
+    TenantResponse,
+)
+from app.modules.tenants.service import activate_tenant_plan
 
 router = APIRouter(prefix="/tenants", tags=["tenants"])
 
@@ -124,6 +130,28 @@ async def update_tenant_info(
     await session.commit()
     await session.refresh(tenant)
     return tenant
+
+
+superadmin_check = RoleChecker(allowed_roles=[UserRole.SUPERADMIN])
+
+
+@router.patch("/{tenant_id}/activate-plan", response_model=TenantResponse)
+async def activate_tenant_plan_endpoint(
+    tenant_id: uuid.UUID,
+    body: ActivatePlanRequest,
+    current_user: User = Depends(superadmin_check),
+    session: AsyncSession = Depends(get_session),
+) -> Tenant:
+    """Activate a tenant's plan (superadmin only).
+
+    Sets ``payment_status`` to ``active`` and records the activation
+    timestamp (immutable after first activation).
+    """
+    return await activate_tenant_plan(
+        tenant_id=tenant_id,
+        plan=body.plan,
+        session=session,
+    )
 
 
 @router.delete("/{tenant_id}", status_code=204, response_class=Response)
