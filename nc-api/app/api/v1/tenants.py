@@ -13,6 +13,8 @@ from app.modules.auth.deps import RoleChecker, get_current_user
 from app.modules.auth.models import User, UserRole
 from app.modules.auth.user_tenant import UserTenant
 from app.modules.tenants.models import Tenant
+
+admin_or_super = RoleChecker(allowed_roles=[UserRole.ADMIN, UserRole.SUPERADMIN])
 from app.modules.tenants.schemas import (
     ActivatePlanRequest,
     TenantCreate,
@@ -31,18 +33,44 @@ async def create_new_tenant(
     session: AsyncSession = Depends(get_session),
 ) -> Tenant:
     """Register a new tenant (business).
-    
-    Only SUPERADMIN can create tenants directly here for now, 
-    or we might allow CLIENTs to create their own first tenant.
+
+    Admin/superadmin can create tenants directly.
+    Tenantless users (no existing UserTenant) can create their first tenant,
+    which auto-assigns them as admin with is_primary=True.
     """
     role = getattr(current_user, "current_role", current_user.role)
-    if role != UserRole.SUPERADMIN:
-        # For now, only superadmins can create tenants. 
-        # In the future, a "billing" role or self-service flow might allow this.
+    is_tenantless = not getattr(current_user, "current_tenant_id", None)
+
+    # Check if user can create a tenant
+    if role not in (UserRole.ADMIN, UserRole.SUPERADMIN) and not is_tenantless:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     tenant = Tenant(**body.model_dump())
     session.add(tenant)
+    await session.flush()
+
+    # If tenantless, auto-assign as admin
+    if is_tenantless:
+        # Verify user has no existing tenant
+        existing = await session.execute(
+            select(UserTenant).where(UserTenant.user_id == current_user.id)
+        )
+        if existing.first():
+            # User already has a tenant — requires admin/superadmin
+            if role not in (UserRole.ADMIN, UserRole.SUPERADMIN):
+                await session.delete(tenant)
+                await session.commit()
+                raise HTTPException(status_code=403, detail="Forbidden")
+
+        ut = UserTenant(
+            user_id=current_user.id,
+            tenant_id=tenant.id,
+            role=UserRole.ADMIN,
+            is_primary=True,
+        )
+        session.add(ut)
+        current_user.role = UserRole.ADMIN
+
     await session.commit()
     await session.refresh(tenant)
     return tenant
@@ -99,25 +127,10 @@ async def get_tenant(
 async def update_tenant_info(
     tenant_id: uuid.UUID,
     body: TenantUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(admin_or_super),
     session: AsyncSession = Depends(get_session),
 ) -> Tenant:
     """Update tenant information."""
-    role = getattr(current_user, "current_role", current_user.role)
-    
-    if role != UserRole.SUPERADMIN:
-        from sqlalchemy import select
-        assoc_result = await session.execute(
-            select(UserTenant).where(
-                UserTenant.user_id == current_user.id,
-                UserTenant.tenant_id == tenant_id
-            )
-        )
-        assoc = assoc_result.scalar_one_or_none()
-        if not assoc or assoc.role != UserRole.ADMIN:
-            # Only tenant admin or superadmin can update tenant info
-            raise HTTPException(status_code=403, detail="Forbidden")
-
     tenant = await session.get(Tenant, tenant_id)
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
@@ -157,16 +170,10 @@ async def activate_tenant_plan_endpoint(
 @router.delete("/{tenant_id}", status_code=204, response_class=Response)
 async def delete_tenant(
     tenant_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(superadmin_check),
     session: AsyncSession = Depends(get_session),
 ):
-    """Delete a tenant."""
-    role = getattr(current_user, "current_role", current_user.role)
-    
-    if role != UserRole.SUPERADMIN:
-        # Only superadmin can delete tenants
-        raise HTTPException(status_code=403, detail="Forbidden")
-
+    """Delete a tenant (superadmin only)."""
     tenant = await session.get(Tenant, tenant_id)
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")

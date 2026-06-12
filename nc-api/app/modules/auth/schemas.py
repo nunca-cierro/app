@@ -12,6 +12,11 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     name: str
+    tenant_name: str | None = None
+
+
+class SwitchTenantRequest(BaseModel):
+    tenant_id: uuid.UUID
 
 
 class LoginRequest(BaseModel):

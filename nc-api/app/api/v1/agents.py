@@ -9,8 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
-from app.modules.auth.deps import get_current_user
+from app.modules.auth.deps import RoleChecker, get_current_user
 from app.modules.auth.models import User, UserRole
+
+admin_or_super = RoleChecker(allowed_roles=[UserRole.ADMIN, UserRole.SUPERADMIN])
 from app.modules.agents.models import AiAgent, Prompt
 from app.modules.agents.schemas import (
     AiAgentCreate,
@@ -31,7 +33,7 @@ router = APIRouter(prefix="/agents", tags=["agents"])
 async def create_agent_from_template(
     body: AiAgentFromTemplate,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(admin_or_super),
 ) -> AiAgent:
     """Create an AI agent from a pre-built template with placeholder resolution.
 
@@ -46,8 +48,17 @@ async def create_agent_from_template(
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
 
+    # Tenant isolation: non-superadmin users can only create agents in their own tenant
+    target_tenant_id = body.tenant_id
+    if current_user.current_role != UserRole.SUPERADMIN:
+        if not current_user.current_tenant_id:
+            raise HTTPException(status_code=403, detail="No tenant context")
+        if body.tenant_id != current_user.current_tenant_id:
+            raise HTTPException(status_code=403, detail="Cross-tenant access denied")
+        target_tenant_id = current_user.current_tenant_id
+
     # Load tenant
-    tenant = await session.get(Tenant, body.tenant_id)
+    tenant = await session.get(Tenant, target_tenant_id)
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
@@ -62,7 +73,7 @@ async def create_agent_from_template(
 
     # Build AiAgent from resolved content
     agent = AiAgent(
-        tenant_id=body.tenant_id,
+        tenant_id=target_tenant_id,
         name=body.name or template.name,
         business_config=resolved_content,
         provider="groq",
@@ -80,7 +91,7 @@ async def create_agent_from_template(
 async def create_new_agent(
     body: AiAgentCreate,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(admin_or_super),
 ) -> AiAgent:
     """Create a new AI Agent for the current tenant."""
     if current_user.current_role != UserRole.SUPERADMIN:
@@ -148,7 +159,7 @@ async def update_agent_info(
     agent_id: uuid.UUID,
     body: AiAgentUpdate,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(admin_or_super),
 ) -> AiAgent:
     """Update agent information with isolation."""
     from sqlalchemy import select
@@ -182,7 +193,7 @@ async def update_agent_info(
 async def delete_agent(
     agent_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(admin_or_super),
 ):
     """Delete an agent and its prompts with isolation."""
     from sqlalchemy import select
@@ -237,7 +248,7 @@ async def create_agent_prompt(
     agent_id: uuid.UUID,
     body: PromptCreate,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(admin_or_super),
 ) -> Prompt:
     """Create a new prompt version for an agent with isolation."""
     from sqlalchemy import select, func

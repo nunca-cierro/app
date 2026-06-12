@@ -9,8 +9,10 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
-from app.modules.auth.deps import get_current_user
+from app.modules.auth.deps import RoleChecker, get_current_user
 from app.modules.auth.models import User, UserRole
+
+admin_or_super = RoleChecker(allowed_roles=[UserRole.ADMIN, UserRole.SUPERADMIN])
 from app.modules.whatsapp.models import WhatsAppNumber
 from app.modules.whatsapp.schemas import WhatsAppNumberCreate, WhatsAppNumberUpdate, WhatsAppNumberResponse
 
@@ -20,7 +22,7 @@ router = APIRouter(prefix="/whatsapp-numbers", tags=["whatsapp-numbers"])
 @router.post("", response_model=WhatsAppNumberResponse, status_code=201)
 async def create_new_number(
     body: WhatsAppNumberCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(admin_or_super),
     session: AsyncSession = Depends(get_session),
 ) -> WhatsAppNumber:
     """Register a new WhatsApp number (Meta Cloud API)."""
@@ -85,7 +87,7 @@ async def get_number(
 async def update_number_info(
     number_id: uuid.UUID,
     body: WhatsAppNumberUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(admin_or_super),
     session: AsyncSession = Depends(get_session),
 ) -> WhatsAppNumber:
     """Update WhatsApp number information."""
@@ -111,7 +113,7 @@ async def update_number_info(
 @router.delete("/{number_id}", status_code=204, response_class=Response)
 async def delete_whatsapp_number(
     number_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(admin_or_super),
     session: AsyncSession = Depends(get_session),
 ):
     """Remove a WhatsApp number."""

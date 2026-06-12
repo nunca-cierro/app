@@ -10,8 +10,10 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
-from app.modules.auth.deps import get_current_user
+from app.modules.auth.deps import RoleChecker, get_current_user
 from app.modules.auth.models import User, UserRole
+
+admin_or_super = RoleChecker(allowed_roles=[UserRole.ADMIN, UserRole.SUPERADMIN])
 from app.modules.platform_connections.schemas import (
     PlatformConnectionCreate,
     PlatformConnectionResponse,
@@ -112,7 +114,7 @@ async def list_platform_connections(
 async def create_platform_connection(
     body: PlatformConnectionCreate,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(admin_or_super),
 ) -> t.Any:
     """Register a new platform connection for the current tenant."""
     if current_user.current_role != UserRole.SUPERADMIN:
@@ -149,7 +151,7 @@ async def update_platform_connection(
     connection_id: uuid.UUID,
     body: PlatformConnectionUpdate,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(admin_or_super),
 ) -> t.Any:
     """Update an existing platform connection with isolation."""
     connection = await get_connection(session, connection_id)
@@ -166,7 +168,7 @@ async def update_platform_connection(
 async def delete_platform_connection(
     connection_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(admin_or_super),
 ):
     """Remove a platform connection with isolation."""
     connection = await get_connection(session, connection_id)
@@ -196,7 +198,7 @@ async def validate_telegram_token(
 async def register_telegram_webhook(
     connection_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(admin_or_super),
 ) -> dict[str, str]:
     """Register (or re-register) the Telegram webhook for this connection with isolation."""
     connection = await get_connection(session, connection_id)
@@ -263,7 +265,7 @@ async def register_telegram_webhook(
 async def register_evolution_webhook(
     connection_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(admin_or_super),
     base_url_override: str | None = None,
 ) -> dict[str, str]:
     """Register (or re-register) the Evolution API webhook for this connection with isolation."""
@@ -392,7 +394,7 @@ class EvolutionConnectResponse(BaseModel):
 async def connect_evolution(
     connection_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(admin_or_super),
     regenerate: bool = False,  # query param: force QR regeneration
 ) -> EvolutionConnectResponse:
     """Create an Evolution API instance and return the QR code.
@@ -666,7 +668,7 @@ async def connect_evolution(
 async def disconnect_evolution(
     connection_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(admin_or_super),
 ) -> dict[str, str]:
     """Logout + delete the Evolution API instance AND the platform connection."""
     import httpx

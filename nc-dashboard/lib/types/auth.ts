@@ -44,3 +44,12 @@ export interface AdminUser {
   created_at: string;
   tenants: TenantAssociation[];
 }
+
+/** Minimal tenant info returned by GET /api/v1/tenants (list). */
+export interface TenantEntry {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  plan: string;
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { apiClient, ApiError } from "@/lib/api";
-import type { UserRole } from "@/lib/types";
+import type { UserRole, TenantEntry } from "@/lib/types";
 import {
   LayoutDashboard,
   Building2,
@@ -19,11 +19,13 @@ import {
   Send,
   ChevronDown,
   ChevronRight,
+  ChevronsUpDown,
   Users,
   Shield,
   KeyRound,
   Loader2 as LoaderIcon,
   X,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -127,7 +129,7 @@ export function getNavItems(role?: UserRole | null, plan?: string | null): NavIt
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, switchTenant, logout } = useAuth();
   const effectiveRole = user?.current_role ?? user?.role ?? null;
   const plan = user?.plan ?? null;
   const navItems = getNavItems(effectiveRole, plan);
@@ -195,6 +197,12 @@ export function Sidebar() {
           return <NavLink key={item.href} item={item} pathname={pathname} />;
         })}
       </nav>
+
+      {/* ── Tenant Switcher ── */}
+      <TenantSwitcher
+        currentTenantId={user?.tenant_id ?? user?.current_tenant_id ?? null}
+        onSwitch={switchTenant}
+      />
 
       {/* ── User + Logout ── */}
       <div className="border-t p-3">
@@ -374,6 +382,113 @@ function CollapsibleSection({
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+
+/* ------------------------------------------------------------------ */
+/*  TenantSwitcher                                                     */
+/* ------------------------------------------------------------------ */
+
+function TenantSwitcher({
+  currentTenantId,
+  onSwitch,
+}: {
+  currentTenantId: string | null;
+  onSwitch: (tenantId: string) => Promise<void>;
+}) {
+  const [tenants, setTenants] = useState<TenantEntry[]>([]);
+  const [open, setOpen] = useState(false);
+  const [isSwitching, setIsSwitching] = useState(false);
+
+  /* ── Fetch user's tenants on mount ── */
+  useEffect(() => {
+    let cancelled = false;
+    apiClient<TenantEntry[]>("/api/v1/tenants")
+      .then((data) => {
+        if (!cancelled) setTenants(data);
+      })
+      .catch(() => {
+        // Silently fail — tenant switcher simply won't show
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /* ── Only render if the user has 2+ tenants ── */
+  if (tenants.length < 2) return null;
+
+  const currentTenant = tenants.find((t) => t.id === currentTenantId);
+
+  const handleSwitch = async (tenantId: string) => {
+    if (tenantId === currentTenantId) return;
+    setIsSwitching(true);
+    setOpen(false);
+    try {
+      await onSwitch(tenantId);
+      toast.success("Negocio cambiado");
+    } catch {
+      toast.error("Error al cambiar de negocio");
+    } finally {
+      setIsSwitching(false);
+    }
+  };
+
+  return (
+    <div className="border-t px-3 py-2">
+      <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+        Negocio activo
+      </div>
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          disabled={isSwitching}
+          className={cn(
+            "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+            "hover:bg-accent hover:text-accent-foreground",
+            "disabled:opacity-50",
+          )}
+        >
+          <Building2 className="size-4 shrink-0 text-muted-foreground" />
+          <span className="flex-1 truncate text-left">
+            {currentTenant?.name ?? "Seleccionar..."}
+          </span>
+          {isSwitching ? (
+            <LoaderIcon className="size-3.5 animate-spin" />
+          ) : (
+            <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground/60" />
+          )}
+        </button>
+
+        {open && (
+          <div className="absolute bottom-full left-0 right-0 mb-1 rounded-md border bg-popover shadow-md">
+            <div className="py-1">
+              {tenants.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => handleSwitch(t.id)}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors",
+                    "hover:bg-accent hover:text-accent-foreground",
+                    t.id === currentTenantId
+                      ? "bg-accent/50 font-medium text-accent-foreground"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  <span className="flex-1 truncate">{t.name}</span>
+                  {t.id === currentTenantId && (
+                    <Check className="size-3.5 shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

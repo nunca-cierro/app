@@ -1,7 +1,4 @@
-"""Auth endpoints — register and login.
-
-No roles. Just a single user managing the SaaS.
-"""
+"""Auth endpoints — register, login, and switch tenant."""
 
 from __future__ import annotations
 
@@ -19,6 +16,7 @@ from app.modules.auth.schemas import (
     ChangePasswordRequest,
     LoginRequest,
     RegisterRequest,
+    SwitchTenantRequest,
     TokenResponse,
     MeResponse,
     UserResponse,
@@ -38,9 +36,10 @@ async def register(
     body: RegisterRequest,
     session: AsyncSession = Depends(get_session),
 ) -> t.Any:
-    """Register a new admin user.
+    """Register a new user, create a tenant, and assign admin role.
 
     Returns a JWT token directly so the user is logged in after registering.
+    The user becomes ADMIN of the newly created tenant.
     """
     # Check email uniqueness
     existing = await session.execute(
@@ -54,18 +53,46 @@ async def register(
             status_code=422, detail="Password must be at least 6 characters"
         )
 
+    # Determine tenant name from request or fallback to user's name
+    tenant_name = (body.tenant_name or body.name).strip()
+    slug = tenant_name.lower().replace(" ", "-").replace("/", "-")[:100]
+
+    # Create User with ADMIN role
     user = User(
         email=body.email,
         password_hash=hash_password(body.password),
         name=body.name,
-        role=UserRole.CLIENT,
+        role=UserRole.ADMIN,
     )
     session.add(user)
+    await session.flush()
+
+    # Create Tenant
+    tenant = Tenant(
+        name=tenant_name,
+        slug=slug,
+        plan="basic",
+        timezone="America/Bogota",
+        locale="es-CO",
+        status="active",
+    )
+    session.add(tenant)
+    await session.flush()
+
+    # Create UserTenant association as admin, primary
+    user_tenant = UserTenant(
+        user_id=user.id,
+        tenant_id=tenant.id,
+        role=UserRole.ADMIN,
+        is_primary=True,
+    )
+    session.add(user_tenant)
+
     await session.commit()
     await session.refresh(user)
 
     token = create_access_token(
-        str(user.id), user.email, role=user.role, tenant_id=None
+        str(user.id), user.email, role=UserRole.ADMIN, tenant_id=str(tenant.id)
     )
 
     return TokenResponse(
@@ -73,8 +100,67 @@ async def register(
         user_id=str(user.id),
         email=user.email,
         name=user.name,
-        role=user.role,
-        tenant_id=None,
+        role=UserRole.ADMIN,
+        tenant_id=str(tenant.id),
+        tenant_plan="basic",
+        payment_status="pending",
+    )
+
+
+@router.post("/switch-tenant", response_model=TokenResponse)
+async def switch_tenant(
+    body: SwitchTenantRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> t.Any:
+    """Switch the current user's active tenant context.
+
+    Validates the user has a UserTenant association with the target tenant,
+    checks the tenant is active, then issues a new JWT scoped to that tenant.
+    """
+    # Verify UserTenant association
+    assoc_result = await session.execute(
+        select(UserTenant).where(
+            UserTenant.user_id == current_user.id,
+            UserTenant.tenant_id == body.tenant_id,
+        )
+    )
+    ut = assoc_result.scalar_one_or_none()
+    if not ut:
+        raise HTTPException(
+            status_code=403,
+            detail="Not a member of this tenant",
+        )
+
+    # Verify tenant exists and is active
+    tenant = await session.get(Tenant, body.tenant_id)
+    if not tenant:
+        raise HTTPException(
+            status_code=404,
+            detail="Tenant not found",
+        )
+    if tenant.status != "active":
+        raise HTTPException(
+            status_code=403,
+            detail="Tenant is not active",
+        )
+
+    token = create_access_token(
+        str(current_user.id),
+        current_user.email,
+        role=ut.role,
+        tenant_id=str(tenant.id),
+    )
+
+    return TokenResponse(
+        access_token=token,
+        user_id=str(current_user.id),
+        email=current_user.email,
+        name=current_user.name,
+        role=ut.role,
+        tenant_id=str(tenant.id),
+        tenant_plan=tenant.plan,
+        payment_status=tenant.payment_status,
     )
 
 

@@ -57,19 +57,19 @@ async def test_assign_tenant_as_superadmin(client: AsyncClient, db_session: Asyn
         app.dependency_overrides.clear()
 
 @pytest.mark.asyncio
-async def test_assign_tenant_unauthorized(client: AsyncClient, db_session: AsyncSession):
+async def test_assign_tenant_unauthorized_agent(client: AsyncClient, db_session: AsyncSession):
     # Setup
     tenant = create_tenant(db_session, "Omega", "omega")
     user_to_assign = User(id=uuid.uuid4(), email="john@doe.com", name="John Doe", password_hash="hash")
     db_session.add(user_to_assign)
     await db_session.commit()
 
-    regular_admin = User(id=uuid.uuid4(), email="admin@test.com", name="Admin", password_hash="hash")
-    setattr(regular_admin, "current_role", UserRole.ADMIN)
+    agent_user = User(id=uuid.uuid4(), email="agent@test.com", name="Agent", password_hash="hash")
+    setattr(agent_user, "current_role", UserRole.AGENT)
 
     # Override auth
     async def mock_get_current_user():
-        return regular_admin
+        return agent_user
     app.dependency_overrides[get_current_user] = mock_get_current_user
 
     try:

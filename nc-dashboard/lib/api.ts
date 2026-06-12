@@ -55,11 +55,44 @@ export async function register(
   email: string,
   password: string,
   name: string,
+  tenant_name?: string,
 ): Promise<LoginResponse> {
+  const body: Record<string, string> = { email, password, name };
+  if (tenant_name) body.tenant_name = tenant_name;
+
   const response = await fetch("/api/v1/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, name }),
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new ApiError(response.status, text);
+  }
+
+  const data: LoginResponse = await response.json();
+  localStorage.setItem(TOKEN_KEYS.access, data.access_token);
+  localStorage.setItem(
+    TOKEN_KEYS.user,
+    JSON.stringify({ id: data.user_id, email: data.email, name: data.name }),
+  );
+  return data;
+}
+
+export async function switchTenant(tenantId: string): Promise<LoginResponse> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  const accessToken = localStorage.getItem(TOKEN_KEYS.access);
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+
+  const response = await fetch("/api/v1/auth/switch-tenant", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ tenant_id: tenantId }),
   });
 
   if (!response.ok) {
