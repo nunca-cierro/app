@@ -25,7 +25,7 @@ export interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, tenant_name?: string) => Promise<void>;
+  register: (email: string, password: string, name: string, role?: string) => Promise<void>;
   switchTenant: (tenantId: string) => Promise<void>;
   logout: () => void;
 }
@@ -95,8 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   /* ── Register ── */
-  const register = async (_email: string, _password: string, _name: string, _tenant_name?: string) => {
-    const data = await apiRegister(_email, _password, _name, _tenant_name);
+  const register = async (_email: string, _password: string, _name: string, _role: string = "client") => {
+    const data = await apiRegister(_email, _password, _name, _role);
     setUser({
       id: data.user_id,
       email: data.email,

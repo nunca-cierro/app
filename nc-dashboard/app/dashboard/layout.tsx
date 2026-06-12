@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/layout/sidebar";
-import { isRouteAllowed, getRoleLandingRoute, isTenantless } from "@/lib/rbac";
+import { isRouteAllowed, getRoleLandingRoute } from "@/lib/rbac";
 import type { UserRole } from "@/lib/types";
 
 export default function DashboardLayout({
@@ -22,15 +22,6 @@ export default function DashboardLayout({
       router.replace("/auth/login");
     }
   }, [isLoading, isAuthenticated, router]);
-
-  /* ── Tenantless guard: redirect to onboarding ── */
-  useEffect(() => {
-    if (isLoading || !isAuthenticated || !user) return;
-
-    if (isTenantless(user) && pathname !== "/dashboard/onboarding") {
-      router.replace("/dashboard/onboarding");
-    }
-  }, [isLoading, isAuthenticated, user, pathname, router]);
 
   /* ── Role guard: redirect to landing route if not allowed ── */
   useEffect(() => {

@@ -55,15 +55,12 @@ export async function register(
   email: string,
   password: string,
   name: string,
-  tenant_name?: string,
+  role: string = "client",
 ): Promise<LoginResponse> {
-  const body: Record<string, string> = { email, password, name };
-  if (tenant_name) body.tenant_name = tenant_name;
-
   const response = await fetch("/api/v1/auth/register", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ email, password, name, role }),
   });
 
   if (!response.ok) {
