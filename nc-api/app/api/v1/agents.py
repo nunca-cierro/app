@@ -13,6 +13,7 @@ from app.modules.auth.deps import RoleChecker, get_current_user
 from app.modules.auth.models import User, UserRole
 
 admin_or_super = RoleChecker(allowed_roles=[UserRole.ADMIN, UserRole.SUPERADMIN])
+superadmin_only = RoleChecker(allowed_roles=[UserRole.SUPERADMIN])
 from app.modules.agents.models import AiAgent, Prompt
 from app.modules.agents.schemas import (
     AiAgentCreate,
@@ -33,7 +34,7 @@ router = APIRouter(prefix="/agents", tags=["agents"])
 async def create_agent_from_template(
     body: AiAgentFromTemplate,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(admin_or_super),
+    current_user: User = Depends(superadmin_only),
 ) -> AiAgent:
     """Create an AI agent from a pre-built template with placeholder resolution.
 
@@ -91,7 +92,7 @@ async def create_agent_from_template(
 async def create_new_agent(
     body: AiAgentCreate,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(admin_or_super),
+    current_user: User = Depends(superadmin_only),
 ) -> AiAgent:
     """Create a new AI Agent for the current tenant."""
     if current_user.current_role != UserRole.SUPERADMIN:
@@ -189,7 +190,7 @@ async def update_agent_info(
     return agent
 
 
-@router.delete("/{agent_id}", status_code=204, response_class=Response)
+@router.delete("/{agent_id}", status_code=204, response_model=None)
 async def delete_agent(
     agent_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
