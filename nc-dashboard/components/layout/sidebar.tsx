@@ -124,7 +124,7 @@ export function getNavItems(role?: UserRole | null, plan?: string | null): NavIt
     if (item.children) {
       return {
         ...item,
-        children: item.children.filter((child) => !child.roles || child.roles.includes(role ?? "")),
+        children: item.children.filter((child) => !child.roles || (role != null && child.roles.includes(role))),
       };
     }
     return item;
