@@ -13,7 +13,9 @@ export interface UseUsersReturn {
   isLoading: boolean;
   error: string | null;
   refetch: () => void;
+  createUser: (email: string, password: string, name: string, role?: string) => Promise<void>;
   assignTenant: (userId: string, tenantId: string, role: string) => Promise<void>;
+  deleteUser: (userId: string) => Promise<void>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -49,6 +51,17 @@ export function useUsers(): UseUsersReturn {
     };
   }, [refetchCount]);
 
+  const createUser = useCallback(
+    async (email: string, password: string, name: string, role: string = "client") => {
+      await apiClient("/api/v1/admin/users", {
+        method: "POST",
+        body: JSON.stringify({ email, password, name, role }),
+      });
+      setRefetchCount((c) => c + 1);
+    },
+    [],
+  );
+
   const assignTenant = useCallback(
     async (userId: string, tenantId: string, role: string) => {
       await apiClient("/api/v1/admin/assign-tenant", {
@@ -65,11 +78,21 @@ export function useUsers(): UseUsersReturn {
     [],
   );
 
+  const deleteUser = useCallback(
+    async (userId: string) => {
+      await apiClient(`/api/v1/admin/users/${userId}`, {
+        method: "DELETE",
+      });
+      setRefetchCount((c) => c + 1);
+    },
+    [],
+  );
+
   const refetch = useCallback(() => {
     setError(null);
     setIsLoading(true);
     setRefetchCount((c) => c + 1);
   }, []);
 
-  return { users, isLoading, error, refetch, assignTenant };
+  return { users, isLoading, error, refetch, createUser, assignTenant, deleteUser };
 }

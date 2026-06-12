@@ -7,7 +7,17 @@ import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { UserCheck, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { UserCheck, X, Trash2, UserPlus } from "lucide-react";
 import type { AdminUser, Tenant } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
@@ -15,15 +25,54 @@ import type { AdminUser, Tenant } from "@/lib/types";
 /* ------------------------------------------------------------------ */
 
 export default function AdminUsersPage() {
-  const { users, isLoading, error, assignTenant } = useUsers();
+  const { users, isLoading, error, createUser, assignTenant, deleteUser } =
+    useUsers();
   const { tenants } = useTenants();
   const [assigningUserId, setAssigningUserId] = useState<string | null>(null);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
-  const handleAssign = async (
-    userId: string,
-    tenantId: string,
-    role: string,
-  ) => {
+  /* ── Create user state ── */
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newRole, setNewRole] = useState("client");
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleCreate = async () => {
+    if (!newEmail || !newPassword || !newName) {
+      toast.error("Completá todos los campos");
+      return;
+    }
+    if (newPassword.length < 6) {
+      toast.error("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    setIsCreating(true);
+    try {
+      await createUser(newEmail, newPassword, newName, newRole);
+      toast.success("Usuario creado");
+      setShowCreateDialog(false);
+      setNewEmail("");
+      setNewPassword("");
+      setNewName("");
+      setNewRole("client");
+    } catch {
+      toast.error("Error al crear el usuario");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleDelete = async (userId: string) => {
+    try {
+      await deleteUser(userId);
+      toast.success("Usuario eliminado");
+    } catch {
+      toast.error("Error al eliminar el usuario");
+    }
+  };
+
+  const handleAssign = async (userId: string, tenantId: string, role: string) => {
     try {
       await assignTenant(userId, tenantId, role);
       toast.success("Usuario asignado al negocio correctamente");
@@ -35,11 +84,82 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Usuarios</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Gestiona los usuarios registrados y asígnalos a negocios.
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Usuarios</h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Gestiona los usuarios registrados y asígnalos a negocios.
+          </p>
+        </div>
+
+        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="gap-2">
+              <UserPlus className="size-4" />
+              Crear Usuario
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Crear nuevo usuario</DialogTitle>
+              <DialogDescription>
+                El usuario podrá iniciar sesión con su email y contraseña.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nombre</label>
+                <Input
+                  placeholder="Ej: Juan Pérez"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Email</label>
+                <Input
+                  type="email"
+                  placeholder="juan@ejemplo.com"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Contraseña</label>
+                <Input
+                  type="password"
+                  placeholder="Mínimo 6 caracteres"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Rol</label>
+                <select
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value)}
+                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                >
+                  <option value="client">Cliente</option>
+                  <option value="agent">Agente</option>
+                  <option value="admin">Admin</option>
+                  <option value="superadmin">Superadmin</option>
+                </select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowCreateDialog(false)}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleCreate} disabled={isCreating}>
+                {isCreating ? "Creando..." : "Crear usuario"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {isLoading && <UsersSkeleton />}
@@ -70,6 +190,7 @@ export default function AdminUsersPage() {
                   onAssign={(tenantId, role) =>
                     handleAssign(user.id, tenantId, role)
                   }
+                  onDelete={() => handleDelete(user.id)}
                 />
               ))}
             </tbody>
@@ -91,6 +212,7 @@ interface UserRowProps {
   onStartAssign: () => void;
   onCancelAssign: () => void;
   onAssign: (tenantId: string, role: string) => void;
+  onDelete: () => void;
 }
 
 function UserRow({
@@ -100,9 +222,11 @@ function UserRow({
   onStartAssign,
   onCancelAssign,
   onAssign,
+  onDelete,
 }: UserRowProps) {
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [selectedRole, setSelectedRole] = useState("client");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const handleSubmit = () => {
     if (!selectedTenantId) {
@@ -153,17 +277,53 @@ function UserRow({
           })}
         </td>
         <td className="px-4 py-3 text-right">
-          {user.role !== "superadmin" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onStartAssign}
-              className="gap-1"
-            >
-              <UserCheck className="size-3.5" />
-              Asignar
-            </Button>
-          )}
+          <div className="flex items-center justify-end gap-1">
+            {user.role !== "superadmin" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onStartAssign}
+                className="gap-1"
+              >
+                <UserCheck className="size-3.5" />
+                Asignar
+              </Button>
+            )}
+
+            {/* Delete — with confirmation */}
+            {!confirmDelete ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setConfirmDelete(true)}
+                className="size-8 text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="size-3.5" />
+              </Button>
+            ) : (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    onDelete();
+                    setConfirmDelete(false);
+                  }}
+                  className="h-8 text-xs"
+                >
+                  Confirmar
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setConfirmDelete(false)}
+                  className="size-8"
+                >
+                  <X className="size-3.5" />
+                </Button>
+              </div>
+            )}
+          </div>
         </td>
       </tr>
 

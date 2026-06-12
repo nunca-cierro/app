@@ -60,6 +60,13 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
 
 
+class CreateUserRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+    role: str = "client"
+
+
 class AssignTenantRequest(BaseModel):
     user_id: uuid.UUID
     tenant_id: uuid.UUID

@@ -9,12 +9,22 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from uuid import UUID
+
+from fastapi import Response
+
 from app.db.session import get_session
 from app.modules.auth.deps import RoleChecker, get_current_user
 from app.modules.auth.models import User, UserRole
+from app.modules.auth.service import hash_password
 
 admin_or_super = RoleChecker(allowed_roles=[UserRole.ADMIN, UserRole.SUPERADMIN])
-from app.modules.auth.schemas import AdminUserOut, AssignTenantRequest, TenantAssociationOut
+from app.modules.auth.schemas import (
+    AdminUserOut,
+    AssignTenantRequest,
+    CreateUserRequest,
+    TenantAssociationOut,
+)
 from app.modules.auth.user_tenant import UserTenant
 from app.modules.tenants.models import Tenant
 
@@ -72,6 +82,87 @@ async def list_users(
         )
 
     return response
+
+
+@router.post("/users", response_model=AdminUserOut, status_code=201)
+async def create_user(
+    body: CreateUserRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> t.Any:
+    """Create a new user. Superadmin only."""
+    if getattr(current_user, "current_role", current_user.role) != UserRole.SUPERADMIN:
+        raise HTTPException(status_code=403, detail="Only superadmins can create users")
+
+    if len(body.password) < 6:
+        raise HTTPException(
+            status_code=422, detail="Password must be at least 6 characters"
+        )
+
+    # Check email uniqueness
+    existing = await session.execute(select(User).where(User.email == body.email))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="Email already registered")
+
+    # Validate role
+    valid_roles = {r.value for r in UserRole}
+    if body.role not in valid_roles:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid role. Must be one of: {', '.join(valid_roles)}",
+        )
+
+    user = User(
+        email=body.email,
+        password_hash=hash_password(body.password),
+        name=body.name,
+        role=body.role,
+    )
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+
+    return AdminUserOut(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        role=user.role,
+        created_at=user.created_at,
+        tenants=[],
+    )
+
+
+@router.delete("/users/{user_id}", status_code=204, response_class=Response)
+async def delete_user(
+    user_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Delete a user. Superadmin only. Cannot delete yourself."""
+    if getattr(current_user, "current_role", current_user.role) != UserRole.SUPERADMIN:
+        raise HTTPException(status_code=403, detail="Only superadmins can delete users")
+
+    if user_id == current_user.id:
+        raise HTTPException(status_code=403, detail="Cannot delete yourself")
+
+    user = await session.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Prevent deleting the last superadmin
+    if user.role == UserRole.SUPERADMIN:
+        count_result = await session.execute(
+            select(User).where(User.role == UserRole.SUPERADMIN)
+        )
+        superadmin_count = len(count_result.scalars().all())
+        if superadmin_count <= 1:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot delete the last superadmin",
+            )
+
+    await session.delete(user)
+    await session.commit()
 
 
 @router.post("/assign-tenant", status_code=200)
