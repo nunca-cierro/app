@@ -1,8 +1,6 @@
-"""Tests for auth registration — atomic tenant creation with admin role."""
+"""Tests for auth registration — bare user creation, no auto-tenant."""
 
 from __future__ import annotations
-
-import uuid
 
 import pytest
 from httpx import AsyncClient
@@ -12,11 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.modules.auth.models import User, UserRole
-from app.modules.tenants.models import Tenant
 
 
 @pytest.mark.asyncio
-async def test_register_creates_admin_with_tenant(client: AsyncClient, db_session: AsyncSession):
+async def test_register_creates_user_with_default_role(client: AsyncClient, db_session: AsyncSession):
     payload = {
         "email": "newuser@test.com",
         "password": "securepassword123",
@@ -27,64 +24,40 @@ async def test_register_creates_admin_with_tenant(client: AsyncClient, db_sessio
     assert response.status_code == 201
     data = response.json()
     assert data["email"] == "newuser@test.com"
-    assert data["role"] == UserRole.ADMIN
-    assert data["tenant_id"] is not None
+    assert data["role"] == UserRole.CLIENT
+    assert data["tenant_id"] is None  # No auto-tenant
 
     # Verify User in DB
     result = await db_session.execute(select(User).where(User.email == "newuser@test.com"))
     user = result.scalar_one_or_none()
     assert user is not None
-    assert user.role == UserRole.ADMIN
+    assert user.role == UserRole.CLIENT
 
-    # Verify Tenant was created
-    assert data["tenant_id"] is not None
-    tenant_result = await db_session.execute(
-        select(Tenant).where(Tenant.id == uuid.UUID(data["tenant_id"]))
-    )
-    tenant = tenant_result.scalar_one_or_none()
-    assert tenant is not None
-    assert tenant.name == "New User"
-
-    # Verify UserTenant association
-    from app.modules.auth.user_tenant import UserTenant
-
-    assoc_result = await db_session.execute(
-        select(UserTenant).where(
-            UserTenant.user_id == user.id,
-            UserTenant.tenant_id == tenant.id,
-        )
-    )
-    ut = assoc_result.scalar_one_or_none()
-    assert ut is not None
-    assert ut.role == UserRole.ADMIN
-    assert ut.is_primary is True
-
-    # Verify JWT includes admin role and tenant_id
+    # Verify JWT has no tenant context
     decoded = jwt.decode(data["access_token"], settings.jwt_secret, algorithms=["HS256"])
-    assert decoded["role"] == UserRole.ADMIN
-    assert decoded["tenant_id"] == data["tenant_id"]
+    assert decoded["role"] == UserRole.CLIENT
+    assert decoded["tenant_id"] is None
 
 
 @pytest.mark.asyncio
-async def test_register_with_custom_tenant_name(client: AsyncClient, db_session: AsyncSession):
+async def test_register_with_custom_role(client: AsyncClient, db_session: AsyncSession):
     payload = {
-        "email": "custom@test.com",
+        "email": "agent@test.com",
         "password": "securepassword123",
-        "name": "Custom User",
-        "tenant_name": "My Business",
+        "name": "Agent User",
+        "role": "agent",
     }
     response = await client.post("/api/v1/auth/register", json=payload)
 
     assert response.status_code == 201
     data = response.json()
+    assert data["role"] == "agent"
 
-    # Verify tenant name matches custom
-    tenant_result = await db_session.execute(
-        select(Tenant).where(Tenant.id == uuid.UUID(data["tenant_id"]))
-    )
-    tenant = tenant_result.scalar_one_or_none()
-    assert tenant is not None
-    assert tenant.name == "My Business"
+    # Verify in DB
+    result = await db_session.execute(select(User).where(User.email == "agent@test.com"))
+    user = result.scalar_one_or_none()
+    assert user is not None
+    assert user.role == UserRole.AGENT
 
 
 @pytest.mark.asyncio
@@ -99,3 +72,34 @@ async def test_register_duplicate_email_returns_409(client: AsyncClient, db_sess
 
     response2 = await client.post("/api/v1/auth/register", json=payload)
     assert response2.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_register_short_password_returns_422(client: AsyncClient):
+    payload = {
+        "email": "short@test.com",
+        "password": "12345",
+        "name": "Short",
+    }
+    response = await client.post("/api/v1/auth/register", json=payload)
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_register_superadmin_role(client: AsyncClient, db_session: AsyncSession):
+    payload = {
+        "email": "super@test.com",
+        "password": "securepassword123",
+        "name": "Super Admin",
+        "role": "superadmin",
+    }
+    response = await client.post("/api/v1/auth/register", json=payload)
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["role"] == "superadmin"
+
+    result = await db_session.execute(select(User).where(User.email == "super@test.com"))
+    user = result.scalar_one_or_none()
+    assert user is not None
+    assert user.role == UserRole.SUPERADMIN

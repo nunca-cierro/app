@@ -114,18 +114,11 @@ describe("RBAC route matrix", () => {
     expect(getRoleLandingRoute("admin")).toBe("/dashboard/tenants");
   });
 
-  /* ── Onboarding route accessible to tenantless users ── */
+  /* ── Onboarding route removed — self-registration disabled ── */
 
-  it("allows /dashboard/onboarding for tenantless users regardless of role", () => {
-    // Tenantless users should be able to access onboarding
-    expect(isRouteAllowed("client", "/dashboard/onboarding", null)).toBe(true);
-    expect(isRouteAllowed("client", "/dashboard/onboarding", undefined)).toBe(true);
-  });
-
-  it("blocks /dashboard/onboarding for users with a tenant", () => {
-    // Users with a tenant should NOT see onboarding (they'd get role-guarded)
+  it("blocks /dashboard/onboarding for all users (route removed)", () => {
+    expect(isRouteAllowed("client", "/dashboard/onboarding", null)).toBe(false);
     expect(isRouteAllowed("admin", "/dashboard/onboarding", "some-tenant-id")).toBe(false);
-    expect(isRouteAllowed("agent", "/dashboard/onboarding", "some-tenant-id")).toBe(false);
   });
 
   /* ── isTenantless ── */
@@ -140,5 +133,10 @@ describe("RBAC route matrix", () => {
   it("detects user with tenant", () => {
     expect(isTenantless({ tenant_id: "abc-123" })).toBe(false);
     expect(isTenantless({ current_tenant_id: "abc-123" })).toBe(false);
+  });
+
+  it("superadmin is never tenantless", () => {
+    expect(isTenantless({ role: "superadmin", tenant_id: null })).toBe(false);
+    expect(isTenantless({ current_role: "superadmin", tenant_id: undefined })).toBe(false);
   });
 });

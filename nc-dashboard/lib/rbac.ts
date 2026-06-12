@@ -12,11 +12,6 @@ export const ROLE_ROUTE_MATRIX: Record<UserRole, readonly string[]> = {
   client: ["/dashboard/conversations"],
 };
 
-/** Routes accessible to users without a tenant (tenantless / onboarding flow). */
-export const TENANTLESS_ROUTES: readonly string[] = [
-  "/dashboard/onboarding",
-];
-
 const ALL_ROLES: UserRole[] = ["superadmin", "admin", "agent", "client"];
 
 function normalizePath(pathname: string): string {
@@ -36,11 +31,6 @@ export function isRouteAllowed(
   // Dashboard home is allowed for every authenticated user
   if (path === "/dashboard") return true;
 
-  // Tenantless users can access onboarding routes
-  if (!tenant_id && TENANTLESS_ROUTES.some((r) => path === r || path.startsWith(`${r}/`))) {
-    return true;
-  }
-
   const allowed = ROLE_ROUTE_MATRIX[role] ?? [];
   return allowed.some((route) => {
     const normalizedRoute = normalizePath(route);
@@ -48,7 +38,15 @@ export function isRouteAllowed(
   });
 }
 
-export function isTenantless(user: { tenant_id?: string | null; current_tenant_id?: string | null }): boolean {
+export function isTenantless(user: {
+  role?: string | null;
+  current_role?: string | null;
+  tenant_id?: string | null;
+  current_tenant_id?: string | null;
+}): boolean {
+  // Superadmin oversees all tenants — never tenantless
+  const effectiveRole = user.current_role ?? user.role;
+  if (effectiveRole === "superadmin") return false;
   return !(user.tenant_id || user.current_tenant_id);
 }
 

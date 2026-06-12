@@ -12,7 +12,7 @@ class RegisterRequest(BaseModel):
     email: str
     password: str
     name: str
-    tenant_name: str | None = None
+    role: str = "client"
 
 
 class SwitchTenantRequest(BaseModel):
