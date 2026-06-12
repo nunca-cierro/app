@@ -11,6 +11,7 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import pytest_asyncio
 
 os.environ.setdefault("ENCRYPTION_KEY", "dGhpcyBpcyBhIDE2LWJ5dGUgZXhhbXBsZSBrZXkgISE=")
 
@@ -77,7 +78,7 @@ def mock_rate_limiter() -> AsyncMock:
         yield mock
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def tenant(db_session) -> Tenant:
     """Create a test tenant."""
     t = Tenant(
@@ -85,7 +86,7 @@ async def tenant(db_session) -> Tenant:
         name="Spam Test",
         slug="spam-test",
         status="active",
-        plan="basic",
+        plan="professional",
         timezone="UTC",
         locale="en",
     )
@@ -94,7 +95,7 @@ async def tenant(db_session) -> Tenant:
     return t
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def connection_block(db_session, tenant: Tenant) -> PlatformConnection:
     """Connection with anti-spam in block mode."""
     conn = PlatformConnection(
@@ -116,7 +117,7 @@ async def connection_block(db_session, tenant: Tenant) -> PlatformConnection:
     return conn
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def connection_log(db_session, tenant: Tenant) -> PlatformConnection:
     """Connection with anti-spam in log mode."""
     conn = PlatformConnection(
@@ -185,12 +186,19 @@ async def test_spam_flood_blocked(
     with patch("app.core.rate_limiter.time.time") as mock_time:
         mock_time.return_value = 1000.0
 
-        # Send 5 legitimate messages (should pass)
-        for i in range(5):
-            ev = _make_event("Hola, ¿cómo estás?", msg_id=f"flood_ok_{i}")
+        # Send 5 legitimate messages with distinct texts (should pass, Groq called)
+        distinct_texts = [
+            "Hola, ¿cómo estás?",
+            "Me gustaría más información por favor",
+            "¿Tienen horario de atención hoy?",
+            "¿Cuál es el precio del servicio?",
+            "Gracias por la información brindada",
+        ]
+        for i, text in enumerate(distinct_texts):
+            ev = _make_event(text, msg_id=f"flood_ok_{i}")
             await handle_evolution_incoming(ev, connection_block, db_session)
 
-        # 6th message should be blocked
+        # 6th message should be blocked by flood
         ev6 = _make_event("Hola, ¿cómo estás?", msg_id="flood_blocked")
         await handle_evolution_incoming(ev6, connection_block, db_session)
 
