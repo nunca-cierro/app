@@ -17,9 +17,11 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from loguru import logger
+from sqlalchemy.exc import IntegrityError
 
 from app.api.v1.router import router as v1_router
 from app.api.webhooks import router as webhook_router
@@ -56,10 +58,12 @@ app = FastAPI(
 )
 
 # ── CORS ────────────────────────────────────────────────────────────────
+# Origins are configured via CORS_ORIGINS env var (JSON array).
+# When set to ["*"] (dev default), credentials are disabled for security.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_credentials=True,
+    allow_credentials="*" not in settings.cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -71,6 +75,18 @@ app.include_router(v1_router)
 
 # Webhook (WhatsApp incoming messages)
 app.include_router(webhook_router)
+
+
+# ── Global exception handlers ────────────────────────────────────────────
+
+@app.exception_handler(IntegrityError)
+async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSONResponse:
+    """Catch duplicate keys / constraint violations and return 409 instead of 500."""
+    logger.error(f"IntegrityError on {request.method} {request.url.path}: {exc}")
+    return JSONResponse(
+        status_code=409,
+        content={"detail": "Ya existe un recurso con ese identificador único."},
+    )
 
 
 # ── Root health ─────────────────────────────────────────────────────────

@@ -38,16 +38,6 @@ class Settings(BaseSettings):
             self.database_url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
         return self
 
-    @model_validator(mode="after")
-    def guard_jwt_secret(self) -> "Settings":
-        """Rechazar el default de JWT_SECRET en producción."""
-        if self.jwt_secret == "change-me-in-production" and not self.debug:
-            raise ValueError(
-                "JWT_SECRET no fue configurado. "
-                "Generá uno con: openssl rand -base64 48"
-            )
-        return self
-
     # ── Meta WhatsApp Cloud API ──────────────────────────────────────────
     whatsapp_token: str = ""
     whatsapp_phone_number_id: str = ""
@@ -63,8 +53,14 @@ class Settings(BaseSettings):
     groq_rate_limit_rpm: int = 30
 
     # ── Auth ─────────────────────────────────────────────────────────────
-    jwt_secret: str = "change-me-in-production"
-    admin_default_password: str = "admin"
+    jwt_secret: str = ""
+
+    @field_validator("jwt_secret", mode="after")
+    @classmethod
+    def require_jwt_secret(cls, v: str) -> str:
+        if not v or v == "change-me-in-production":
+            raise ValueError("JWT_SECRET es obligatorio. Generalo con: openssl rand -base64 48")
+        return v
 
     # ── Encryption ─────────────────────────────────────────────────────────
     encryption_key: str = ""
