@@ -4,7 +4,9 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   agentFormSchema,
+  agentEditFormSchema,
   type AgentFormValues,
+  type AgentEditFormValues,
 } from "@/lib/schemas/agent";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -44,7 +46,8 @@ export function AgentForm({
     control,
     formState: { errors },
   } = useForm<AgentFormValues>({
-    resolver: zodResolver(agentFormSchema),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(mode === "edit" ? agentEditFormSchema : agentFormSchema) as any,
     defaultValues: {
       tenant_id: "",
       name: "",

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BusinessConfigForm } from "@/app/dashboard/agents/components/business-config-form";
 import { ExpiredTrialOverlay } from "@/app/dashboard/components/expired-trial-overlay";
+import { PaymentScreen } from "@/app/dashboard/components/payment-screen";
 import {
   Building2,
   MessageSquare,
@@ -232,10 +233,14 @@ function ClientDashboard() {
   const { updateBusinessConfig } = useAgent(myAgent?.id ?? "");
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
 
   // Payment status handling
   const paymentStatus = myTenant?.payment_status;
   if (!isLoadingTenants) {
+    if (showPayment && plan) {
+      return <PaymentScreen planKey={plan} onBack={() => setShowPayment(false)} />;
+    }
     // Pending payment — show banner instead of blocking
     if (paymentStatus === "pending" && plan !== "trial") {
       // Show banner below, don't block dashboard access
@@ -278,6 +283,14 @@ function ClientDashboard() {
           <p className="mt-1 text-amber-700">
             Tu pago está siendo verificado. Te activaremos el plan apenas se confirme.
           </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3 border-amber-300 text-amber-800 hover:bg-amber-100"
+            onClick={() => setShowPayment(true)}
+          >
+            Ver opciones de pago
+          </Button>
         </div>
       )}
 
