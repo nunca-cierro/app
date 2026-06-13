@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePlatformConnections } from "@/hooks/use-platform-connections";
 import { useTenants } from "@/hooks/use-tenants";
 import { EvolutionForm } from "@/app/dashboard/platforms/whatsapp/components/evolution-form";
+import { QrDisplay } from "@/app/dashboard/platforms/evolution/components/qr-display";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
@@ -80,15 +81,15 @@ export default function PlatformsNewEvolutionPage() {
 
       // 2. Auto-connect — creates instance in Evolution API, polls for QR
       const result = await apiClient<{
-        qr_code?: string;
+        qrcode?: string;
         instance_name: string;
         status: string;
       }>(`/api/v1/platform-connections/${connection.id}/connect-evolution`, {
         method: "POST",
       });
 
-      if (result.qr_code) {
-        setQrCode(result.qr_code);
+      if (result.qrcode) {
+        setQrCode(result.qrcode);
         setStep("qr");
         toast.info("Escanea el código QR con WhatsApp para conectar");
       } else {
@@ -144,17 +145,7 @@ export default function PlatformsNewEvolutionPage() {
             </p>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-6 pb-8">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`data:image/png;base64,${qrCode}`}
-              alt="WhatsApp QR Code"
-              className="size-64 border rounded-lg"
-            />
-
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" />
-              Esperando escaneo...
-            </div>
+            <QrDisplay qrCode={qrCode} isPolling />
 
             <Button onClick={goToDetail} variant="outline" size="sm">
               Ya escaneé el código
