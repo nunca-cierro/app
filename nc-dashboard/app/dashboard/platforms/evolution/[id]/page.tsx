@@ -7,6 +7,7 @@ import { usePlatformConnection } from "@/hooks/use-platform-connections";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { QrDisplay } from "@/app/dashboard/platforms/evolution/components/qr-display";
 import { toast } from "sonner";
 import {
   CheckCircle2 as CheckIcon,
@@ -18,7 +19,7 @@ import {
   ShieldAlert as ShieldOffIcon,
 } from "lucide-react";
 
-type EvolutionState = "idle" | "connecting" | "qr" | "connected" | "error";
+type EvolutionState = "idle" | "connecting" | "qr" | "connected" | "error" | "timeout";
 
 export default function PlatformEvolutionDetailPage({
   params: paramsPromise,
@@ -48,13 +49,17 @@ export default function PlatformEvolutionDetailPage({
     isConnecting: boolean;
   }>({ qrCode: null, errorMsg: null, isConnecting: false });
 
+  const [pollTimedOut, setPollTimedOut] = useState(false);
+
   // Derive state from connection data at render time — no useEffect needed
   const derivedState: EvolutionState =
     !evoStatus || evoStatus === "disconnected"
       ? "idle"
       : evoStatus === "connected"
         ? "connected"
-        : "qr"; // awaiting_scan or connecting
+        : pollTimedOut
+          ? "timeout"
+          : "qr"; // awaiting_scan or connecting
 
   // User-triggered states override derived state
   const evoState: EvolutionState = transient.isConnecting
@@ -69,13 +74,28 @@ export default function PlatformEvolutionDetailPage({
   const evoError = transient.errorMsg;
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollCountRef = useRef(0);
+  const MAX_POLLS = 12; // 60 seconds at 5s intervals
 
   /* ── Poll connection status when awaiting_scan or connecting ── */
   useEffect(() => {
     if (evoStatus === "awaiting_scan" || evoStatus === "connecting") {
+      pollCountRef.current = 0;
+
       pollRef.current = setInterval(() => {
+        pollCountRef.current += 1;
+
+        if (pollCountRef.current >= MAX_POLLS) {
+          // Timeout — stop polling, show manual-check state
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null;
+          setPollTimedOut(true);
+          return;
+        }
+
         refetchConnection();
       }, 5000);
+
       return () => {
         if (pollRef.current) clearInterval(pollRef.current);
       };
@@ -86,6 +106,8 @@ export default function PlatformEvolutionDetailPage({
       clearInterval(pollRef.current);
       pollRef.current = null;
     }
+    // Reset timeout when status changes
+    setPollTimedOut(false);
   }, [evoStatus, refetchConnection]);
 
   /* ── Anti-spam state ── */
@@ -142,6 +164,7 @@ export default function PlatformEvolutionDetailPage({
   /* ── Handlers ── */
   const handleConnect = async () => {
     setTransient({ qrCode: null, errorMsg: null, isConnecting: true });
+    setPollTimedOut(false);
 
     try {
       const result = await connectEvolution();
@@ -223,25 +246,29 @@ export default function PlatformEvolutionDetailPage({
 
             {/* QR display */}
             {evoState === "qr" && qrCode && (
-              <div className="flex flex-col items-center gap-3 pt-2 border-t">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`data:image/png;base64,${qrCode}`}
-                  alt="WhatsApp QR Code"
-                  className="size-48 border rounded-lg"
-                />
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <LoaderIcon className="size-3 animate-spin" />
-                  Esperando escaneo...
-                </div>
+              <div className="pt-2 border-t">
+                <QrDisplay qrCode={qrCode} isPolling size="size-48" />
               </div>
             )}
 
-            {/* Connection status message when polling (QR not stored) */}
+            {/* Polling without QR (QR was scanned but webhook not received yet) */}
             {evoState === "qr" && !qrCode && evoStatus === "awaiting_scan" && (
               <div className="flex flex-col items-center gap-3 py-4 border-t text-sm text-muted-foreground">
                 <LoaderIcon className="size-6 animate-spin" />
-                <p>Código QR escaneado anteriormente — esperando conexión...</p>
+                <p>Esperando confirmación de WhatsApp...</p>
+              </div>
+            )}
+
+            {/* Timeout: polling exceeded max attempts */}
+            {evoState === "timeout" && (
+              <div className="flex flex-col items-center gap-3 py-4 border-t text-sm">
+                <p className="text-amber-600 font-medium">
+                  No se detectó la conexión
+                </p>
+                <p className="text-muted-foreground text-xs text-center max-w-xs">
+                  WhatsApp puede estar conectado aunque no lo detectamos. 
+                  Intentá verificar manualmente.
+                </p>
               </div>
             )}
 
@@ -280,8 +307,8 @@ export default function PlatformEvolutionDetailPage({
               ) : (
                 <QrIcon className="mr-2 size-4" />
               )}
-              {evoState === "qr"
-                ? "Esperando escaneo..."
+              {evoState === "qr" || evoState === "timeout"
+                ? "Verificar conexión"
                 : evoState === "connected"
                   ? "Reconectar"
                   : "Conectar WhatsApp"}
