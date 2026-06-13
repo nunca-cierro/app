@@ -53,6 +53,14 @@ async def register(
             status_code=422, detail="Password must be at least 6 characters"
         )
 
+    # Validate role against allowed values
+    ALLOWED_ROLES = {r.value for r in UserRole}
+    if body.role not in ALLOWED_ROLES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid role. Must be one of: {', '.join(sorted(ALLOWED_ROLES))}",
+        )
+
     user = User(
         email=body.email,
         password_hash=hash_password(body.password),

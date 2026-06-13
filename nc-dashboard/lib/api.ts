@@ -128,7 +128,11 @@ export async function apiClient<T = unknown>(
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
 
-  const response = await fetch(endpoint, { ...options, headers });
+  const response = await fetch(endpoint, { ...options, headers }).catch(
+    (err) => {
+      throw new ApiError(0, `Network error: ${err instanceof Error ? err.message : "server unreachable"}`);
+    },
+  );
 
   if (response.status === 401) {
     // Token expired or invalid — clear and redirect
