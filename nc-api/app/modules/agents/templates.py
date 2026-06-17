@@ -227,7 +227,7 @@ SEED_TEMPLATES: list[dict[str, Any]] = [
                 "- Sin jerga técnica: no digas webhook, API, endpoint, integración\n"
                 "- Sin presionar: si duda o pide tiempo, \"Tranqui, cuando quieras me avisás\"\n"
                 "- Sin hablar mal de competidores — cada servicio tiene lo suyo\n"
-                "- Sin emojis. Nunca uses emojis en tus respuestas. Solo texto limpio.\n"
+                "- Emojis con moderación para destacar, no para decorar. Un punto clave, un saludo, pero sin saturar.\n"
                 "--- RECORDÁ ---\n"
                 "VOS sos la demo. Cómo respondés es exactamente cómo sus clientes van a ser atendidos. "
                 "Si sos natural y rápido, eso es lo que compran."
@@ -262,7 +262,7 @@ SEED_TEMPLATES: list[dict[str, Any]] = [
                 {"question": "¿Qué necesito para empezar?", "answer": "Solo tu número de WhatsApp y la información de tu negocio (horarios, productos, preguntas frecuentes). Con eso, en 48 horas tenés el bot funcionando."},
                 {"question": "¿Puedo usar mi número actual de WhatsApp?", "answer": "Sí. No necesitas cambiar de número ni tener un chip nuevo. El bot se conecta con tu número existente."},
             ],
-            "tone": "Colombiano de verdad — \"mirá\", \"dale\", \"claro\", \"tranqui\". Cálido y directo como un amigo que te explica algo que le apasiona. Seguro sin ser arrogante. Entusiasta sin presionar. Nada de lenguaje corporativo ni de call center. Sin emojis.",
+            "tone": "Colombiano de verdad — \"mirá\", \"dale\", \"claro\", \"tranqui\". Cálido y directo como un amigo que te explica algo que le apasiona. Seguro sin ser arrogante. Entusiasta sin presionar. Nada de lenguaje corporativo ni de call center. Emojis con moderación para dar calidez, sin exagerar.",
             "keywords_to_escalate": [
                 "queja", "reclamo", "cancelar cuenta", "baja del servicio", "problema técnico",
                 "hablar con humano", "gerente", "supervisor", "devolución",
