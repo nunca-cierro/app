@@ -26,6 +26,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy application code
 COPY app/ ./app/
+COPY scripts/ ./scripts/
 COPY alembic.ini ./
 COPY pyproject.toml ./
 
