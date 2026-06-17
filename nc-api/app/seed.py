@@ -4,22 +4,29 @@ Run once after ``alembic upgrade head``::
 
     uv run python -m app.seed
 
-Idempotent and re-runnable — updates existing templates when content changes.
+To delete all templates and re-seed from scratch::
+
+    uv run python -m app.seed --reset
 """
 
 from __future__ import annotations
 
 import asyncio
+import sys
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from app.db.models import AgentTemplate  # noqa: F401 — register model
 from app.db.session import async_session_factory
 from app.modules.agents.templates import SEED_TEMPLATES
 
 
-async def seed() -> None:
+async def seed(reset: bool = False) -> None:
     async with async_session_factory() as session:
+        if reset:
+            await session.execute(delete(AgentTemplate))
+            await session.commit()
+            print("✓ All templates deleted — re-seeding from scratch")
         await _seed_templates(session)
 
 
@@ -54,4 +61,5 @@ async def _seed_templates(session) -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(seed())
+    reset = "--reset" in sys.argv
+    asyncio.run(seed(reset=reset))
