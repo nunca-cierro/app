@@ -282,6 +282,9 @@ async def handle_evolution_incoming(
         for m in past_messages
     ]
 
+    # ── First message detection ────────────────────────────────────
+    is_first_message = len(past_messages) == 0
+
     # ── 4c. Repetitive check ───────────────────────────────────────────
     rep_result = spam_detector.check_repetitive(
         text=parsed["content"],
@@ -459,12 +462,21 @@ async def handle_evolution_incoming(
 
         # 3. Default response
         if not matched_answer:
-            matched_answer = (
-                "¡Hola! 👋 Soy el asistente automático de {name}. "
-                "Estoy aquí para ayudarte con información sobre horarios, "
-                "productos, precios y servicios. "
-                "¿En qué puedo ayudarte hoy?"
-            ).format(name=tenant.name)
+            # First message → welcome, subsequent → short helper
+            if is_first_message:
+                matched_answer = (
+                    "¡Hola! 👋 Bienvenido/a a {name}. "
+                    "Soy su asistente automático y estoy aquí para atenderle. "
+                    "Puedo ayudarle con información sobre horarios, "
+                    "productos, precios y servicios. "
+                    "¿En qué puedo servirle hoy?"
+                )
+            else:
+                matched_answer = (
+                    "¡Hola! 👋 Soy el asistente de {name}. "
+                    "¿En qué más puedo ayudarle?"
+                )
+            matched_answer = matched_answer.format(name=tenant.name)
 
         # Send and return
         adapter = EvolutionAdapter()
@@ -540,6 +552,16 @@ async def handle_evolution_incoming(
         elif prompts:
             # Backward compat: custom prompt when no business_config
             system_prompt = prompts[0].content
+
+    # ── First message welcome hint ─────────────────────────────────
+    if is_first_message:
+        welcome_hint = (
+            "\n\n---\n"
+            "NOTA: Este es el PRIMER mensaje de este usuario en esta conversación. "
+            "Preséntate con calidez, di tu nombre si aplica, da la bienvenida al usuario "
+            "y pregúnta en qué puedes ayudarle."
+        )
+        system_prompt += welcome_hint
 
     # ── 6. Generate response via LLM ────────────────────────────────────
     try:
