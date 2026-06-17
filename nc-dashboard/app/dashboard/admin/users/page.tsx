@@ -359,6 +359,7 @@ function UserRow({
                   <option value="client">Cliente</option>
                   <option value="agent">Agente</option>
                   <option value="admin">Admin</option>
+                  <option value="superadmin">Superadmin</option>
                 </select>
               </div>
               <div className="flex gap-2">
