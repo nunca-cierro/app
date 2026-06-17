@@ -1,8 +1,10 @@
-"""Seed script — create initial agent templates.
+"""Seed script — create/update initial agent templates.
 
 Run once after ``alembic upgrade head``::
 
     uv run python -m app.seed
+
+Idempotent and re-runnable — updates existing templates when content changes.
 """
 
 from __future__ import annotations
@@ -22,7 +24,7 @@ async def seed() -> None:
 
 
 async def _seed_templates(session) -> None:
-    """Upsert seed templates by (category, name) — idempotent, re-runnable."""
+    """Upsert seed templates by (category, name) — updates content if changed."""
     for tpl_data in SEED_TEMPLATES:
         result = await session.execute(
             select(AgentTemplate).where(
@@ -35,9 +37,18 @@ async def _seed_templates(session) -> None:
         if not existing:
             template = AgentTemplate(**tpl_data)
             session.add(template)
-            print(f"Template created: {tpl_data['name']} ({tpl_data['category']})")
+            print(f"✓ Template created: {tpl_data['name']} ({tpl_data['category']})")
         else:
-            print(f"Template already exists: {tpl_data['name']} ({tpl_data['category']})")
+            # Update existing template with latest seed content
+            changed = False
+            for key, value in tpl_data.items():
+                if getattr(existing, key) != value:
+                    setattr(existing, key, value)
+                    changed = True
+            if changed:
+                print(f"✓ Template updated: {tpl_data['name']} ({tpl_data['category']})")
+            else:
+                print(f"  Template unchanged: {tpl_data['name']} ({tpl_data['category']})")
 
     await session.commit()
 
