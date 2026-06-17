@@ -1,6 +1,7 @@
 # NuncaCierro — Manual de Marca y Ventas
 
-> **Propósito**: Este documento define la identidad, el tono, los precios y el flujo de ventas de NuncaCierro. Sirve como referencia para el equipo y como fuente de verdad para el system_prompt del bot.
+> **Propósito**: Este documento define la identidad, el tono y el flujo de ventas de NuncaCierro. Sirve como referencia para el equipo humano (Nicolas).  
+> 📌 **Los precios actualizados están en `docs/NEGOCIO.md` — ese es el documento fuente.**
 
 ---
 
@@ -32,9 +33,11 @@
 
 ## 2. Planes y Precios
 
-### 📊 Referencia de mercado (2026)
+> 📌 **Fuente de verdad → `docs/NEGOCIO.md`.**  
+> Los precios, features y condiciones actualizados están en ese documento.  
+> Resumen rápido: Básico $60.000/mes · Profesional $120.000/mes · Empresarial $250.000/mes.
 
-Según la documentación oficial de Meta y el mercado actual:
+### Referencia de mercado (2026)
 
 | Concepto | Costo |
 |----------|-------|
@@ -46,59 +49,16 @@ Según la documentación oficial de Meta y el mercado actual:
 
 > **Ventaja competitiva:** Nuestro bot responde mensajes de clientes (servicio) = SIN costo de mensajería para el cliente. Solo pagarían si quisieran campañas masivas de marketing con templates.
 
-### 🚀 Plan Básico — Desde $60.000/mes
+### Features por plan
 
-> **Solo keywords. Sin IA.** Si el cliente pregunta algo que no está configurado, el bot responde amablemente que no entendió.
-
-| Característica | Detalle |
-|----------------|---------|
-| Negocios | 1 |
-| Respuestas automáticas (keywords) | Hasta **500/mes** |
-| IA inteligente (Groq) | ❌ **No incluida** |
-| Keywords personalizadas | ✅ Ilimitadas |
-| Captura leads fuera de horario | ✅ |
-| Mensaje de bienvenida personalizado | ✅ |
-| Configuración inicial | ✅ **Sin costo** (incluida) |
-| Tiempo de entrega | **48 horas** |
-| Reajustes de keywords y tono | ✅ Ilimitados |
-| Soporte | WhatsApp en horario laboral |
-| Ideal para | Negocio pequeño que empieza a automatizar |
-| Ref. mercado | Bots básicos $15-$50 USD/mes |
-
-### 💼 Plan Profesional — Desde $200.000/mes
-
-> **Keywords + IA.** Si no hay keyword, la IA entiende el contexto y responde igual. Respuestas ilimitadas.
-
-| Característica | Detalle |
-|----------------|---------|
-| Negocios | Hasta 3 |
-| Respuestas automáticas | ✅ **Ilimitadas** |
-| IA inteligente (Groq) | ✅ **Incluida** (entiende contexto) |
-| Catálogo interactivo automático | ✅ |
-| Estadísticas de uso | ✅ |
-| Configuración inicial | ✅ **Sin costo** (incluida) |
-| Reajustes de keywords y tono | ✅ Ilimitados |
-| Soporte | Prioritario en horario laboral |
-| Ideal para | Negocio con volumen constante de clientes |
-| Ref. mercado | Bots con IA $50-$200 USD/mes |
-
-### 🏢 Plan Empresarial — Desde $320.000/mes
-
-> **Todo incluido.** Keywords + IA + múltiples negocios + dashboard + API.
-
-| Característica | Detalle |
-|----------------|---------|
-| Negocios | Ilimitados |
-| Respuestas automáticas | ✅ Ilimitadas |
-| IA inteligente | ✅ |
-| Dashboard web | ✅ Panel de control en vivo |
-| API personalizada | ✅ Integración con tus sistemas |
-| Configuración inicial | ✅ **Sin costo** (incluida) |
-| Reajustes de keywords y tono | ✅ Ilimitados |
-| SLA | ✅ Tiempo de respuesta garantizado |
-| Soporte | Prioritario 24/7 |
-| Ideal para | Empresas con múltiples sucursales o gran volumen |
-| Ref. mercado | Soluciones enterprise $200-$500+ USD/mes |
+| Feature | Básico | Profesional | Empresarial |
+|---------|--------|-------------|-------------|
+| Respuestas automáticas | FAQ + keywords | IA (Groq) | IA (Groq) |
+| Productos/Servicios | Hasta 10 | Hasta 50 | Ilimitados |
+| Conversaciones/mes | 500 | 5.000 | Ilimitadas |
+| Negocios | 1 | Hasta 3 | Ilimitados |
+| Dashboard en vivo | ❌ | ✅ | ✅ |
+| Soporte | WhatsApp | WhatsApp | Prioritario 24/7 |
 
 ### Notas sobre precios
 
@@ -108,11 +68,6 @@ Según la documentación oficial de Meta y el mercado actual:
 - Se puede cancelar en cualquier momento SIN penalización
 - El Plan Básico tiene un límite de 500 respuestas/mes. Al llegar al límite, el bot responde pidiendo paciencia y se te notifica para considerar un upgrade.
 - Descuentos disponibles para pagos trimestrales o semestrales
-- **Modelo "desde"**: Los precios son base. Si el cliente necesita más negocios, más respuestas, o funciones adicionales, el precio se ajusta. Esto te permite negociar sin estar atado a un precio fijo.
-- **Sugerencia de mercado**: Basado en el mercado internacional:
-  - Básico: $15-$25 USD/mes (~$60K-$100K COP)
-  - Profesional: $40-$60 USD/mes (~$160K-$240K COP)
-  - Empresarial: $80-$150 USD/mes (~$320K-$600K COP)
 
 ---
 
@@ -328,22 +283,10 @@ Ser honesto:
 | 5 - Objeciones | caro, difícil, no sé, no tengo tiempo | Validar + contra-argumentar + ofrecer demo |
 | 6 - Cierre | me interesa, quiero contratar, hagámoslo | Pedir nombre + número WhatsApp |
 
-### System Prompt Template
+### System Prompt Reference
 
-> **Eres Nicolas, el asesor comercial de NuncaCierro.**
->
-> **Tono**: Profesional, cálido, experto. Tuteo colombiano. Entusiasta pero sin presionar.
->
-> **Flujo obligatorio**: 1) Discovery → 2) Calificar → 3) Educar → 4) Proponer → 5) Objeciones → 6) Cerrar.
-> **Regla**: Cada respuesta debe mover al prospecto a la siguiente etapa.
->
-> **Sticky notes**:
-> - NO vendas antes de calificar (Etapa 2)
-> - NO hables mal de competidores
-> - NO inventes precios ni features
-> - Si pide precio en Etapa 1, da un contexto rápido y vuelve a preguntar por su negocio
-> - Si muestra interés → PEDIR DATOS INMEDIATAMENTE: nombre del negocio y WhatsApp
-> - Si no es cliente ideal → sé honesto, recomienda alternativa gratis
+> El system prompt del bot comercial está en la plantilla **NuncaCierro** del seed (`templates.py`).  
+> Esta sección es solo referencia para el humano. No editar directamente en el bot.
 
 ---
 
@@ -443,9 +386,9 @@ Podés abrir ese archivo directamente con el bloc de notas o verlos por terminal
 | Clientes | Plan | Ingreso mensual |
 |----------|------|-----------------|
 | 5 básicos | $60K | $300.000 |
-| 3 profesionales | $200K | $600.000 |
-| 1 empresarial | $320K | $320.000 |
-| **9 clientes** | **Mixto** | **$1.220.000/mes** |
+| 3 profesionales | $120K | $360.000 |
+| 1 empresarial | $250K | $250.000 |
+| **9 clientes** | **Mixto** | **$910.000/mes** |
 
 Más plantillas de mensajes en `MENSAJES.md`.
 
