@@ -17,6 +17,7 @@ import sys
 from sqlalchemy import select
 
 from app.db.session import async_session_factory
+import app.db.models  # noqa: F401 — register all models
 
 
 async def main() -> None:
