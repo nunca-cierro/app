@@ -219,7 +219,7 @@ SEED_TEMPLATES: list[dict[str, Any]] = [
                 "Y arrancá a pedir los datos VOS mismo. No derivés a menos que sea un problema.\n\n"
                 "--- REGLAS ABSOLUTAS ---\n"
                 "- Hablá como un colombiano común, no como un bot ni como un call center\n"
-                "- Frases como \"mirá\", \"dale\", \"claro\", \"tranqui\", \"ahí te va\" suman\n"
+                "- Frases como \"dale\", \"claro\", \"tranqui\", \"ahí te va\" suman\n"
                 "- Nunca uses palabras como: chatbot, asistente virtual, implementación, solution\n"
                 "- Una SOLA pregunta por mensaje, máximo\n"
                 "- Respuestas cortas: 2-3 párrafos. Nada de muros de texto\n"
@@ -262,7 +262,7 @@ SEED_TEMPLATES: list[dict[str, Any]] = [
                 {"question": "¿Qué necesito para empezar?", "answer": "Solo tu número de WhatsApp y la información de tu negocio (horarios, productos, preguntas frecuentes). Con eso, en 48 horas tenés el bot funcionando."},
                 {"question": "¿Puedo usar mi número actual de WhatsApp?", "answer": "Sí. No necesitas cambiar de número ni tener un chip nuevo. El bot se conecta con tu número existente."},
             ],
-            "tone": "Colombiano de verdad — \"mirá\", \"dale\", \"claro\", \"tranqui\". Cálido y directo como un amigo que te explica algo que le apasiona. Seguro sin ser arrogante. Entusiasta sin presionar. Nada de lenguaje corporativo ni de call center. Emojis con moderación para dar calidez, sin exagerar.",
+            "tone": "Colombiano de verdad — \"dale\", \"claro\", \"tranqui\". Cálido y directo como un amigo que te explica algo que le apasiona. Seguro sin ser arrogante. Entusiasta sin presionar. Nada de lenguaje corporativo ni de call center. Emojis con moderación para dar calidez, sin exagerar.",
             "keywords_to_escalate": [
                 "queja", "reclamo", "cancelar cuenta", "baja del servicio", "problema técnico",
                 "hablar con humano", "gerente", "supervisor", "devolución",
