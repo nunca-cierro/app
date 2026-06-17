@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
-from app.modules.auth.models import User, UserRole
+from app.modules.auth.models import PaymentStatus, User, UserRole
 from app.modules.auth.user_tenant import UserTenant
 from app.modules.tenants.models import Tenant
 from app.modules.auth.schemas import (
@@ -140,7 +140,7 @@ async def switch_tenant(
         role=ut.role,
         tenant_id=str(tenant.id),
         tenant_plan=tenant.plan,
-        payment_status=tenant.payment_status,
+        payment_status=PaymentStatus.ACTIVE if tenant.slug == "nuncacierro" else tenant.payment_status,
     )
 
 
@@ -185,6 +185,9 @@ async def login(
                 tenant_plan = tenant.plan
                 payment_status = getattr(tenant, "payment_status", None)
                 plan_activated_at = getattr(tenant, "plan_activated_at", None)
+                # NuncaCierro is internal — exempt from payment
+                if tenant.slug == "nuncacierro":
+                    payment_status = PaymentStatus.ACTIVE
 
     token = create_access_token(
         str(user.id), user.email, role=role, tenant_id=tenant_id
@@ -220,6 +223,8 @@ async def me(
             current_plan = tenant.plan
             payment_status = getattr(tenant, "payment_status", None)
             plan_activated_at = getattr(tenant, "plan_activated_at", None)
+            if tenant.slug == "nuncacierro":
+                payment_status = PaymentStatus.ACTIVE
 
     response = MeResponse.model_validate(current_user)
     response.current_plan = current_plan

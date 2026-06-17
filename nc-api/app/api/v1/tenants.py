@@ -106,7 +106,12 @@ async def list_tenants(
         query = select(Tenant).join(UserTenant).where(UserTenant.user_id == current_user.id)
     
     result = await session.execute(query.offset(skip).limit(limit))
-    return result.scalars().all()
+    tenants = result.scalars().all()
+    # NuncaCierro is internal — exempt from payment
+    for t in tenants:
+        if t.slug == "nuncacierro":
+            t.payment_status = "active"
+    return tenants
 
 
 @router.get("/{tenant_id}", response_model=TenantResponse)
@@ -132,6 +137,8 @@ async def get_tenant(
     tenant = await session.get(Tenant, tenant_id)
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
+    if tenant.slug == "nuncacierro":
+        tenant.payment_status = "active"
     return tenant
 
 

@@ -102,7 +102,7 @@ function AdminDashboard() {
     (t) => t.plan === "trial" && new Date(t.created_at).getTime() + _trialMs < _now,
   );
   const pendingPayments = (tenants ?? []).filter(
-    (t) => t.payment_status === "pending",
+    (t) => t.payment_status === "pending" && t.slug !== "nuncacierro",
   );
   const needsAttention = expiredTrials.length + pendingPayments.length > 0;
 
