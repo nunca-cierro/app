@@ -214,8 +214,8 @@ Si conoces algún otro negocio que también reciba muchas consultas por WhatsApp
 | Clientes | Plan | Ingreso mensual |
 |----------|------|-----------------|
 | 5 básicos | $60K | $300.000 |
-| 3 profesionales | $200K | $600.000 |
-| 1 empresarial | $320K | $320.000 |
-| **9 clientes** | **Mixto** | **$1.220.000/mes** |
+| 3 profesionales | $120K | $360.000 |
+| 1 empresarial | $250K | $250.000 |
+| **9 clientes** | **Mixto** | **$910.000/mes** |
 
 Con 10 leads nuevos por día → 3 responden → 1 se califica → ~3-5 contratan al mes.
