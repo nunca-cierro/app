@@ -321,7 +321,7 @@ export const sitePlans = {
     { label: "Productos/Servicios", basic: "Hasta 10", pro: "Hasta 50", enterprise: "Ilimitado" },
     { label: "Conversaciones al mes", basic: "500", pro: "5.000", enterprise: "Ilimitadas" },
     { label: "Negocios", basic: "1", pro: "3", enterprise: "Ilimitados" },
-    { label: "Métricas semanales", basic: "✅", pro: "✅", enterprise: "✅" },
+    { label: "Métricas semanales", basic: "—", pro: "✅", enterprise: "✅" },
     { label: "Dashboard en vivo", basic: "—", pro: "✅", enterprise: "✅" },
     { label: "Acceso cliente", basic: "—", pro: "Solo lectura", enterprise: "Editar + agregar" },
     { label: "Soporte", basic: "WhatsApp", pro: "WhatsApp", enterprise: "Prioritario 24/7" },
@@ -399,7 +399,7 @@ export const siteFaq = {
       question:
         "¿Qué pasa con mi WhatsApp cuando configuran el bot? ¿Dejo de recibir mensajes?",
       answer:
-        "No, todo lo contrario. Sigues recibiendo mensajes normal. El bot solo responde automáticamente las preguntas frecuentes y los mensajes que llegan fuera de horario. Cuando estés disponible, tomas el control cuando quieras.",
+        "No, todo lo contrario. Sigues recibiendo mensajes normal. El bot responde automáticamente preguntas frecuentes y lo que no sabe te lo reenvía. Si un cliente necesita algo específico, lo deriva a tu WhatsApp para que tú lo resuelvas.",
     },
     {
       question: "¿El bot entiende lo que los clientes preguntan?",
@@ -414,7 +414,7 @@ export const siteFaq = {
     {
       question: "¿Cuánto tiempo toma tenerlo listo?",
       answer:
-        "El Bot WhatsApp lo configuramos en 48 horas hábiles. Los planes más avanzados pueden tomar hasta una semana, dependiendo de la landing page.",
+        "El Bot WhatsApp lo configuramos en 2 horas hábiles. Los planes más avanzados pueden tomar hasta una semana, dependiendo de la landing page.",
     },
     {
       question: "¿Necesito conocimientos técnicos para usarlo?",
@@ -429,12 +429,17 @@ export const siteFaq = {
     {
       question: "¿Cómo sé cuántos clientes me contactaron?",
       answer:
-        "En el plan Asistente Inteligente te enviamos estadísticas básicas semanales. En el Sistema Completo tienes un dashboard en vivo con métricas detalladas.",
+        "A partir del plan Profesional recibes estadísticas semanales con el número de consultas, horarios más activos y tipos de preguntas. En el plan Empresarial sumamos un dashboard en vivo con métricas detalladas.",
     },
     {
       question: "¿Funciona para cualquier tipo de negocio?",
       answer:
         "Funciona para cualquier negocio que reciba consultas por WhatsApp: restaurantes, clínicas, barberías, tiendas, talleres, gimnasios, spas, dentistas. Si tu negocio recibe mensajes, te sirve.",
+    },
+    {
+      question: "¿Necesito WhatsApp Business o un número exclusivo para usarlo?",
+      answer:
+        "No, funciona con cualquier WhatsApp, incluso si es tu número personal. El bot se conecta como una sesión adicional de WhatsApp Web — tú sigues usando tu WhatsApp normal en el celular para hablar con amigos y familia sin problema. El bot responde automáticamente a los clientes, y si alguien pregunta algo que el bot no sabe, te lo reenvía a tu WhatsApp para que lo resuelvas. Si prefieres tener todo separado, puedes usar un chip prepago exclusivo para el negocio, pero no es obligatorio.",
     },
   ],
 };

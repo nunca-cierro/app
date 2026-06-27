@@ -95,7 +95,7 @@ export function Businesses() {
       <AnimatedWrapper direction="up" duration={0.6}>
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-medium uppercase tracking-wider text-amber-300">
-            Industrias
+            Negocios
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance text-stone-100 md:text-4xl">
             Funciona para tu tipo de negocio

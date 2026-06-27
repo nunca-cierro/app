@@ -58,7 +58,7 @@ export function TemplateSelector({
       {/* ── Category selector ── */}
       <div>
         <h3 className="text-sm font-medium mb-3">
-          ¿Qué tipo de negocio querés configurar?
+          ¿Qué tipo de negocio quieres configurar?
         </h3>
         <div className="grid gap-3 sm:grid-cols-4">
           {CATEGORIES.map(({ value, label, Icon }) => (

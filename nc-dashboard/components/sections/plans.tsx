@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Check } from "lucide-react";
 import { Section } from "@/components/layout/section";
 import { Button } from "@/components/ui/button";
 import { siteBanner, sitePlans } from "@/data/site";
@@ -14,54 +15,61 @@ function getPlanWhatsAppUrl(planName: string) {
   return `${sitePlans.whatsappBaseUrl}${encodeURIComponent(`Quiero el plan ${planName} para mi negocio.`)}`;
 }
 
+function CellValue({ value }: { value: string }) {
+  if (value === "✅") {
+    return <Check className="inline-block w-4 h-4 text-emerald-500" />;
+  }
+  return <>{value}</>;
+}
+
 export function Plans() {
   return (
     <Section
       id={sitePlans.sectionId}
-      className="border-stone-800/80 bg-stone-950 text-stone-100"
+      className="bg-[#F3EDE0] text-stone-900"
     >
       <AnimatedWrapper direction="up" duration={0.6}>
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-sm font-medium uppercase tracking-wider text-amber-300">
+          <p className="text-sm font-medium uppercase tracking-wider text-amber-600">
             {sitePlans.label}
           </p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance text-stone-100 md:text-4xl">
+          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance text-stone-800 md:text-4xl">
             {sitePlans.title}
           </h2>
-          <p className="mt-4 text-stone-300/90">{sitePlans.subtitle}</p>
+          <p className="mt-4 text-stone-500">{sitePlans.subtitle}</p>
         </div>
       </AnimatedWrapper>
 
       {/* ── Comparison table ── */}
       <div className="mt-14 max-w-5xl mx-auto">
         <AnimatedWrapper direction="up" duration={0.5}>
-          <div className="overflow-x-auto rounded-xl border border-stone-800/80 bg-stone-900/60">
+          <div className="overflow-x-auto rounded-xl border border-stone-200 bg-white/70">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-stone-800/80">
-                  <th className="text-left px-5 py-5 text-stone-400 font-medium">
+                <tr className="border-b border-stone-200">
+                  <th className="text-left px-5 py-5 text-stone-500 font-medium">
                     Característica
                   </th>
                   <th className="px-5 py-5 text-center align-bottom">
                     <div className="inline-flex flex-col items-center gap-1.5">
-                      <span className="text-stone-300 font-semibold text-base">
+                      <span className="text-stone-700 font-semibold text-base">
                         Básico
                       </span>
                     </div>
                   </th>
                   <th className="px-5 py-5 text-center align-bottom relative">
                     <div className="inline-flex flex-col items-center gap-1.5">
-                      <span className="inline-block rounded-full border border-amber-400/40 bg-amber-400/15 px-3 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-100 whitespace-nowrap">
+                      <span className="inline-block rounded-full border border-amber-500/40 bg-amber-100 px-3 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 whitespace-nowrap">
                         {sitePlans.cardLabels.featuredBadge}
                       </span>
-                      <span className="text-amber-300 font-semibold text-base">
+                      <span className="text-amber-700 font-semibold text-base">
                         Profesional
                       </span>
                     </div>
                   </th>
                   <th className="px-5 py-5 text-center align-bottom">
                     <div className="inline-flex flex-col items-center gap-1.5">
-                      <span className="text-stone-300 font-semibold text-base">
+                      <span className="text-stone-700 font-semibold text-base">
                         Empresarial
                       </span>
                     </div>
@@ -69,54 +77,44 @@ export function Plans() {
                 </tr>
               </thead>
               <tbody>
-                {sitePlans.comparisonRows.map((row, i) => (
-                  <tr
-                    key={row.label}
-                    className={i % 2 === 0 ? "bg-stone-900/40" : ""}
-                  >
-                    <td className="px-5 py-3.5 text-stone-300 font-medium">
-                      {row.label}
-                    </td>
-                    <td className="px-5 py-3.5 text-center text-stone-400">
-                      {row.basic}
-                    </td>
-                    <td className="px-5 py-3.5 text-center text-stone-100 font-medium">
-                      {row.pro}
-                    </td>
-                    <td className="px-5 py-3.5 text-center text-stone-200">
-                      {row.enterprise}
-                    </td>
-                  </tr>
-                ))}
+                {sitePlans.comparisonRows.map((row, i) => {
+                  const isEven = i % 2 === 0;
+                  return (
+                    <tr key={row.label}>
+                      <td className={isEven ? "px-5 py-3.5 text-stone-600 font-medium bg-stone-100/40" : "px-5 py-3.5 text-stone-600 font-medium"}>
+                        {row.label}
+                      </td>
+                      <td className={isEven ? "px-5 py-3.5 text-center text-stone-500 bg-stone-100/40" : "px-5 py-3.5 text-center text-stone-500"}>
+                        <CellValue value={row.basic} />
+                      </td>
+                      <td className={isEven ? "px-5 py-3.5 text-center text-amber-900 font-medium bg-amber-50/70" : "px-5 py-3.5 text-center text-amber-900 font-medium bg-amber-50/40"}>
+                        <CellValue value={row.pro} />
+                      </td>
+                      <td className={isEven ? "px-5 py-3.5 text-center text-stone-700 bg-stone-100/40" : "px-5 py-3.5 text-center text-stone-700"}>
+                        <CellValue value={row.enterprise} />
+                      </td>
+                    </tr>
+                  );
+                })}
                 {/* CTA row */}
-                <tr className="border-t border-stone-800/80">
+                <tr className="border-t border-stone-200">
                   <td className="px-5 py-5"></td>
                   <td className="px-5 py-5 text-center">
-                    <Button
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                    >
+                    <Button asChild size="sm" className="w-full">
                       <Link href={getPlanWhatsAppUrl("Básico")}>
                         {sitePlans.buttonText}
                       </Link>
                     </Button>
                   </td>
-                  <td className="px-5 py-5 text-center bg-amber-400/5">
-                    <Button asChild size="sm" className="w-full">
+                  <td className="px-5 py-5 text-center bg-amber-50/70">
+                    <Button asChild size="sm" className="w-full bg-amber-500 hover:bg-amber-600 text-white shadow-sm">
                       <Link href={getPlanWhatsAppUrl("Profesional")}>
                         {sitePlans.buttonText}
                       </Link>
                     </Button>
                   </td>
                   <td className="px-5 py-5 text-center">
-                    <Button
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                    >
+                    <Button asChild size="sm" className="w-full">
                       <Link href={getPlanWhatsAppUrl("Empresarial")}>
                         {sitePlans.buttonText}
                       </Link>
@@ -132,32 +130,32 @@ export function Plans() {
       {/* ── Trial card ── */}
       <div className="mt-10 max-w-lg mx-auto">
         <AnimatedWrapper direction="up" duration={0.5}>
-          <div className="rounded-xl border border-emerald-700/40 bg-emerald-900/20 px-6 py-5 text-center">
-            <p className="text-sm font-semibold text-emerald-300">
+          <div className="rounded-xl border border-emerald-600/30 bg-emerald-50 px-6 py-5 text-center">
+            <p className="text-sm font-semibold text-emerald-700">
               {sitePlans.trialInfo.label}
             </p>
-            <p className="mt-1 text-xs text-emerald-300/70">
+            <p className="mt-1 text-xs text-emerald-600/70">
               {sitePlans.trialInfo.description}
             </p>
           </div>
         </AnimatedWrapper>
       </div>
 
-      <p className="mx-auto mt-8 max-w-2xl text-center text-sm text-stone-400">
+      <p className="mx-auto mt-8 max-w-2xl text-center text-sm text-stone-500">
         {sitePlans.footerText}
       </p>
 
-      <div className="mt-6 rounded-lg border border-amber-400/35 bg-amber-400/10 px-5 py-4 text-center shadow-[0_0_0_1px_rgba(34,211,238,0.16)]">
-        <p className="text-sm font-medium text-amber-100">
+      <div className="mt-6 rounded-lg border border-amber-300 bg-amber-50 px-5 py-4 text-center">
+        <p className="text-sm font-medium text-amber-800">
           {sitePlans.guaranteeText}
         </p>
       </div>
 
-      <div className="mt-10 rounded-lg border border-amber-400/35 bg-stone-900/80 p-7 text-center shadow-[0_0_0_1px_rgba(34,211,238,0.2),0_18px_40px_rgba(34,211,238,0.12)]">
-        <p className="text-lg font-semibold text-stone-100">
+      <div className="mt-10 rounded-lg border border-amber-300 bg-white p-7 text-center shadow-lg">
+        <p className="text-lg font-semibold text-stone-800">
           {sitePlans.advisoryCta.title}
         </p>
-        <p className="mt-2 text-sm text-stone-300/85">
+        <p className="mt-2 text-sm text-stone-500">
           {sitePlans.advisoryCta.description}
         </p>
         <div className="mt-5">
