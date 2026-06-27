@@ -51,10 +51,12 @@ export function Hero() {
 
         {/* Right: WhatsApp mockup */}
         <div
-          className="hero-fade w-full max-w-md lg:justify-self-end lg:self-center"
+          className="hero-fade lg:justify-self-end lg:self-center"
           style={{ animationDelay: "0.3s" }}
         >
-          <WhatsAppMockup />
+          <div className="w-full max-w-md lg:translate-x-[15px]">
+            <WhatsAppMockup />
+          </div>
         </div>
       </div>
 
