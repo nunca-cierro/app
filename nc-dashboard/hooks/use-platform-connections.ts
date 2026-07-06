@@ -46,6 +46,11 @@ export interface UsePlatformConnectionReturn {
     instance_name: string;
     status: string;
   }>;
+  connectEvolutionPairing: (phoneNumber: string) => Promise<{
+    pairing_code?: string;
+    instance_name: string;
+    status: string;
+  }>;
   disconnectEvolution: () => Promise<{ status: string; detail: string }>;
   refetchConnection: () => Promise<void>;
   checkEvolutionState: () => Promise<EvolutionConnectionState>;
@@ -266,6 +271,23 @@ export function usePlatformConnection(
     return result;
   }, [id]);
 
+  const connectEvolutionPairing = useCallback(async (phoneNumber: string) => {
+    const result = await apiClient<{
+      pairing_code?: string;
+      instance_name: string;
+      status: string;
+    }>(
+      `/api/v1/platform-connections/${id}/connect-evolution-pairing?phone_number=${encodeURIComponent(phoneNumber)}`,
+      { method: "POST" },
+    );
+
+    const updated = await apiClient<PlatformConnection>(
+      `/api/v1/platform-connections/${id}`,
+    );
+    setConnection(updated);
+    return result;
+  }, [id]);
+
   const disconnectEvolution = useCallback(async () => {
     const result = await apiClient<{ status: string; detail: string }>(
       `/api/v1/platform-connections/${id}/disconnect-evolution`,
@@ -296,6 +318,7 @@ export function usePlatformConnection(
     deleteConnection,
     registerWebhook,
     connectEvolution,
+    connectEvolutionPairing,
     disconnectEvolution,
     refetchConnection,
     checkEvolutionState,
