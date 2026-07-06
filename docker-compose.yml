@@ -163,8 +163,8 @@ services:
       WEBHOOK_RETRY_USE_EXPONENTIAL_BACKOFF: "true"
 
       # ── WhatsApp session ────────────────────────────────────────────
-      CONFIG_SESSION_PHONE_CLIENT: NuncaCierro
-      CONFIG_SESSION_PHONE_NAME: Chrome
+      CONFIG_SESSION_PHONE_CLIENT: POCO X6 Pro
+      CONFIG_SESSION_PHONE_NAME: Edge
       QRCODE_LIMIT: 30
 
       # ── Logs ────────────────────────────────────────────────────────
