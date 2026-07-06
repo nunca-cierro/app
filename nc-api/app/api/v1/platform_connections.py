@@ -566,7 +566,7 @@ async def connect_evolution(
 
     # Auto-generate instance name if missing
     if not instance_name:
-        instance_name = f"conn-{shortuuid.uuid()[:12]}"
+        instance_name = f"conn-{uuid.uuid4().hex[:12]}"
         # Persist the generated name back to credentials
         creds["instance_name"] = instance_name
         connection.credentials = encrypt(creds)
@@ -780,6 +780,217 @@ async def connect_evolution(
             detail=f"Evolution API no responde: {exc}",
         )
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Evolution API — pairing code (alternative to QR)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class EvolutionPairingCodeResponse(BaseModel):
+    """Response from the connect-evolution-pairing endpoint."""
+
+    connection_id: str
+    instance_name: str
+    pairing_code: str | None = None
+    status: str  = ""
+    message: str = ""
+
+
+@router.post("/{connection_id}/connect-evolution-pairing")
+async def connect_evolution_pairing(
+    connection_id: uuid.UUID,
+    phone_number: str,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(admin_or_super),
+) -> EvolutionPairingCodeResponse:
+    """Generate a pairing code instead of a QR.
+
+    The user enters this code in WhatsApp → Linked Devices
+    → Link a Device → 'Link using phone number'.
+
+    Flow:
+    1. Creates the Evolution API instance (if not exists)
+    2. Calls pairing endpoint with the phone number
+    3. Returns the 8-character pairing code
+    """
+    import asyncio
+
+    import httpx
+    from loguru import logger
+
+    from app.core.config import settings
+    from app.core.encryption import decrypt, encrypt
+
+    # ── 1. Get connection ───────────────────────────────────────────────
+    connection = await get_connection(session, connection_id)
+    if not connection or (
+        current_user.current_role != UserRole.SUPERADMIN
+        and connection.tenant_id != current_user.current_tenant_id
+    ):
+        raise HTTPException(status_code=404, detail="Platform connection not found")
+
+    if connection.platform_type != "evolution":
+        raise HTTPException(
+            status_code=400,
+            detail="connect-evolution-pairing is only supported for evolution connections",
+        )
+
+    # ── 2. Decrypt and prepare credentials ──────────────────────────────
+    creds = decrypt(connection.credentials)
+    if not isinstance(creds, dict):
+        raise HTTPException(status_code=500, detail="Invalid credential format")
+
+    base_url: str = (creds.get("base_url") or settings.evo_api_base_url).rstrip("/")
+    api_key: str = creds.get("api_key", "") or settings.evo_api_key
+    instance_name: str = (creds.get("instance_name") or "").strip()
+
+    if not instance_name:
+        instance_name = f"conn-{uuid.uuid4().hex[:12]}"
+        creds["instance_name"] = instance_name
+        connection.credentials = encrypt(creds)
+        await session.commit()
+
+    headers = {"Content-Type": "application/json", "apikey": api_key}
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            # ── 3. Create instance if not exists ───────────────────────────
+            create_payload = {
+                "instanceName": instance_name,
+                "qrcode": False,
+                "integration": "WHATSAPP-BAILEYS",
+            }
+
+            logger.info(
+                "Creating Evolution instance for pairing | name={name} | conn={conn}",
+                name=instance_name,
+                conn=connection_id,
+            )
+
+            create_resp = await client.post(
+                f"{base_url}/instance/create",
+                json=create_payload,
+                headers=headers,
+            )
+
+            if create_resp.is_success:
+                logger.info("Evolution instance created | name={name}", name=instance_name)
+                await asyncio.sleep(2)
+            elif create_resp.status_code in (409, 403):
+                logger.info("Evolution instance already exists | name={name}", name=instance_name)
+            else:
+                logger.error(
+                    "Evolution instance creation failed | status={s} | body={b}",
+                    s=create_resp.status_code,
+                    b=create_resp.text[:300],
+                )
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Evolution API error ({create_resp.status_code}): {create_resp.text[:300]}",
+                )
+
+            # ── 4. Call pairing endpoint ───────────────────────────────────
+            # Evolution API v2.x: POST /instance/connect/{name}
+            # with {"number": "57xxx", "pairingCode": true}
+            pairing_payload = {
+                "number": phone_number,
+                "pairingCode": True,
+            }
+
+            logger.info(
+                "Requesting pairing code for {name} | number={num}",
+                name=instance_name,
+                num=phone_number,
+            )
+
+            pairing_resp = await client.post(
+                f"{base_url}/instance/connect/{instance_name}",
+                json=pairing_payload,
+                headers=headers,
+            )
+
+            if pairing_resp.is_success:
+                data = pairing_resp.json()
+                # Evolution API returns pairing code in various shapes
+                pairing_code = (
+                    data.get("pairingCode")
+                    or data.get("code")
+                    or data.get("pairing_code")
+                    or ""
+                )
+
+                if pairing_code:
+                    # Save state
+                    extra = dict(connection.extra_data or {})
+                    extra["instance_name"] = instance_name
+                    extra["base_url"] = base_url
+                    extra["connection_status"] = "awaiting_pairing"
+                    extra["pairing_code"] = pairing_code
+                    connection.extra_data = extra
+                    await session.commit()
+
+                    logger.info(
+                        "Pairing code generated for {name} | code={code}",
+                        name=instance_name,
+                        code=pairing_code,
+                    )
+
+                    return EvolutionPairingCodeResponse(
+                        connection_id=str(connection_id),
+                        instance_name=instance_name,
+                        pairing_code=pairing_code,
+                        status="pairing",
+                        message=(
+                            "Código de 8 dígitos generado. El cliente debe ir a "
+                            "WhatsApp → Dispositivos vinculados → Vincular dispositivo "
+                            "e ingresar este código."
+                        ),
+                    )
+                else:
+                    # Check if already connected
+                    status = data.get("status", "")
+                    if status in ("open", "connected", "syncing"):
+                        extra = dict(connection.extra_data or {})
+                        extra["connection_status"] = "connected"
+                        extra["instance_name"] = instance_name
+                        connection.extra_data = extra
+                        await session.commit()
+                        return EvolutionPairingCodeResponse(
+                            connection_id=str(connection_id),
+                            instance_name=instance_name,
+                            status=status,
+                            message="WhatsApp ya está conectado",
+                        )
+
+                    logger.warning(
+                        "Pairing response missing code | data={data}",
+                        data=data,
+                    )
+                    return EvolutionPairingCodeResponse(
+                        connection_id=str(connection_id),
+                        instance_name=instance_name,
+                        status="error",
+                        message=f"Evolution API no devolvió código: {data}",
+                    )
+
+            else:
+                error_body = pairing_resp.text[:300]
+                logger.error(
+                    "Pairing code request failed | status={s} | body={b}",
+                    s=pairing_resp.status_code,
+                    b=error_body,
+                )
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Error al generar código ({pairing_resp.status_code}): {error_body}",
+                )
+
+    except httpx.RequestError as exc:
+        logger.error("Evolution API unreachable: {exc}", exc=exc)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Evolution API no responde: {exc}",
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

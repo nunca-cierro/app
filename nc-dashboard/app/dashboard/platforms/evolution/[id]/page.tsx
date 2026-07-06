@@ -29,7 +29,7 @@ export default function PlatformEvolutionDetailPage({
 }) {
   const params = use(paramsPromise);
   const router = useRouter();
-  const { connection, isLoading, error, connectEvolution, refetchConnection, disconnectEvolution, updateConnection, checkEvolutionState } = usePlatformConnection(params.id);
+  const { connection, isLoading, error, connectEvolution, connectEvolutionPairing, refetchConnection, disconnectEvolution, updateConnection, checkEvolutionState } = usePlatformConnection(params.id);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -111,6 +111,14 @@ export default function PlatformEvolutionDetailPage({
     setPollTimedOut(false);
   }, [evoStatus, refetchConnection]);
 
+  /* ── Pairing code state ── */
+  const [pairingState, setPairingState] = useState<{
+    phoneNumber: string;
+    generating: boolean;
+    code: string | null;
+    error: string | null;
+  }>({ phoneNumber: "", generating: false, code: null, error: null });
+
   /* ── Connection state check ── */
   const [evoStateCheck, setEvoStateCheck] = useState<{
     checking: boolean;
@@ -150,6 +158,30 @@ export default function PlatformEvolutionDetailPage({
   // Instead, non-sensitive fields are exposed in extra_data.
   const instanceName = extraData?.instance_name as string | undefined;
   const baseUrl = extraData?.base_url as string | undefined;
+
+  const handleGeneratePairingCode = async () => {
+    if (!pairingState.phoneNumber || pairingState.phoneNumber.length < 10) {
+      toast.error("Ingresá un número de teléfono válido (ej: 573001234567)");
+      return;
+    }
+    setPairingState(prev => ({ ...prev, generating: true, code: null, error: null }));
+    try {
+      const result = await connectEvolutionPairing(pairingState.phoneNumber);
+      if (result.pairing_code) {
+        setPairingState(prev => ({ ...prev, generating: false, code: result.pairing_code!, error: null }));
+        toast.success("Código de vinculación generado", {
+          description: "Compártelo con tu cliente para que lo ingrese en WhatsApp.",
+        });
+      } else {
+        setPairingState(prev => ({ ...prev, generating: false, error: "No se obtuvo código de vinculación" }));
+        toast.error("No se pudo generar el código");
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error al generar código";
+      setPairingState(prev => ({ ...prev, generating: false, error: msg }));
+      toast.error(msg);
+    }
+  };
 
   const handleCheckState = async () => {
     setEvoStateCheck({ checking: true, result: null, error: null });
@@ -423,6 +455,68 @@ export default function PlatformEvolutionDetailPage({
                   ? "Generar QR para otro cliente"
                   : "Generar QR para cliente"}
             </Button>
+
+            {/* ── O: Pairing code (alternativa al QR) ── */}
+            <div className="border-t pt-4">
+              <div className="mb-3 text-center">
+                <p className="text-xs font-medium text-muted-foreground">— O —
+
+usa código de vinculación —</p>
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="+57 300 123 4567"
+                  value={pairingState.phoneNumber}
+                  onChange={(e) => setPairingState(prev => ({ ...prev, phoneNumber: e.target.value.replace(/\D/g, "") }))}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={pairingState.generating}
+                />
+                <Button
+                  onClick={handleGeneratePairingCode}
+                  disabled={pairingState.generating || pairingState.phoneNumber.length < 10}
+                  variant="secondary"
+                  className="shrink-0 gap-2"
+                >
+                  {pairingState.generating ? (
+                    <LoaderIcon className="size-4 animate-spin" />
+                  ) : (
+                    <Smartphone className="size-4" />
+                  )}
+                  Generar código
+                </Button>
+              </div>
+
+              {pairingState.code && (
+                <div className="mt-4 flex flex-col items-center gap-3 rounded-xl border-2 border-green-500/30 bg-green-50 p-4 dark:bg-green-950/20">
+                  <p className="text-xs text-muted-foreground text-center max-w-xs">
+                    Compartí este código con tu cliente. Debe ir a WhatsApp → 
+                    Dispositivos vinculados → Vincular dispositivo e ingresarlo.
+                  </p>
+                  <div className="select-all rounded-lg bg-white px-8 py-3 text-3xl font-bold tracking-[0.3em] text-foreground shadow-sm dark:bg-black">
+                    {pairingState.code}
+                  </div>
+                  <Button
+                    onClick={() => {
+                      navigator.clipboard.writeText(pairingState.code!);
+                      toast.success("Código copiado", { description: "Ya puedes compartirlo con tu cliente." });
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    Copiar código
+                  </Button>
+                </div>
+              )}
+
+              {pairingState.error && (
+                <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+                  {pairingState.error}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
