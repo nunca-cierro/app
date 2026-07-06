@@ -890,10 +890,11 @@ async def connect_evolution_pairing(
                 )
 
             # ── 4. Call pairing endpoint ───────────────────────────────────
-            # Evolution API v2.3: POST /instance/pairing/{name}
-            # with {"number": "57xxx"}
+            # Evolution API v2.x: POST /instance/connect/{name}
+            # with {"number": "57xxx", "pairingCode": true}
             pairing_payload = {
                 "number": phone_number,
+                "pairingCode": True,
             }
 
             logger.info(
@@ -903,7 +904,7 @@ async def connect_evolution_pairing(
             )
 
             pairing_resp = await client.post(
-                f"{base_url}/instance/pairing/{instance_name}",
+                f"{base_url}/instance/connect/{instance_name}",
                 json=pairing_payload,
                 headers=headers,
             )
