@@ -170,7 +170,9 @@ export default function PlatformEvolutionDetailPage({
       const result = await connectEvolution();
       if (result.qrcode) {
         setTransient({ qrCode: result.qrcode, errorMsg: null, isConnecting: false });
-        toast.info("Escanea el código QR con WhatsApp para conectar la instancia");
+        toast.success("QR generado", {
+          description: "Compártelo con tu cliente para que escanee desde WhatsApp.",
+        });
       } else {
         setTransient({ qrCode: null, errorMsg: null, isConnecting: false });
         toast.success("Instancia de Evolution ya conectada");
@@ -210,44 +212,49 @@ export default function PlatformEvolutionDetailPage({
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* ── Connection Info Card ── */}
-        <Card>
+        {/* ── QR Card — el producto que le vendés al cliente ── */}
+        <Card className={evoState === "qr" && qrCode ? "md:col-span-2" : ""}>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Conexión Evolution</CardTitle>
+              <CardTitle>{connection.display_name}</CardTitle>
               <div className="flex items-center gap-2">
                 {/* Evolution connection status badge */}
                 {evoStatus === "connected" ? (
                   <Badge variant="default" className="bg-green-600">WhatsApp conectado</Badge>
                 ) : evoStatus === "awaiting_scan" || evoStatus === "connecting" ? (
-                  <Badge variant="secondary" className="animate-pulse">Conectando...</Badge>
+                  <Badge variant="secondary" className="animate-pulse">Esperando escaneo...</Badge>
                 ) : evoStatus === "disconnected" ? (
                   <Badge variant="destructive">Desconectado</Badge>
                 ) : (
                   <Badge variant="outline">Sin conectar</Badge>
                 )}
-                {/* Our DB status */}
-                <Badge variant={connection.status === "active" ? "default" : "secondary"} className="ml-1">
-                  {connection.status === "active" ? "Activo" : "Inactivo"}
-                </Badge>
               </div>
             </div>
-            <CardDescription>{connection.display_name}</CardDescription>
+            <CardDescription>
+              {evoState === "qr" && qrCode
+                ? "Comparte este QR con tu cliente para que conecte su WhatsApp"
+                : "Generá un QR para que tu cliente conecte su WhatsApp al sistema"}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-medium">Instancia:</span>
-              <span className="text-muted-foreground font-mono text-xs">{instanceName || "—"}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-medium">Servidor:</span>
-              <span className="text-muted-foreground text-xs font-mono">{baseUrl || "—"}</span>
-            </div>
+            {/* ── Connection details (subtle, background info) ── */}
+            {instanceName && (
+              <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground/60">
+                <span>Instancia: <span className="font-mono">{instanceName}</span></span>
+                {baseUrl && <span>·</span>}
+                {baseUrl && <span>Servidor: <span className="font-mono">{baseUrl?.replace(/^https?:\/\//, "").replace(/:.*/, "")}</span></span>}
+              </div>
+            )}
 
-            {/* QR display */}
+            {/* ── QR display (prominent, center of attention) ── */}
             {evoState === "qr" && qrCode && (
-              <div className="pt-2 border-t">
-                <QrDisplay qrCode={qrCode} isPolling size="size-48" />
+              <div className="pt-4 border-t">
+                <QrDisplay
+                  qrCode={qrCode}
+                  isPolling
+                  size="size-72"
+                  connectionName={connection.display_name}
+                />
               </div>
             )}
 
@@ -263,12 +270,21 @@ export default function PlatformEvolutionDetailPage({
             {evoState === "timeout" && (
               <div className="flex flex-col items-center gap-3 py-4 border-t text-sm">
                 <p className="text-amber-600 font-medium">
-                  No se detectó la conexión
+                  Sin confirmación aún
                 </p>
                 <p className="text-muted-foreground text-xs text-center max-w-xs">
-                  WhatsApp puede estar conectado aunque no lo detectamos. 
-                  Intentá verificar manualmente.
+                  El QR sigue activo. Si tu cliente ya lo escaneó, presiona
+                  "Verificar" para confirmar la conexión.
                 </p>
+                <Button
+                  onClick={refetchConnection}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                >
+                  <CheckIcon className="size-4" />
+                  Verificar conexión
+                </Button>
               </div>
             )}
 
@@ -276,7 +292,7 @@ export default function PlatformEvolutionDetailPage({
             {evoState === "connected" && (
               <div className="flex items-center justify-center gap-2 py-4 text-sm text-green-600">
                 <CheckIcon className="size-5" />
-                WhatsApp conectado
+                WhatsApp conectado — tu cliente ya está activo
               </div>
             )}
 
@@ -289,9 +305,9 @@ export default function PlatformEvolutionDetailPage({
 
             {/* Connecting spinner */}
             {evoState === "connecting" && (
-              <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
-                <LoaderIcon className="size-4 animate-spin" />
-                Conectando con Evolution API...
+              <div className="flex flex-col items-center gap-3 py-4 text-sm">
+                <LoaderIcon className="size-6 animate-spin text-muted-foreground" />
+                <p className="text-muted-foreground">Generando QR para tu cliente...</p>
               </div>
             )}
 
@@ -308,10 +324,10 @@ export default function PlatformEvolutionDetailPage({
                 <QrIcon className="mr-2 size-4" />
               )}
               {evoState === "qr" || evoState === "timeout"
-                ? "Verificar conexión"
+                ? "Generar nuevo QR"
                 : evoState === "connected"
-                  ? "Reconectar"
-                  : "Conectar WhatsApp"}
+                  ? "Generar QR para otro cliente"
+                  : "Generar QR para cliente"}
             </Button>
           </CardContent>
         </Card>
