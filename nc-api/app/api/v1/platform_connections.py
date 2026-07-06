@@ -90,6 +90,129 @@ async def evolution_fetch_instances(
         raise HTTPException(status_code=500, detail=str(exc))
 
 
+class EvolutionConnectionStateResponse(BaseModel):
+    """Response from the evolution-connection-state endpoint."""
+
+    instance_name: str
+    state: str  # open | connecting | close | qrread | undefined
+    status: str  # connected | connecting | disconnected | unknown
+    details: dict[str, t.Any] = {}
+
+
+@router.get("/{connection_id}/evolution-connection-state")
+async def evolution_connection_state(
+    connection_id: uuid.UUID,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> EvolutionConnectionStateResponse:
+    """Check the real connection state of an Evolution instance.
+
+    Calls Evolution API's ``/instance/connectionState/{name}`` to get
+    the actual WhatsApp connection status, not our cached one.
+    """
+    import httpx
+    from loguru import logger
+
+    from app.core.config import settings
+    from app.core.encryption import decrypt
+
+    connection = await get_connection(session, connection_id)
+    if not connection or (
+        current_user.current_role != UserRole.SUPERADMIN
+        and connection.tenant_id != current_user.current_tenant_id
+    ):
+        raise HTTPException(status_code=404, detail="Platform connection not found")
+
+    if connection.platform_type != "evolution":
+        raise HTTPException(
+            status_code=400,
+            detail="Only supported for evolution connections",
+        )
+
+    creds = decrypt(connection.credentials)
+    if not isinstance(creds, dict):
+        raise HTTPException(status_code=500, detail="Invalid credential format")
+
+    base_url: str = (creds.get("base_url") or settings.evo_api_base_url).rstrip("/")
+    api_key: str = creds.get("api_key", "") or settings.evo_api_key
+    instance_name: str = (creds.get("instance_name") or "").strip()
+
+    if not instance_name:
+        return EvolutionConnectionStateResponse(
+            instance_name="",
+            state="undefined",
+            status="disconnected",
+            details={"error": "No instance name configured"},
+        )
+
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["apikey"] = api_key
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.get(
+                f"{base_url}/instance/connectionState/{instance_name}",
+                headers=headers,
+            )
+
+            if not resp.is_success:
+                logger.warning(
+                    "Evolution connectionState failed | status={s} | body={b}",
+                    s=resp.status_code,
+                    b=resp.text[:200],
+                )
+                return EvolutionConnectionStateResponse(
+                    instance_name=instance_name,
+                    state="undefined",
+                    status="unknown",
+                    details={"http_status": resp.status_code, "error": resp.text[:200]},
+                )
+
+            data = resp.json()
+
+            # Evolution API v2.x returns state in different shapes:
+            # {"state": "open"}, {"instance": {...}}, etc.
+            raw_state = (
+                data.get("state")
+                or (data.get("instance") or {}).get("state")
+                or "undefined"
+            )
+
+            status_map = {
+                "open": "connected",
+                "connecting": "connecting",
+                "close": "disconnected",
+                "qrread": "connecting",
+            }
+            mapped_status = status_map.get(raw_state, "unknown")
+
+            return EvolutionConnectionStateResponse(
+                instance_name=instance_name,
+                state=raw_state,
+                status=mapped_status,
+                details=data,
+            )
+
+    except httpx.RequestError as exc:
+        logger.error("Evolution API unreachable: {exc}", exc=exc)
+        return EvolutionConnectionStateResponse(
+            instance_name=instance_name,
+            state="undefined",
+            status="unknown",
+            details={"error": f"Evolution API unreachable: {exc}"},
+        )
+
+    except Exception as exc:
+        logger.exception("Unexpected error checking connection state")
+        return EvolutionConnectionStateResponse(
+            instance_name=instance_name,
+            state="undefined",
+            status="unknown",
+            details={"error": str(exc)},
+        )
+
+
 @router.get("", response_model=list[PlatformConnectionResponse])
 async def list_platform_connections(
     platform_type: str | None = None,

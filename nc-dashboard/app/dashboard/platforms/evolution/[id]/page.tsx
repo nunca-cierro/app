@@ -3,7 +3,7 @@
 import { useState, use, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { usePlatformConnection } from "@/hooks/use-platform-connections";
+import { usePlatformConnection, type EvolutionConnectionState } from "@/hooks/use-platform-connections";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import {
   Trash2 as TrashIcon,
   ShieldCheck as ShieldIcon,
   ShieldAlert as ShieldOffIcon,
+  Smartphone,
 } from "lucide-react";
 
 type EvolutionState = "idle" | "connecting" | "qr" | "connected" | "error" | "timeout";
@@ -28,7 +29,7 @@ export default function PlatformEvolutionDetailPage({
 }) {
   const params = use(paramsPromise);
   const router = useRouter();
-  const { connection, isLoading, error, connectEvolution, refetchConnection, disconnectEvolution, updateConnection } = usePlatformConnection(params.id);
+  const { connection, isLoading, error, connectEvolution, refetchConnection, disconnectEvolution, updateConnection, checkEvolutionState } = usePlatformConnection(params.id);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -110,6 +111,13 @@ export default function PlatformEvolutionDetailPage({
     setPollTimedOut(false);
   }, [evoStatus, refetchConnection]);
 
+  /* ── Connection state check ── */
+  const [evoStateCheck, setEvoStateCheck] = useState<{
+    checking: boolean;
+    result: EvolutionConnectionState | null;
+    error: string | null;
+  }>({ checking: false, result: null, error: null });
+
   /* ── Anti-spam state ── */
   const antiSpamConfig = extraData?.anti_spam as Record<string, unknown> | undefined;
   const [antiSpamEnabled, setAntiSpamEnabled] = useState(
@@ -142,6 +150,17 @@ export default function PlatformEvolutionDetailPage({
   // Instead, non-sensitive fields are exposed in extra_data.
   const instanceName = extraData?.instance_name as string | undefined;
   const baseUrl = extraData?.base_url as string | undefined;
+
+  const handleCheckState = async () => {
+    setEvoStateCheck({ checking: true, result: null, error: null });
+    try {
+      const result = await checkEvolutionState();
+      setEvoStateCheck({ checking: false, result, error: null });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Error al verificar estado";
+      setEvoStateCheck({ checking: false, result: null, error: msg });
+    }
+  };
 
   const handleSaveAntiSpam = async () => {
     setIsSavingAntiSpam(true);
@@ -282,11 +301,86 @@ export default function PlatformEvolutionDetailPage({
                   size="sm"
                   className="gap-2"
                 >
-                  <CheckIcon className="size-4" />
-                  Verificar conexión
+                  <LoaderIcon className="size-4" />
+                  Refrescar estado
                 </Button>
               </div>
             )}
+
+            {/* ── Real connection state check from Evolution API ── */}
+            <div className="border-t pt-4">
+              <Button
+                onClick={handleCheckState}
+                variant="outline"
+                size="sm"
+                className="w-full gap-2"
+                disabled={evoStateCheck.checking}
+              >
+                {evoStateCheck.checking ? (
+                  <LoaderIcon className="size-4 animate-spin" />
+                ) : (
+                  <Smartphone className="size-4" />
+                )}
+                {evoStateCheck.checking
+                  ? "Verificando..."
+                  : "Diagnóstico: verificar estado real"}
+              </Button>
+
+              {evoStateCheck.result && (
+                <div className="mt-3 rounded-md border bg-muted/30 p-3 text-xs space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Estado real:</span>
+                    <span
+                      className={
+                        evoStateCheck.result.state === "open"
+                          ? "text-green-600 font-semibold"
+                          : evoStateCheck.result.state === "close"
+                            ? "text-red-600 font-semibold"
+                            : "text-amber-600 font-semibold"
+                      }
+                    >
+                      {evoStateCheck.result.state === "open"
+                        ? "✅ Conectado"
+                        : evoStateCheck.result.state === "close"
+                          ? "❌ Desconectado"
+                          : evoStateCheck.result.state === "qrread"
+                            ? "📱 QR escaneado — esperando handshake..."
+                            : evoStateCheck.result.state === "connecting"
+                              ? "🔄 Conectando..."
+                              : `⚠️ ${evoStateCheck.result.state}`}
+                    </span>
+                  </div>
+                  <div className="text-muted-foreground">
+                    Instancia: <span className="font-mono">{evoStateCheck.result.instance_name}</span>
+                  </div>
+                  {evoStateCheck.result.state === "open" && (
+                    <p className="text-green-700 dark:text-green-400">
+                      El WhatsApp ya está conectado. Todo funciona correctamente.
+                    </p>
+                  )}
+                  {evoStateCheck.result.state === "close" && (
+                    <div className="text-red-700 dark:text-red-400 space-y-1">
+                      <p>La conexión está cerrada. Necesitas generar un nuevo QR.</p>
+                    </div>
+                  )}
+                  {evoStateCheck.result.state === "qrread" && (
+                    <div className="text-amber-700 dark:text-amber-400 space-y-1">
+                      <p>El cliente escaneó el QR pero el handshake no se completa.</p>
+                      <p className="mt-1">
+                        <strong>Probá esto:</strong> desconectá la instancia, genera un QR nuevo
+                        y pedile al cliente que lo escanee de nuevo.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {evoStateCheck.error && (
+                <div className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+                  {evoStateCheck.error}
+                </div>
+              )}
+            </div>
 
             {/* Connected state */}
             {evoState === "connected" && (
