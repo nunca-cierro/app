@@ -48,6 +48,14 @@ export interface UsePlatformConnectionReturn {
   }>;
   disconnectEvolution: () => Promise<{ status: string; detail: string }>;
   refetchConnection: () => Promise<void>;
+  checkEvolutionState: () => Promise<EvolutionConnectionState>;
+}
+
+export interface EvolutionConnectionState {
+  instance_name: string;
+  state: string;
+  status: string;
+  details: Record<string, unknown>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -274,6 +282,12 @@ export function usePlatformConnection(
     setConnection(updated);
   }, [id]);
 
+  const checkEvolutionState = useCallback(async () => {
+    return apiClient<EvolutionConnectionState>(
+      `/api/v1/platform-connections/${id}/evolution-connection-state`,
+    );
+  }, [id]);
+
   return {
     connection,
     isLoading,
@@ -284,5 +298,6 @@ export function usePlatformConnection(
     connectEvolution,
     disconnectEvolution,
     refetchConnection,
+    checkEvolutionState,
   };
 }
