@@ -3,9 +3,20 @@
 import { FaWhatsapp } from "react-icons/fa";
 import { siteBanner, siteWhatsappFloat } from "@/data/site";
 
-const message = encodeURIComponent(siteWhatsappFloat.whatsappText);
+export type Mode = "automation" | "landing";
 
-export function WhatsappFloat() {
+const automationMessage = encodeURIComponent(siteWhatsappFloat.whatsappText);
+const landingMessage = encodeURIComponent(
+  "Hola, vi NuncaCierro y quiero una página web con WhatsApp para mi negocio.\n\nMi negocio es: \nCiudad: \n¿Qué tipo de página necesito?: \n\n¿Qué información necesitas de mí?",
+);
+
+type Props = {
+  mode?: Mode;
+};
+
+export function WhatsappFloat({ mode = "automation" }: Props) {
+  const message = mode === "landing" ? landingMessage : automationMessage;
+
   return (
     <a
       href={`https://wa.me/${siteBanner.whatsappNumber}?text=${message}`}
