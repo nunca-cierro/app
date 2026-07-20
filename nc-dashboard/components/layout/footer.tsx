@@ -25,7 +25,7 @@ export function Footer() {
   };
 
   return (
-    <footer className="relative py-12 border-t border-amber-400/10 bg-stone-950 text-stone-100 overflow-hidden">
+    <footer className="relative py-12 border-t border-amber-400/10 bg-stone-800 text-stone-100 overflow-hidden">
       {/* Línea decorativa glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px bg-linear-to-r from-transparent via-amber-400/60 to-transparent" />
 

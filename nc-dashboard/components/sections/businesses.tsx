@@ -90,7 +90,7 @@ export function Businesses() {
   return (
     <Section
       id="negocios"
-      className="border-stone-800/80 bg-stone-950 text-stone-100"
+      className="border-stone-700/60 bg-stone-800 text-stone-100"
     >
       <AnimatedWrapper direction="up" duration={0.6}>
         <div className="mx-auto max-w-3xl text-center">

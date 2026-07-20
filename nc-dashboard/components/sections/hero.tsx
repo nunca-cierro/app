@@ -11,7 +11,7 @@ export function Hero() {
   return (
     <Section
       id={siteHero.sectionId}
-      className="relative min-h-screen overflow-hidden border-0 bg-stone-950 text-white scroll-mt-28 pt-36 md:pt-44 pb-24"
+      className="relative min-h-screen overflow-hidden border-0 bg-stone-800 text-white scroll-mt-28 pt-36 md:pt-44 pb-24"
       containerClassName="max-w-7xl px-3 sm:px-4 lg:px-6"
     >
       <HeroBackground />

@@ -21,7 +21,7 @@ export function Faq() {
   return (
     <Section
       id={siteFaq.sectionId}
-      className="border-stone-800/80 bg-stone-950 text-stone-100"
+      className="border-stone-700/60 bg-stone-800 text-stone-100"
       containerClassName="max-w-4xl px-3 sm:px-4 lg:px-6"
     >
       <AnimatedWrapper direction="up" duration={0.6}>
