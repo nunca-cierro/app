@@ -27,7 +27,7 @@ export const siteWhatsAppMessages = {
   automation:
     "Hola, vi NuncaCierro y quiero automatizar mi negocio.",
   landing:
-    "Hola, vi NuncaCierro y quiero una página web con WhatsApp para mi negocio.",
+    "Hola, quiero un sitio web para mi negocio.",
   get automationUrl() {
     return `https://wa.me/${siteContactInfo.whatsappNumber}?text=${encodeURIComponent(this.automation)}`;
   },
