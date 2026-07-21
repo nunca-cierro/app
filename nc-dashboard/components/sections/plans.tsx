@@ -127,20 +127,6 @@ export function Plans() {
         </AnimatedWrapper>
       </div>
 
-      {/* ── Trial card ── */}
-      <div className="mt-10 max-w-lg mx-auto">
-        <AnimatedWrapper direction="up" duration={0.5}>
-          <div className="rounded-xl border border-emerald-600/30 bg-emerald-50 px-6 py-5 text-center">
-            <p className="text-sm font-semibold text-emerald-700">
-              {sitePlans.trialInfo.label}
-            </p>
-            <p className="mt-1 text-xs text-emerald-600/70">
-              {sitePlans.trialInfo.description}
-            </p>
-          </div>
-        </AnimatedWrapper>
-      </div>
-
       <p className="mx-auto mt-8 max-w-2xl text-center text-sm text-stone-500">
         {sitePlans.footerText}
       </p>

@@ -10,7 +10,7 @@ export default function PaginaWebPage() {
       <main className="flex-1">
         <LandingContent />
       </main>
-      <WhatsappFloat />
+      <WhatsappFloat mode="landing" />
       <Footer />
     </div>
   );

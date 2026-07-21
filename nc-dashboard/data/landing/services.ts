@@ -14,7 +14,7 @@ export const landingServices = {
       icon: "Zap",
       title: "Página optimizada para convertir",
       description:
-        "Diseñamos una página simple, directa y enfocada en que cada visita se convierta en mensaje y posible venta.",
+        "Diseñamos un sitio web claro y directo, pensado para que cada visita se convierta en mensaje y posible venta.",
     },
     {
       icon: "Globe",

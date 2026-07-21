@@ -20,9 +20,9 @@ export const landingPricing = {
       name: "Básico",
       price: "Desde $700.000 COP",
       description:
-        "Ideal para negocios que quieren una página simple y empezar a recibir mensajes.",
+        "Ideal para negocios que quieren un sitio web y empezar a recibir mensajes.",
       features: [
-        "Página simple adaptada para PC y Celular",
+        "Sitio web adaptado a PC y Celular",
         "Botón WhatsApp integrado",
         "Hasta 2 correcciones de contenido",
         "Mensaje claro para vender",
@@ -66,7 +66,7 @@ export const landingPricing = {
     positiveLabel: "✔",
     negativeLabel: "—",
     rows: [
-      { item: "Página adaptada a PC y Celular", included: [true, true, true] },
+      { item: "Sitio web adaptado a PC y Celular", included: [true, true, true] },
       { item: "Botón WhatsApp integrado", included: [true, true, true] },
       { item: "Mensaje claro para vender", included: [true, true, true] },
       { item: "Optimización de mensajes", included: [false, true, true] },

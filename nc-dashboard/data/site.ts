@@ -513,7 +513,7 @@ export const landingData = {
     sectionId: "inicio-landing",
     title: "Más clientes por WhatsApp con una página web para tu negocio",
     subtitle:
-      "Te creamos una página simple que lleva a tus clientes directo a WhatsApp para que te escriban, te pregunten y compren más rápido. Sin complicaciones.",
+      "Te creamos un sitio web que lleva a tus clientes directo a WhatsApp para que te escriban, te pregunten y compren más rápido. Sin complicaciones.",
     cta: {
       primary: {
         label: "Quiero más clientes",
@@ -553,7 +553,7 @@ export const landingData = {
         icon: "Zap",
         title: "Página optimizada para convertir",
         description:
-          "Diseñamos una página simple, directa y enfocada en que cada visita se convierta en mensaje y posible venta.",
+          "Diseñamos un sitio web claro y directo, pensado para que cada visita se convierta en mensaje y posible venta.",
       },
       {
         icon: "Globe",
@@ -725,9 +725,9 @@ export const landingData = {
         name: "Básico",
         price: "Desde $700.000 COP",
         description:
-          "Ideal para negocios que quieren una página simple y empezar a recibir mensajes.",
+          "Ideal para negocios que quieren un sitio web y empezar a recibir mensajes.",
         features: [
-          "Página simple adaptada para PC y Celular",
+          "Sitio web adaptado a PC y Celular",
           "Botón WhatsApp integrado",
           "Hasta 2 correcciones de contenido",
           "Mensaje claro para vender",
@@ -771,7 +771,7 @@ export const landingData = {
       positiveLabel: "✔",
       negativeLabel: "—",
       rows: [
-        { item: "Página adaptada a PC y Celular", included: [true, true, true] },
+        { item: "Sitio web adaptado a PC y Celular", included: [true, true, true] },
         { item: "Botón WhatsApp integrado", included: [true, true, true] },
         { item: "Mensaje claro para vender", included: [true, true, true] },
         { item: "Optimización de mensajes", included: [false, true, true] },
