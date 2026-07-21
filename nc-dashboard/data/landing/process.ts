@@ -10,15 +10,15 @@ export const landingProcess = {
   steps: [
     {
       number: "01",
-      title: "Analizo tu negocio",
+      title: "Analizamos tu negocio",
       description:
         "Revisamos qué vendes, a quién le vendes y qué tipo de clientes quieres atraer.",
     },
     {
       number: "02",
-      title: "Te muestro una demo",
+      title: "Te mostramos una demo",
       description:
-        "Te presento una propuesta simple para que veas cómo llegaría la gente a tu WhatsApp.",
+        "Te presentamos una propuesta simple para que veas cómo llegaría la gente a tu WhatsApp.",
     },
     {
       number: "03",

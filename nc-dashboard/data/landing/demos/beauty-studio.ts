@@ -10,5 +10,5 @@ export const beautyStudioDemo: DemoItem = {
     "Diseño aspiracional para salones que quieren elevar su percepción premium.",
   longDescription:
     "Propuesta de diseño web profesional para marcas de belleza que desean posicionarse con autoridad, mostrar resultados y generar más consultas.",
-  features: ["Portafolio visual", "CTA de cotización", "Optimización mobile"],
+  features: ["Portafolio visual", "Botón de WhatsApp", "Se ve en celulares"],
 };

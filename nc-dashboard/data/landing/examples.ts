@@ -25,10 +25,10 @@ export const landingExamples = {
   title: "Así podría verse tu sitio web",
   subtitle: "Estos son ejemplos de páginas que podemos hacer para tu negocio.",
   secondarySubtitle:
-    "Creamos páginas web para negocios con enfoque en conversión, diseño profesional y landing optimizada para atraer clientes.",
+    "Creamos páginas web para negocios con enfoque en resultados, diseño profesional y contenido optimizado para atraer clientes.",
   imageAltPrefix: "Demo",
-  whatsappMessageTemplate:
-    "Hola, quiero una página web para negocios similar al demo {demoName}. Quiero una landing premium para mi marca.",
+    whatsappMessageTemplate:
+      "Hola, quiero una página web para mi negocio similar al demo {demoName}. Quiero un diseño profesional para mi marca.",
   buttons: {
     viewDemo: "Ver Demo",
     quoteSimilar: "Quiero una web así",

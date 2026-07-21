@@ -76,7 +76,7 @@ export function Header() {
         <div className="grid grid-cols-3 items-center h-20 px-4 sm:px-6">
           <a
             href={isLanding ? "/pagina-web" : "/automatizacion"}
-            className="flex items-center gap-2 px-3 py-1 shrink-0 justify-self-start"
+            className="flex items-center gap-2 px-3 py-1 shrink-0 justify-self-start group"
             style={{ letterSpacing: "0.01em" }}
           >
             <span
@@ -84,7 +84,7 @@ export function Header() {
               style={{ letterSpacing: "-0.4px" }}
             >
               <span className="text-white">{brand.name}</span>
-              <span className="text-[#F2BF27]">{brand.accent}</span>
+              <span className="text-amber-400 transition-all duration-300 group-hover:drop-shadow-[0_0_10px_rgba(251,191,36,0.5)]">{brand.accent}</span>
             </span>
           </a>
 

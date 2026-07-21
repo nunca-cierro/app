@@ -10,7 +10,7 @@ export const landingFaq = {
         "Depende del plan y de la rapidez con la que recibamos tu información. En promedio, Básico se entrega rápido y los planes más completos requieren más iteraciones.",
     },
     {
-      question: "¿Incluye dominio y hosting?",
+      question: "¿Incluye dominio y alojamiento web?",
       answer:
         "No están incluidos por defecto para que mantengas el control total, pero podemos gestionarlo por ti como extra opcional.",
     },
@@ -32,7 +32,7 @@ export const landingFaq = {
     {
       question: "¿Incluye posicionamiento en Google?",
       answer:
-        "Todos los planes salen con una base optimizada. En el plan Profesional trabajamos SEO básico y en Premium una optimización SEO avanzada inicial.",
+        "Todos los planes salen con una base optimizada. En el plan Profesional trabajamos posicionamiento básico en Google y en Premium un posicionamiento en Google desde el inicio.",
     },
   ],
 };
