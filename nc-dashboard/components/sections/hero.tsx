@@ -16,9 +16,9 @@ export function Hero() {
     >
       <HeroBackground />
 
-      <div className="relative z-10 grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:min-h-[72vh] lg:items-end">
+      <div className="relative z-10 grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:min-h-[72vh] lg:items-end mt-8 md:mt-10">
         {/* Left: Title, subtitle, QR and social proof */}
-        <div className="max-w-xl lg:self-start space-y-6">
+        <div className="max-w-xl lg:self-start space-y-6 mt-5">
           <h1
             className="hero-fade text-4xl md:text-6xl lg:text-7xl font-semibold leading-[1.05] text-white drop-shadow-[0_8px_26px_rgba(0,0,0,0.55)]"
             style={{ animationDelay: "0.05s" }}
@@ -51,7 +51,7 @@ export function Hero() {
 
         {/* Right: WhatsApp mockup */}
         <div
-          className="hero-fade lg:justify-self-end lg:self-center"
+          className="hero-fade lg:justify-self-end lg:self-center -translate-y-[30px]"
           style={{ animationDelay: "0.3s" }}
         >
           <div className="w-full max-w-md lg:translate-x-[15px]">

@@ -101,7 +101,7 @@ export function Header() {
                     : "text-white/70 hover:text-white",
                 )}
               >
-                Página web
+                Sitio web
               </a>
               <a
                 href="/automatizacion"
@@ -190,7 +190,7 @@ export function Header() {
                       : "text-white/70 hover:text-white",
                   )}
                 >
-                  Página web
+                  Sitio web
                 </a>
                 <a
                   href="/automatizacion"
