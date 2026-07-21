@@ -3,6 +3,7 @@
 import { Section } from "@/components/layout/section";
 import { Button } from "@/components/ui/button";
 import { ResponsiveDeviceMorph } from "@/components/ui/devices";
+import { HeroBackground } from "@/components/sections/hero/hero-background";
 import { landingHero } from "@/data/landing/hero";
 
 import { ArrowRight } from "lucide-react";
@@ -24,16 +25,18 @@ export function LandingHero() {
   return (
     <Section
       id={landingHero.sectionId}
-      className="relative min-h-screen overflow-hidden border-0 bg-[#F3EDE0] text-stone-900 bg-[radial-gradient(1200px_circle_at_top,rgba(242,191,39,0.04),transparent_60%)] scroll-mt-28 pt-36 md:pt-44 pb-24"
+      className="relative min-h-screen overflow-hidden border-0 text-white scroll-mt-28 pt-36 md:pt-44 pb-24"
     >
-      <div className="grid gap-12 lg:grid-cols-[1.15fr_0.85fr] items-start">
+      <HeroBackground />
+
+      <div className="relative z-10 grid gap-12 lg:grid-cols-[1.15fr_0.85fr] items-start">
         <div className="max-w-3xl md:mt-5">
           <div>
-            <h1 className="hero-fade-in text-4xl md:text-5xl lg:text-6xl font-semibold text-stone-800 leading-tight tracking-tight text-balance">
+            <h1 className="hero-fade-in text-4xl md:text-5xl lg:text-6xl font-semibold text-white leading-tight tracking-tight text-balance">
               {landingHero.title}
             </h1>
             <p
-              className="hero-fade-in mt-6 text-lg md:text-xl text-stone-500/80 leading-relaxed max-w-2xl"
+              className="hero-fade-in mt-6 text-lg md:text-xl text-white/70 leading-relaxed max-w-2xl"
               style={{ animationDelay: "0.1s" }}
             >
               {landingHero.subtitle}
@@ -53,7 +56,7 @@ export function LandingHero() {
                 asChild
                 variant="outline"
                 size="lg"
-                className="border-stone-400 text-stone-600 hover:bg-stone-100 hover:text-stone-800"
+                className="border-white/40 text-white hover:bg-white/10 hover:text-white"
               >
                 <a href={landingHero.cta.secondary.href}>
                   {landingHero.cta.secondary.label}
@@ -64,7 +67,7 @@ export function LandingHero() {
               {landingHero.disclaimer.map((item, idx) => (
                 <span
                   key={idx}
-                  className="hero-fade-chip text-xs md:text-sm text-amber-700 bg-amber-100 rounded-full px-3 py-1 border border-amber-200 shadow-sm font-medium"
+                  className="hero-fade-chip text-xs md:text-sm text-amber-300 bg-white/10 rounded-full px-3 py-1 border border-white/20 shadow-sm font-medium"
                   style={{ animationDelay: `${0.2 + idx * 0.08}s` }}
                 >
                   {item}
@@ -83,7 +86,7 @@ export function LandingHero() {
       </div>
 
       {/* Stats or Trust Indicators */}
-      <div className="mt-20 pt-10 border-t border-stone-200/60">
+      <div className="mt-20 pt-10 border-t border-white/20">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           {landingHero.stats.map((stat, idx) => {
             const IconComponent = statIcons[stat.icon];
