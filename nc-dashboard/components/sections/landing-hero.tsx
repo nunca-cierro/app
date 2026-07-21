@@ -26,17 +26,18 @@ export function LandingHero() {
     <Section
       id={landingHero.sectionId}
       className="relative min-h-screen overflow-hidden border-0 text-white scroll-mt-28 pt-36 md:pt-44 pb-24"
+      containerClassName="max-w-7xl px-3 sm:px-4 lg:px-6"
     >
       <HeroBackground />
 
-      <div className="relative z-10 grid gap-12 lg:grid-cols-[1.15fr_0.85fr] items-start">
-        <div className="max-w-3xl md:mt-5">
+      <div className="relative z-10 grid gap-12 lg:grid-cols-[1.15fr_0.85fr] items-start mt-8 md:mt-10">
+        <div className="max-w-2xl lg:self-start space-y-6 mt-5">
           <div>
-            <h1 className="hero-fade-in text-4xl md:text-5xl lg:text-6xl font-semibold text-white leading-tight tracking-tight text-balance">
+            <h1 className="hero-fade-in text-4xl md:text-6xl lg:text-7xl font-semibold leading-[1.05] text-white drop-shadow-[0_8px_26px_rgba(0,0,0,0.55)]">
               {landingHero.title}
             </h1>
             <p
-              className="hero-fade-in mt-6 text-lg md:text-xl text-white/70 leading-relaxed max-w-2xl"
+              className="hero-fade-in mt-6 text-lg md:text-xl text-white/80 leading-relaxed drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
               style={{ animationDelay: "0.1s" }}
             >
               {landingHero.subtitle}
@@ -54,9 +55,9 @@ export function LandingHero() {
               </Button>
               <Button
                 asChild
-                variant="outline"
+                variant="ghost"
                 size="lg"
-                className="border-white/40 text-white hover:bg-white/10 hover:text-white"
+                className="text-white/80 hover:text-white hover:bg-white/10"
               >
                 <a href={landingHero.cta.secondary.href}>
                   {landingHero.cta.secondary.label}
@@ -77,7 +78,7 @@ export function LandingHero() {
           </div>
         </div>
 
-        <div className="pt-5 lg:pt-16">
+        <div className="lg:justify-self-end lg:self-center translate-y-2.5">
           <ResponsiveDeviceMorph
             containerClassName="w-full sm:max-w-sm lg:max-w-130"
             height={480}
