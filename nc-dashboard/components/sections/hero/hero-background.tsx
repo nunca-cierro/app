@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 
-const heroImages = [
+const negociosImages = [
   "/negocios/restaurante.jpg",
   "/negocios/barberia.jpg",
   "/negocios/panaderia.jpg",
@@ -11,10 +11,23 @@ const heroImages = [
   "/negocios/pasteleria.jpg",
 ];
 
+const websitesImages = [
+  "/websites/Nuncacierro web y movil.png",
+  "/websites/Restaurante website.jpeg",
+  "/websites/Mujer sosteniendo smartphone.jpeg",
+  "/websites/Negocio mostrando el sitio.jpeg",
+  "/websites/Diseño en celular.jpeg",
+];
+
 const ROTATE_INTERVAL = 5000; // 5 seconds per image
 const FADE_DURATION = 1000; // 1 second fade
 
-export function HeroBackground() {
+type HeroBackgroundProps = {
+  images?: "websites" | "negocios";
+};
+
+export function HeroBackground({ images = "negocios" }: HeroBackgroundProps = {}) {
+  const heroImages = images === "websites" ? websitesImages : negociosImages;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [previousIndex, setPreviousIndex] = useState<number | null>(null);
   const [fadeOut, setFadeOut] = useState(false);

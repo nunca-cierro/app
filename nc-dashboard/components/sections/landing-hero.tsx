@@ -28,7 +28,7 @@ export function LandingHero() {
       className="relative min-h-screen overflow-hidden border-0 text-white scroll-mt-28 pt-36 md:pt-44 pb-24"
       containerClassName="max-w-7xl px-3 sm:px-4 lg:px-6"
     >
-      <HeroBackground />
+      <HeroBackground images="websites" />
 
       <div className="relative z-10 grid gap-12 lg:grid-cols-[1.15fr_0.85fr] items-start mt-8 md:mt-10">
         <div className="max-w-2xl lg:self-start space-y-6 mt-5">
@@ -55,9 +55,9 @@ export function LandingHero() {
               </Button>
               <Button
                 asChild
-                variant="ghost"
+                variant="outline"
                 size="lg"
-                className="text-white/80 hover:text-white hover:bg-white/10"
+                className="border-white/30 bg-black/20 text-white/90 hover:bg-black/35 hover:text-white hover:border-white/50 backdrop-blur-xs"
               >
                 <a href={landingHero.cta.secondary.href}>
                   {landingHero.cta.secondary.label}
@@ -78,7 +78,7 @@ export function LandingHero() {
           </div>
         </div>
 
-        <div className="lg:justify-self-end lg:self-center translate-y-2.5">
+        <div className="lg:self-center translate-y-2.5">
           <ResponsiveDeviceMorph
             containerClassName="w-full sm:max-w-sm lg:max-w-130"
             height={480}

@@ -139,25 +139,25 @@ export function ResponsiveDeviceMorph({
       >
         <div className="absolute inset-0 rounded-3xl" />
         <div className="absolute left-0 right-0 z-10 flex items-center justify-center gap-3 px-4">
-            <div className="h-px w-16 bg-white/20" />
+            <div className="h-px w-16 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
           <motion.div
             key={active.key}
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22 }}
-            className="flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-white shadow-sm"
+            className="flex items-center gap-2 rounded-full border border-amber-400/30 bg-black/50 px-3 py-1 shadow-lg shadow-amber-600/20"
           >
-            <active.Icon className="text-amber-300" />
-            <span className="text-xs font-semibold tracking-wide text-white/80">
+            <active.Icon className="text-amber-400" />
+            <span className="text-xs font-semibold tracking-wide text-amber-200">
               {active.label}
             </span>
           </motion.div>
-          <div className="h-px w-16 bg-white/20" />
+          <div className="h-px w-16 bg-gradient-to-r from-transparent via-amber-500/40 to-transparent" />
         </div>
 
         <LayoutGroup>
           <motion.div
-            className="absolute left-1/2 top-1/2 overflow-hidden border border-white/30 bg-white/10 shadow-sm"
+            className="absolute left-1/2 top-1/2 overflow-hidden border border-amber-400/30 bg-black/50 shadow-lg shadow-amber-600/15"
             style={{ translateX: "-50%", translateY: "-50%" }}
             animate={
               shouldReduceMotion
@@ -170,16 +170,16 @@ export function ResponsiveDeviceMorph({
             }
             transition={{ type: "spring", stiffness: 140, damping: 18 }}
           >
-            <div className="absolute inset-0 bg-[radial-gradient(900px_circle_at_top,rgba(255,255,255,0.06),transparent_55%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(900px_circle_at_top,rgba(245,158,11,0.1),transparent_55%)]" />
 
             <div className="relative h-full w-full">
               {([
-                { id: "topbar" as const, tone: "bg-white/5" },
-                { id: "hero" as const, tone: "bg-white/7" },
-                { id: "cta" as const, tone: "bg-amber-300/20" },
-                { id: "cardA" as const, tone: "bg-white/5" },
-                { id: "cardB" as const, tone: "bg-white/5" },
-                { id: "cardC" as const, tone: "bg-white/5" },
+                { id: "topbar" as const, tone: "bg-amber-500/15" },
+                { id: "hero" as const, tone: "bg-orange-500/20" },
+                { id: "cta" as const, tone: "bg-amber-400/30" },
+                { id: "cardA" as const, tone: "bg-stone-500/20" },
+                { id: "cardB" as const, tone: "bg-amber-500/15" },
+                { id: "cardC" as const, tone: "bg-orange-600/15" },
               ] satisfies { id: BlockLayoutKey; tone: string }[]).map(
                 (block) => (
                   <motion.div
@@ -203,8 +203,8 @@ export function ResponsiveDeviceMorph({
                     transition={{ type: "spring", stiffness: 170, damping: 20 }}
                   >
                     <div className="flex h-full w-full flex-col justify-center gap-2 p-3">
-                      <div className="h-1.5 w-3/4 rounded-full bg-white/30" />
-                      <div className="h-1.5 w-2/3 rounded-full bg-white/30" />
+                      <div className="h-1.5 w-3/4 rounded-full bg-white/50" />
+                      <div className="h-1.5 w-2/3 rounded-full bg-white/40" />
                       <div className="h-1.5 w-1/2 rounded-full bg-white/30" />
                     </div>
                   </motion.div>
