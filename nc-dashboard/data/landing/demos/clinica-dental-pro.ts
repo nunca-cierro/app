@@ -13,6 +13,6 @@ export const clinicaDentalProDemo: DemoItem = {
   features: [
     "Agenda de citas",
     "Sección de tratamientos",
-    "SEO local profesional",
+    "Aparece en Google",
   ],
 };

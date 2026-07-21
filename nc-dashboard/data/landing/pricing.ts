@@ -37,7 +37,7 @@ export const landingPricing = {
       features: [
         "Página con más secciones",
         "Botón WhatsApp + llamada a la acción",
-        "Optimización de mensajes y copy",
+        "Optimización de mensajes y textos",
         "Hasta 2 correcciones de contenido",
         "Ideal para captar más clientes",
       ],
@@ -50,9 +50,9 @@ export const landingPricing = {
         "Para negocios que quieren una solución completa con acompañamiento.",
       features: [
         "Página completa con diseño exclusivo",
-        "Botón WhatsApp + CTAs estratégicos",
-        "Optimización SEO avanzada",
-        "Hasta 3 correcciones de contenido",
+        "Botón WhatsApp + enlaces directos",
+        "Posicionamiento en Google",
+        "Hasta 3 correcciones",
         "Acompañamiento y ajustes para mejorar resultados",
       ],
       featured: false,
@@ -66,7 +66,7 @@ export const landingPricing = {
     positiveLabel: "✔",
     negativeLabel: "—",
     rows: [
-      { item: "Página simple y responsive", included: [true, true, true] },
+      { item: "Página adaptada a PC y Celular", included: [true, true, true] },
       { item: "Botón WhatsApp integrado", included: [true, true, true] },
       { item: "Mensaje claro para vender", included: [true, true, true] },
       { item: "Optimización de mensajes", included: [false, true, true] },
@@ -88,7 +88,7 @@ export const landingPricing = {
         description:
           "Asegura una base técnica confiable para que tu web se vea profesional desde el primer día.",
         includes: [
-          "Dominio (.com o .com.co) + hosting rápido con SSL",
+          "Dominio .com + alojamiento seguro",
           "Configuración completa para salir en línea sin fricción",
           "Soporte básico inicial para acompañar el arranque",
         ],

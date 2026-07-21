@@ -314,7 +314,7 @@ export const sitePlans = {
       name: "Empresarial",
       type: "Empresarial",
       description:
-        "Todo incluido: inteligencia artificial, dashboard avanzado y múltiples negocios.",
+        "Todo incluido: inteligencia artificial, panel de control avanzado y múltiples negocios.",
       features: [
         "Todo lo del Plan Profesional",
         "Productos/servicios ilimitados en catálogo",
@@ -385,7 +385,7 @@ export const sitePlans = {
   },
   trialInfo: {
     label: "Prueba gratis",
-    description: "7 días de prueba con respuestas programadas, dashboard propio y acceso a conversaciones. Cancela cuando quieras.",
+    description: "7 días de prueba con respuestas programadas, panel propio y acceso a conversaciones. Cancela cuando quieras.",
     days: 7,
     type: "programmed",
   },
@@ -426,7 +426,7 @@ export const siteFaq = {
     {
       question: "¿Cuánto tiempo toma tenerlo listo?",
       answer:
-        "El Bot WhatsApp lo configuramos en 2 horas hábiles. Los planes más avanzados pueden tomar hasta una semana, dependiendo de la landing page.",
+        "El Bot WhatsApp lo configuramos en 2 horas hábiles. Los planes más avanzados pueden tomar hasta una semana, dependiendo de la página web.",
     },
     {
       question: "¿Necesito conocimientos técnicos para usarlo?",
@@ -441,7 +441,7 @@ export const siteFaq = {
     {
       question: "¿Cómo sé cuántos clientes me contactaron?",
       answer:
-        "A partir del plan Profesional recibes estadísticas semanales con el número de consultas, horarios más activos y tipos de preguntas. En el plan Empresarial sumamos un dashboard en vivo con métricas detalladas.",
+        "A partir del plan Profesional recibes estadísticas semanales con el número de consultas, horarios más activos y tipos de preguntas. En el plan Empresarial sumamos un panel en vivo con estadísticas detalladas.",
     },
     {
       question: "¿Funciona para cualquier tipo de negocio?",
@@ -576,15 +576,15 @@ export const landingData = {
     steps: [
       {
         number: "01",
-        title: "Analizo tu negocio",
+        title: "Analizamos tu negocio",
         description:
           "Revisamos qué vendes, a quién le vendes y qué tipo de clientes quieres atraer.",
       },
       {
         number: "02",
-        title: "Te muestro una demo",
+        title: "Te mostramos una demo",
         description:
-          "Te presento una propuesta simple para que veas cómo llegaría la gente a tu WhatsApp.",
+          "Te presentamos una propuesta simple para que veas cómo llegaría la gente a tu WhatsApp.",
       },
       {
         number: "03",
@@ -607,10 +607,10 @@ export const landingData = {
     title: "Así podría verse tu sitio web",
     subtitle: "Estos son ejemplos de páginas que podemos hacer para tu negocio.",
     secondarySubtitle:
-      "Creamos páginas web para negocios con enfoque en conversión, diseño profesional y landing optimizada para atraer clientes.",
+      "Creamos páginas web para negocios con enfoque en resultados, diseño profesional y contenido optimizado para atraer clientes.",
     imageAltPrefix: "Demo",
     whatsappMessageTemplate:
-      "Hola, quiero una página web para negocios similar al demo {demoName}. Quiero una landing premium para mi marca.",
+      "Hola, quiero una página web para mi negocio similar al demo {demoName}. Quiero un diseño profesional para mi marca.",
     buttons: {
       viewDemo: "Ver Demo",
       quoteSimilar: "Quiero una web así",
@@ -638,7 +638,7 @@ export const landingData = {
           "Landing premium para reservas y pedidos directos por WhatsApp.",
         longDescription:
           "Diseño web profesional para restaurantes que quieren verse exclusivos, captar más reservas y convertir visitas en clientes con una experiencia clara desde celular.",
-        features: ["Botón de WhatsApp", "Módulo de reservas", "SEO local"],
+        features: ["Botón de WhatsApp", "Módulo de reservas", "Aparece en Google"],
       },
       {
         name: "Spa Serenity",
@@ -661,8 +661,8 @@ export const landingData = {
         shortDescription:
           "Sitio de alto impacto para captar leads de clases y planes mensuales.",
         longDescription:
-          "Ejemplo de landing premium para gimnasios que necesitan más prospectos, mejor posicionamiento y una propuesta clara para convertir tráfico en membresías.",
-        features: ["Formulario de contacto", "Planes destacados", "SEO para Google"],
+          "Ejemplo de página web profesional para gimnasios que necesitan más clientes, mejor posicionamiento y una propuesta clara para conseguir miembros.",
+        features: ["Formulario de contacto", "Planes destacados", "Aparece en Google"],
       },
       {
         name: "Barbería Clásica",
@@ -686,7 +686,7 @@ export const landingData = {
           "Diseño aspiracional para salones que quieren elevar su percepción premium.",
         longDescription:
           "Propuesta de diseño web profesional para marcas de belleza que desean posicionarse con autoridad, mostrar resultados y generar más consultas.",
-        features: ["Portafolio visual", "CTA de cotización", "Optimización mobile"],
+        features: ["Portafolio visual", "Botón de WhatsApp", "Se ve en celulares"],
       },
       {
         name: "Clínica Dental Pro",
@@ -698,7 +698,7 @@ export const landingData = {
           "Web confiable para clínicas que quieren más citas agendadas.",
         longDescription:
           "Ejemplo pensado para clínicas odontológicas que necesitan transmitir seguridad, explicar procedimientos y aumentar conversiones con una experiencia simple.",
-        features: ["Agenda de citas", "Sección de tratamientos", "SEO local profesional"],
+        features: ["Agenda de citas", "Sección de tratamientos", "Aparece en Google"],
       },
     ],
   },
@@ -742,7 +742,7 @@ export const landingData = {
         features: [
           "Página con más secciones",
           "Botón WhatsApp + llamada a la acción",
-          "Optimización de mensajes y copy",
+          "Optimización de mensajes y textos",
           "Hasta 2 correcciones de contenido",
           "Ideal para captar más clientes",
         ],
@@ -755,9 +755,9 @@ export const landingData = {
           "Para negocios que quieren una solución completa con acompañamiento.",
         features: [
           "Página completa con diseño exclusivo",
-          "Botón WhatsApp + CTAs estratégicos",
-          "Optimización SEO avanzada",
-          "Hasta 3 correcciones de contenido",
+          "Botón WhatsApp + enlaces directos",
+          "Posicionamiento en Google",
+          "Hasta 3 correcciones",
           "Acompañamiento y ajustes para mejorar resultados",
         ],
         featured: false,
@@ -771,7 +771,7 @@ export const landingData = {
       positiveLabel: "✔",
       negativeLabel: "—",
       rows: [
-        { item: "Página simple y responsive", included: [true, true, true] },
+        { item: "Página adaptada a PC y Celular", included: [true, true, true] },
         { item: "Botón WhatsApp integrado", included: [true, true, true] },
         { item: "Mensaje claro para vender", included: [true, true, true] },
         { item: "Optimización de mensajes", included: [false, true, true] },
@@ -793,7 +793,7 @@ export const landingData = {
           description:
             "Asegura una base técnica confiable para que tu web se vea profesional desde el primer día.",
           includes: [
-            "Dominio (.com o .com.co) + hosting rápido con SSL",
+            "Dominio .com + alojamiento seguro",
             "Configuración completa para salir en línea sin fricción",
             "Soporte básico inicial para acompañar el arranque",
           ],
@@ -860,7 +860,7 @@ export const landingData = {
           "Depende del plan y de la rapidez con la que recibamos tu información. En promedio, Básico se entrega rápido y los planes más completos requieren más iteraciones.",
       },
       {
-        question: "¿Incluye dominio y hosting?",
+        question: "¿Incluye dominio y alojamiento web?",
         answer:
           "No están incluidos por defecto para que mantengas el control total, pero podemos gestionarlo por ti como extra opcional.",
       },
@@ -882,7 +882,7 @@ export const landingData = {
       {
         question: "¿Incluye posicionamiento en Google?",
         answer:
-          "Todos los planes salen con una base optimizada. En el plan Profesional trabajamos SEO básico y en Premium una optimización SEO avanzada inicial.",
+          "Todos los planes salen con una base optimizada. En el plan Profesional trabajamos posicionamiento básico en Google y en Premium un posicionamiento en Google desde el inicio.",
       },
     ],
   },

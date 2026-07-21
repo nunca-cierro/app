@@ -20,13 +20,13 @@ export function Hero() {
         {/* Left: Title, subtitle, QR and social proof */}
         <div className="max-w-xl lg:self-start space-y-6 mt-5">
           <h1
-            className="hero-fade text-4xl md:text-6xl lg:text-7xl font-semibold leading-[1.05] text-white drop-shadow-[0_8px_26px_rgba(0,0,0,0.55)]"
+            className="hero-fade text-4xl md:text-6xl lg:text-7xl font-bold leading-[1.05] text-white/95 neon-glow"
             style={{ animationDelay: "0.05s" }}
           >
             {siteHero.title}
           </h1>
           <p
-            className="hero-fade text-lg md:text-xl text-white/80 leading-relaxed drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
+            className="hero-fade text-lg md:text-xl text-white/90 leading-relaxed drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
             style={{ animationDelay: "0.15s" }}
           >
             {siteHero.subtitle}
@@ -66,6 +66,11 @@ export function Hero() {
           animation: heroFadeInUp 0.8s ease-out forwards;
         }
 
+        .neon-glow {
+          filter: drop-shadow(0 0 10px rgba(251,191,36,0.10)) drop-shadow(0 0 24px rgba(251,191,36,0.04));
+          animation: heroFadeInUp 0.8s ease-out forwards, neonPulse 3s ease-in-out 0.8s infinite;
+        }
+
         @keyframes heroFadeInUp {
           from {
             opacity: 0;
@@ -77,11 +82,24 @@ export function Hero() {
           }
         }
 
+        @keyframes neonPulse {
+          0%, 100% {
+            filter: drop-shadow(0 0 10px rgba(251,191,36,0.10)) drop-shadow(0 0 24px rgba(251,191,36,0.04));
+          }
+          50% {
+            filter: drop-shadow(0 0 14px rgba(251,191,36,0.18)) drop-shadow(0 0 36px rgba(251,191,36,0.08));
+          }
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .hero-fade {
             opacity: 1;
             animation: none;
             transform: none;
+          }
+          .neon-glow {
+            filter: drop-shadow(0 0 10px rgba(251,191,36,0.10));
+            animation: none;
           }
         }
       `}</style>

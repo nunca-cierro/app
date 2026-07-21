@@ -6,7 +6,7 @@ import { ResponsiveDeviceMorph } from "@/components/ui/devices";
 import { HeroBackground } from "@/components/sections/hero/hero-background";
 import { landingHero } from "@/data/landing/hero";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import {
   MdWhatsapp,
   MdFlashOn,
@@ -33,11 +33,11 @@ export function LandingHero() {
       <div className="relative z-10 grid gap-12 lg:grid-cols-[1.15fr_0.85fr] items-start mt-8 md:mt-10">
         <div className="max-w-2xl lg:self-start space-y-6 mt-5">
           <div>
-            <h1 className="hero-fade-in text-4xl md:text-6xl lg:text-7xl font-semibold leading-[1.05] text-white drop-shadow-[0_8px_26px_rgba(0,0,0,0.55)]">
+            <h1 className="hero-fade-in text-4xl md:text-6xl lg:text-7xl font-bold leading-[1.05] text-white/95 landing-neon-glow">
               {landingHero.title}
             </h1>
             <p
-              className="hero-fade-in mt-6 text-lg md:text-xl text-white/80 leading-relaxed drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
+              className="hero-fade-in mt-6 text-lg md:text-xl text-white/90 leading-relaxed drop-shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
               style={{ animationDelay: "0.1s" }}
             >
               {landingHero.subtitle}
@@ -64,16 +64,22 @@ export function LandingHero() {
                 </a>
               </Button>
             </div>
-            <div className="flex flex-wrap gap-2 mt-3">
-              {landingHero.disclaimer.map((item, idx) => (
-                <span
-                  key={idx}
-                  className="hero-fade-chip text-xs md:text-sm text-amber-300 bg-white/10 rounded-full px-3 py-1 border border-white/20 shadow-sm font-medium"
-                  style={{ animationDelay: `${0.2 + idx * 0.08}s` }}
-                >
-                  {item}
-                </span>
-              ))}
+            <div className="flex flex-wrap gap-3 mt-4">
+              {landingHero.disclaimer.map((item, idx) => {
+                const label = item.replace(/^[✔✓]\s*/, "");
+                return (
+                  <span
+                    key={idx}
+                    className="hero-fade-chip inline-flex items-center gap-2 text-sm text-amber-100/90 bg-white/8 rounded-xl px-4 py-2 border border-white/15 shadow-sm font-medium backdrop-blur-sm"
+                    style={{ animationDelay: `${0.2 + idx * 0.08}s` }}
+                  >
+                    <span className="flex items-center justify-center w-4 h-4 rounded-full bg-amber-400/20 text-amber-400 shrink-0">
+                      <Check className="w-3 h-3" strokeWidth={3} />
+                    </span>
+                    {label}
+                  </span>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -119,6 +125,11 @@ export function LandingHero() {
           animation: heroFadeInSoft 0.55s ease-out forwards;
         }
 
+        .landing-neon-glow {
+          filter: drop-shadow(0 0 10px rgba(251,191,36,0.10)) drop-shadow(0 0 24px rgba(251,191,36,0.04));
+          animation: heroFadeInUp 0.7s ease-out forwards, neonPulse 3s ease-in-out 0.7s infinite;
+        }
+
         @keyframes heroFadeInUp {
           from {
             opacity: 0;
@@ -141,12 +152,25 @@ export function LandingHero() {
           }
         }
 
+        @keyframes neonPulse {
+          0%, 100% {
+            filter: drop-shadow(0 0 10px rgba(251,191,36,0.10)) drop-shadow(0 0 24px rgba(251,191,36,0.04));
+          }
+          50% {
+            filter: drop-shadow(0 0 14px rgba(251,191,36,0.18)) drop-shadow(0 0 36px rgba(251,191,36,0.08));
+          }
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .hero-fade-in,
           .hero-fade-chip {
             opacity: 1;
             animation: none;
             transform: none;
+          }
+          .landing-neon-glow {
+            filter: drop-shadow(0 0 10px rgba(251,191,36,0.10));
+            animation: none;
           }
         }
       `}</style>

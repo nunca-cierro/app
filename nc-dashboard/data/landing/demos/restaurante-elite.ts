@@ -10,5 +10,5 @@ export const restauranteEliteDemo: DemoItem = {
     "Landing premium para reservas y pedidos directos por WhatsApp.",
   longDescription:
     "Diseño web profesional para restaurantes que quieren verse exclusivos, captar más reservas y convertir visitas en clientes con una experiencia clara desde celular.",
-  features: ["Botón de WhatsApp", "Módulo de reservas", "SEO local"],
+  features: ["Botón de WhatsApp", "Módulo de reservas", "Aparece en Google"],
 };
