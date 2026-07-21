@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AnimatedWrapper } from "@/components/ui/animated-wrapper";
 import { landingExamples, type DemoItem } from "@/data/landing/examples";
-import { siteBanner, siteUi } from "@/data/site";
+import { siteBanner, siteUi, siteWhatsAppMessages } from "@/data/site";
 
 const buildWhatsappLink = (demoName: string) => {
   const message = landingExamples.whatsappMessageTemplate.replace(
@@ -154,7 +154,7 @@ export function LandingExamples() {
             size="lg"
             className="mt-6 min-w-64 text-base bg-amber-500 hover:bg-amber-600 text-stone-950"
           >
-            <a href={siteBanner.whatsappUrl} target="_blank" rel="noreferrer">
+            <a href={siteWhatsAppMessages.landingUrl} target="_blank" rel="noreferrer">
               {landingExamples.cta.buttonLabel}
             </a>
           </Button>
