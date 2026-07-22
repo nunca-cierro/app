@@ -41,8 +41,7 @@ describe("slugify — tenant slug generation", () => {
 
 describe("createTenant payload shape", () => {
   it("includes auto-generated slug from name", async () => {
-    const { apiClient } = await import("@/lib/api");
-    const mockApiClient = vi.mocked(apiClient);
+    await import("@/lib/api");
 
     // Simulate createTenant behavior — the actual logic transforms data
     const data = {

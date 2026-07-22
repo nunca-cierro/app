@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { getNavItems, type NavItem } from "@/components/layout/sidebar";
 import type { UserRole } from "@/lib/types";
 

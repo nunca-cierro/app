@@ -64,7 +64,7 @@ export function HeroBackground({ images = "negocios" }: HeroBackgroundProps = {}
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, []);
+  }, [heroImages]);
 
   return (
     <div className="absolute inset-0 bg-stone-950">

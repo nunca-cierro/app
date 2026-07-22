@@ -18,17 +18,13 @@ describe("use-auth", () => {
   });
 
   it("exports switchTenant on context type", async () => {
-    const mod = await import("@/hooks/use-auth");
-    const type: Record<string, unknown> = {};
-    // Verify the interface shape by checking the keys from the implementation
-    const provider = mod.AuthProvider;
-    expect(provider).toBeDefined();
+    const { AuthProvider } = await import("@/hooks/use-auth");
+    expect(AuthProvider).toBeDefined();
   });
 
   it("context includes switchTenant method", async () => {
-    const mod = await import("@/hooks/use-auth");
     // Simulate a mock context provider value
-    const mockCtx: mod.AuthContextType = {
+    const mockCtx: import("@/hooks/use-auth").AuthContextType = {
       user: null,
       isLoading: false,
       isAuthenticated: false,
@@ -41,9 +37,8 @@ describe("use-auth", () => {
   });
 
   it("switchTenant failure preserves state", async () => {
-    const mod = await import("@/hooks/use-auth");
     const mockSwitch = vi.fn().mockRejectedValue(new Error("Switch failed"));
-    const mockCtx: mod.AuthContextType = {
+    const mockCtx: import("@/hooks/use-auth").AuthContextType = {
       user: {
         id: "1",
         email: "test@test.com",

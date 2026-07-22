@@ -325,7 +325,7 @@ export default function BeautyDemoPage() {
             {testimonials.map((item) => (
               <article key={item.name} className="rounded-2xl border border-rose-100 bg-white p-6">
                 <p className="text-sm text-amber-500">★★★★★</p>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-600">"{item.text}"</p>
+                <p className="mt-2 text-sm leading-relaxed text-zinc-600">&ldquo;{item.text}&rdquo;</p>
                 <p className="mt-4 font-semibold text-zinc-900">{item.name}</p>
                 <p className="text-xs uppercase tracking-wider text-zinc-500">{item.service}</p>
               </article>

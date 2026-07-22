@@ -23,8 +23,9 @@ function normalizePath(pathname: string): string {
 export function isRouteAllowed(
   role: UserRole,
   pathname: string,
-  tenant_id?: string | null,
+  _tenant_id?: string | null,
 ): boolean {
+  void _tenant_id; // reserved for tenant-scoped route filtering
   const path = normalizePath(pathname);
   if (path === "/auth/login") return true;
 

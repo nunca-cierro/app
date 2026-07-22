@@ -17,9 +17,9 @@ describe("useAgent", () => {
   });
 
   it("updateAgent uses AgentEditFormValues (without tenant_id)", async () => {
-    const mod = await import("@/hooks/use-agent");
+    await import("@/hooks/use-agent");
     // Verify the return type shape — updateAgent should accept AgentEditFormValues
-    const mockReturn: mod.UseAgentReturn = {
+    const mockReturn: import("@/hooks/use-agent").UseAgentReturn = {
       agent: null,
       prompts: [],
       isLoading: false,
