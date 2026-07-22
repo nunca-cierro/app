@@ -40,7 +40,7 @@ export function Header() {
           el.scrollIntoView({ behavior: "smooth", block: "start" });
           const header = document.querySelector("header");
           const headerHeight = header?.offsetHeight || 80;
-          let yOffset = -(headerHeight + 24);
+          const yOffset = -(headerHeight + 24);
           const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
           window.scrollTo({ top: y, behavior: "smooth" });
         }
