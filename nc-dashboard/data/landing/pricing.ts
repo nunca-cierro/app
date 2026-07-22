@@ -13,7 +13,6 @@ export const landingPricing = {
   },
   footerText:
     "Precios de entrada para negocios locales. Podemos ajustarlo según lo que necesites.",
-  installmentNote: "Paga en 2 cuotas sin interés",
   guaranteeText:
     "Si no te gusta el diseño inicial, lo ajustamos hasta que te encante.",
   packages: [
