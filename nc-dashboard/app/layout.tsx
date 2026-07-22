@@ -72,6 +72,18 @@ export default function RootLayout({
         {siteMetadata.preconnectUrls.map((url) => (
           <link key={url} rel="preconnect" href={url} crossOrigin="anonymous" />
         ))}
+        <link
+          rel="preload"
+          href="/websites/Nuncacierro web y movil.png"
+          as="image"
+          fetchPriority="high"
+        />
+        <link
+          rel="preload"
+          href="/negocios/restaurante.jpg"
+          as="image"
+          fetchPriority="high"
+        />
       </head>
       <Analytics />
       <body

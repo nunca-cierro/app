@@ -19,7 +19,7 @@ export const landingPricing = {
   packages: [
     {
       name: "Básico",
-      price: "Desde $700.000 COP",
+      price: "Desde $699.900 COP",
       description:
         "Ideal para negocios que quieren un sitio web y empezar a recibir mensajes.",
       features: [
@@ -32,7 +32,7 @@ export const landingPricing = {
     },
     {
       name: "Profesional",
-      price: "Desde $1.000.000 COP",
+      price: "Desde $999.000 COP",
       description:
         "Para negocios que quieren más visibilidad y más oportunidades de venta.",
       features: [
@@ -46,7 +46,7 @@ export const landingPricing = {
     },
     {
       name: "Premium",
-      price: "Desde $1.800.000 COP",
+      price: "Desde $1.799.000 COP",
       description:
         "Para negocios que quieren una solución completa con acompañamiento.",
       features: [
