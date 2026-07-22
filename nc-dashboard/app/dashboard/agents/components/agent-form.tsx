@@ -6,7 +6,6 @@ import {
   agentFormSchema,
   agentEditFormSchema,
   type AgentFormValues,
-  type AgentEditFormValues,
 } from "@/lib/schemas/agent";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";

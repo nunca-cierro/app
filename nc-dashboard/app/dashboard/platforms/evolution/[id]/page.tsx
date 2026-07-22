@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, use, useEffect, useRef } from "react";
+import { useState, use, useEffect, useRef, useReducer } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePlatformConnection, type EvolutionConnectionState } from "@/hooks/use-platform-connections";
@@ -21,6 +21,10 @@ import {
 } from "lucide-react";
 
 type EvolutionState = "idle" | "connecting" | "qr" | "connected" | "error" | "timeout";
+
+function pollTimedOutReducer(state: boolean, action: boolean): boolean {
+  return action;
+}
 
 export default function PlatformEvolutionDetailPage({
   params: paramsPromise,
@@ -50,7 +54,7 @@ export default function PlatformEvolutionDetailPage({
     isConnecting: boolean;
   }>({ qrCode: null, errorMsg: null, isConnecting: false });
 
-  const [pollTimedOut, setPollTimedOut] = useState(false);
+  const [pollTimedOut, dispatchTimedOut] = useReducer(pollTimedOutReducer, false);
 
   // Derive state from connection data at render time — no useEffect needed
   const derivedState: EvolutionState =
@@ -90,7 +94,7 @@ export default function PlatformEvolutionDetailPage({
           // Timeout — stop polling, show manual-check state
           if (pollRef.current) clearInterval(pollRef.current);
           pollRef.current = null;
-          setPollTimedOut(true);
+          dispatchTimedOut(true);
           return;
         }
 
@@ -108,7 +112,7 @@ export default function PlatformEvolutionDetailPage({
       pollRef.current = null;
     }
     // Reset timeout when status changes
-    setPollTimedOut(false);
+    dispatchTimedOut(false);
   }, [evoStatus, refetchConnection]);
 
   /* ── Connection state check ── */
@@ -183,7 +187,7 @@ export default function PlatformEvolutionDetailPage({
   /* ── Handlers ── */
   const handleConnect = async () => {
     setTransient({ qrCode: null, errorMsg: null, isConnecting: true });
-    setPollTimedOut(false);
+    dispatchTimedOut(false);
 
     try {
       const result = await connectEvolution();
@@ -293,7 +297,7 @@ export default function PlatformEvolutionDetailPage({
                 </p>
                 <p className="text-muted-foreground text-xs text-center max-w-xs">
                   El QR sigue activo. Si tu cliente ya lo escaneó, presiona
-                  "Verificar" para confirmar la conexión.
+                  &ldquo;Verificar&rdquo; para confirmar la conexión.
                 </p>
                 <Button
                   onClick={refetchConnection}

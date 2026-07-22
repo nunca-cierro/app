@@ -22,7 +22,8 @@ describe("agentFormSchema", () => {
   });
 
   it("rejects missing tenant_id in create mode", () => {
-    const { tenant_id: _, ...withoutTenant } = validCreate;
+    const withoutTenant = { ...validCreate } as typeof validCreate;
+    delete withoutTenant.tenant_id;
     const result = agentFormSchema.safeParse(withoutTenant);
     expect(result.success).toBe(false);
   });

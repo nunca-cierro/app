@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { apiClient, ApiError } from "@/lib/api";
 import type { Agent, Prompt } from "@/lib/types";
 import type { BusinessConfig } from "@/lib/types/agent";
-import type { AgentFormValues, AgentEditFormValues, PromptFormValues } from "@/lib/schemas/agent";
+import type { PromptFormValues } from "@/lib/schemas/agent";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
