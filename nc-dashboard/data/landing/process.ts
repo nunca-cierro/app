@@ -24,7 +24,7 @@ export const landingProcess = {
       number: "03",
       title: "Lo activamos",
       description:
-        "Hacemos los ajustes finales y dejamos tu página lista para empezar a generar contactos.",
+        "Hacemos los ajustes finales y dejamos tu sitio listo para empezar a generar contactos.",
     },
     {
       number: "04",

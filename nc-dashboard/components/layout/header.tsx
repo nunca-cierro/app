@@ -7,13 +7,13 @@ import { headerData, siteWhatsAppMessages } from "@/data/site";
 import { cn } from "@/lib/utils";
 
 const automationNav = [
-  { name: "Planes", href: "/automatizacion#planes" },
-  { name: "Contacto", href: "/automatizacion#contacto" },
+  { name: "Planes", href: "/whatsapp#planes" },
+  { name: "Contacto", href: "/whatsapp#contacto" },
 ];
 
 const landingNav = [
-  { name: "Precios", href: "/pagina-web#precios" },
-  { name: "Contacto", href: "/pagina-web#contacto" },
+  { name: "Precios", href: "/inicio#precios" },
+  { name: "Contacto", href: "/inicio#contacto" },
 ];
 
 export function Header() {
@@ -22,7 +22,7 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const { brand, mobileMenu } = headerData;
 
-  const isLanding = pathname === "/" || pathname === "/pagina-web";
+  const isLanding = pathname === "/" || pathname === "/inicio" || pathname === "/pagina-web";
   const navItems = isLanding ? landingNav : automationNav;
   const whatsappUrl = isLanding ? siteWhatsAppMessages.landingUrl : siteWhatsAppMessages.automationUrl;
 
@@ -75,7 +75,7 @@ export function Header() {
       >
         <div className="grid grid-cols-3 items-center h-20 px-4 sm:px-6">
           <a
-            href={isLanding ? "/pagina-web" : "/automatizacion"}
+            href={isLanding ? "/inicio" : "/whatsapp"}
             className="flex items-center gap-2 px-3 py-1 shrink-0 justify-self-start group"
             style={{ letterSpacing: "0.01em" }}
           >
@@ -92,7 +92,7 @@ export function Header() {
           <div className="hidden md:flex justify-center">
             <div className="inline-flex items-center rounded-lg border border-white/15 bg-white/5 p-0.5">
               <a
-                href="/pagina-web"
+                href="/inicio"
                 className={cn(
                   "rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-200 no-underline",
                   isLanding
@@ -103,7 +103,7 @@ export function Header() {
                 Sitio web
               </a>
               <a
-                href="/automatizacion"
+                href="/whatsapp"
                 className={cn(
                   "rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-200 no-underline",
                   !isLanding
@@ -184,7 +184,7 @@ export function Header() {
               {/* Mobile segmented control */}
               <div className="flex items-center rounded-lg border border-white/15 bg-white/5 p-0.5 mb-2">
                 <a
-                  href="/pagina-web"
+                  href="/inicio"
                   onClick={() => setIsMenuOpen(false)}
                   className={cn(
                     "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 text-center no-underline",
@@ -196,7 +196,7 @@ export function Header() {
                   Sitio web
                 </a>
                 <a
-                  href="/automatizacion"
+                  href="/whatsapp"
                   onClick={() => setIsMenuOpen(false)}
                   className={cn(
                     "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 text-center no-underline",

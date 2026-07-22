@@ -28,7 +28,7 @@ function LandingContactChatMockup() {
         <div className="flex justify-start">
           <div className="max-w-[85%] rounded-2xl rounded-bl-sm bg-white px-4 py-2.5 shadow-sm border border-stone-100">
             <p className="text-[13px] text-gray-700 leading-relaxed">
-              Hola, quiero una página web para mi negocio
+              Hola, quiero un sitio web para mi negocio
             </p>
             <span className="text-[9px] text-gray-400 mt-0.5 block text-right">
               10:32 AM
@@ -49,7 +49,7 @@ function LandingContactChatMockup() {
               {[
                 "🏪 ¿A qué se dedica tu negocio?",
                 "📍 ¿En qué ciudad estás?",
-                "⭐ ¿Qué tipo de página te gustaría?",
+                "⭐ ¿Qué tipo de sitio te gustaría?",
                 "📅 ¿Tienes ejemplos de referencia?",
               ].map((item) => (
                 <p

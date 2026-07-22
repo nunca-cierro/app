@@ -70,7 +70,7 @@ export function LandingHero() {
                 return (
                   <span
                     key={idx}
-                    className="hero-fade-chip inline-flex items-center gap-2 text-sm text-amber-100/90 bg-white/8 rounded-xl px-4 py-2 border border-white/15 shadow-sm font-medium backdrop-blur-sm"
+                    className="hero-fade-chip inline-flex items-center gap-2 text-sm text-amber-200 bg-white/10 backdrop-blur-md rounded-xl px-4 py-2 border border-amber-400/20 shadow-lg shadow-amber-900/10 font-medium"
                     style={{ animationDelay: `${0.2 + idx * 0.08}s` }}
                   >
                     <span className="flex items-center justify-center w-4 h-4 rounded-full bg-amber-400/20 text-amber-400 shrink-0">
@@ -93,19 +93,19 @@ export function LandingHero() {
       </div>
 
       {/* Stats or Trust Indicators */}
-      <div className="mt-20 pt-10 border-t border-white/20">
+      <div className="relative z-20 mt-20 pt-10 border-t border-white/20">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           {landingHero.stats.map((stat, idx) => {
             const IconComponent = statIcons[stat.icon];
             return (
               <div
                 key={idx}
-                className="group bg-white border border-stone-200 rounded-xl p-5 flex flex-col items-center text-center shadow-md transition-all duration-200 hover:scale-105 hover:border-amber-400/70 hover:bg-amber-50 cursor-pointer"
+                className="group bg-white/10 backdrop-blur-md border border-white/15 rounded-xl p-5 flex flex-col items-center text-center shadow-md transition-all duration-200 hover:scale-105 hover:border-amber-400/50 hover:bg-white/20 cursor-pointer"
               >
-                <span className="text-3xl md:text-4xl mb-2 text-stone-600 transition-colors group-hover:text-amber-600">
+                <span className="text-3xl md:text-4xl mb-2 text-white/80 transition-colors group-hover:text-amber-400">
                   {IconComponent}
                 </span>
-                <p className="font-semibold text-base md:text-lg text-stone-700 group-hover:text-amber-700">
+                <p className="font-semibold text-base md:text-lg text-white/90 group-hover:text-amber-300">
                   {stat.title}
                 </p>
               </div>
