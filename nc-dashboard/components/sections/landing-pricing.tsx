@@ -62,9 +62,6 @@ export function LandingPricing() {
                 <p className="mt-3 text-3xl font-bold text-stone-800">
                   {plan.price}
                 </p>
-                <p className="mt-1 text-xs font-medium text-amber-600">
-                  {landingPricing.installmentNote}
-                </p>
                 <p className="mt-4 text-sm text-stone-500">
                   {plan.description}
                 </p>
