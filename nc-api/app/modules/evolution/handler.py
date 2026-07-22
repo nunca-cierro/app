@@ -32,6 +32,11 @@ from app.modules.evolution.anti_spam import _resolve_anti_spam_config, spam_dete
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
+# After the admin sends a message, the bot stays silent for this many hours.
+# During this cooldown, incoming customer messages are saved but NOT answered
+# by the AI, giving the admin space to handle the conversation manually.
+ADMIN_COOLDOWN_HOURS: int = 72
+
 PAYMENT_KEYWORDS: list[str] = [
     "pago", "pagar", "qr", "daviplata", "bre-b",
 ]
@@ -105,14 +110,15 @@ async def handle_evolution_incoming(
     """Process a raw Evolution API webhook event.
 
     1. Detect event type — route ``connection.update`` to separate handler
-    2. Extract the text message (ignore non-text / own messages)
+    2. Extract the text message (include both customer and admin messages)
     3. Resolve tenant from *connection*
     4. Find or create conversation
-    5. Save inbound message
-    6. Build system prompt from tenant config
-    7. Generate response via LLM (Groq)
-    8. Send via EvolutionAdapter (with composing + delay)
-    9. Save outbound message
+    5. **Admin messages** (``from_me``) → save silently, mark 72h cooldown
+    6. **Admin cooldown** → if admin wrote <72h ago, silent save and stop
+    7. **Escalation gate** → if escalated+responded, silent save and stop
+    8. Anti-spam, rate limiting, save inbound
+    9. **Escalation check** → if keyword matched, send fallback and stop
+    10. Build system prompt, generate via LLM, send, save outbound
     """
     # ── 0. Route connection.update events ───────────────────────────────
     if event.get("event") == "connection.update":
@@ -162,6 +168,56 @@ async def handle_evolution_incoming(
         session.add(conversation)
         await session.flush()
 
+    # ── Admin message handler (from_me) ──────────────────────────────────
+    # Messages sent FROM the business number. Need to differentiate:
+    #   - Bot messages → Evolution fires a webhook for messages the bot
+    #     itself sent via the API. These already have a matching Message
+    #     row in DB → skip them.
+    #   - Admin messages → manually written from the WhatsApp app → no
+    #     matching row → save and mark 72h cooldown.
+    if parsed.get("from_me"):
+        # Dedup: if this message_id already exists, it's the bot echoing
+        existing_msg = await session.execute(
+            select(Message).where(
+                Message.platform_connection_id == connection.id,
+                Message.external_message_id == parsed["external_message_id"],
+            )
+        )
+        if existing_msg.scalar_one_or_none():
+            logger.debug(
+                "Skipping bot's own fromMe message | id={mid}",
+                mid=parsed["external_message_id"],
+            )
+            return
+
+        # It's the admin — save and mark cooldown
+        admin_msg = Message(
+            tenant_id=tenant_id,
+            conversation_id=conversation.id,
+            platform_connection_id=connection.id,
+            direction="out",
+            external_user_id=parsed["external_user_id"],
+            external_message_id=parsed["external_message_id"],
+            platform="evolution",
+            message_type="text",
+            content=parsed["content"],
+            status="sent",
+            payload={"source": "admin"},
+        )
+        session.add(admin_msg)
+
+        extra = dict(conversation.extra_data or {})
+        extra["admin_last_active_at"] = datetime.now(UTC).isoformat()
+        conversation.extra_data = extra
+
+        conversation.last_message_at = datetime.now(UTC)
+        await session.commit()
+        logger.info(
+            "Admin message saved — bot cooldown 72h | conv={cid}",
+            cid=conversation.id,
+        )
+        return
+
     # ── 1.5. Escalation silence gate ──────────────────────────────────────
     # If conversation is escalated and bot already sent its courtesy
     # response, save the inbound message silently and return.
@@ -188,6 +244,41 @@ async def handle_evolution_incoming(
                 cid=conversation.id,
             )
             return
+
+    # ── 1.5b. Admin cooldown check ─────────────────────────────────────────
+    # If the admin wrote less than 72h ago, the bot stays silent and
+    # lets the human handle the conversation.
+    conv_extra = conversation.extra_data or {}
+    admin_last_active = conv_extra.get("admin_last_active_at")
+    if admin_last_active:
+        try:
+            admin_time = datetime.fromisoformat(admin_last_active)
+            elapsed = datetime.now(UTC) - admin_time
+            if elapsed < timedelta(hours=ADMIN_COOLDOWN_HOURS):
+                remaining_h = int((timedelta(hours=ADMIN_COOLDOWN_HOURS) - elapsed).total_seconds() / 3600)
+                silent_inbound = Message(
+                    tenant_id=tenant_id,
+                    conversation_id=conversation.id,
+                    platform_connection_id=connection.id,
+                    direction="in",
+                    external_user_id=parsed["external_user_id"],
+                    external_message_id=parsed["external_message_id"],
+                    platform="evolution",
+                    message_type="text",
+                    content=parsed["content"],
+                    status="received",
+                )
+                session.add(silent_inbound)
+                conversation.last_message_at = datetime.now(UTC)
+                await session.commit()
+                logger.info(
+                    "Admin cooldown — silent save ({h}h remaining) | conv={cid}",
+                    h=remaining_h,
+                    cid=conversation.id,
+                )
+                return
+        except (ValueError, TypeError):
+            pass
 
     # ── 2. Anti-spam check (auto-reply + flood) ─────────────────────────
     spam_payload: dict | None = None
@@ -563,6 +654,57 @@ async def handle_evolution_incoming(
         )
         system_prompt += welcome_hint
 
+    # ── 6a. Escalation check — BEFORE AI (Professional+ plans) ─────────────
+    # If the incoming message matches escalation keywords, send the
+    # fallback message immediately and stop — don't let the AI respond.
+    if agent and agent.business_config:
+        esc_keywords = agent.business_config.get("keywords_to_escalate") or []
+        fallback = agent.business_config.get("fallback_message") or (
+            "Un asesor humano te atenderá en breve. "
+            "Por favor espera mientras te conectamos."
+        )
+        if any(kw.lower() in parsed["content"].lower() for kw in esc_keywords):
+            conversation.status = "escalated"
+
+            adapter = EvolutionAdapter()
+            try:
+                evo_response = await adapter.send_message(
+                    connection=connection,
+                    to=parsed["external_user_id"],
+                    text=fallback,
+                )
+                evo_msg_id = evo_response.get("key", {}).get("id") or evo_response.get("id")
+                outbound_status = "sent"
+            except Exception:
+                evo_msg_id = None
+                outbound_status = "failed"
+
+            outbound_msg = Message(
+                tenant_id=tenant_id,
+                conversation_id=conversation.id,
+                platform_connection_id=connection.id,
+                direction="out",
+                external_user_id=parsed["external_user_id"],
+                external_message_id=evo_msg_id,
+                platform="evolution",
+                message_type="text",
+                content=fallback,
+                status=outbound_status,
+            )
+            session.add(outbound_msg)
+
+            extra = dict(conversation.extra_data or {})
+            extra["escalation_responded"] = True
+            conversation.extra_data = extra
+
+            conversation.last_message_at = datetime.now(UTC)
+            await session.commit()
+            logger.info(
+                "Escalation — fallback sent, AI skipped | conv={cid} | tenant={tid}",
+                cid=conversation.id, tid=tenant_id,
+            )
+            return
+
     # ── 6. Generate response via LLM ────────────────────────────────────
     try:
         response = await groq_client.generate(
@@ -578,18 +720,6 @@ async def handle_evolution_incoming(
             "En este momento tengo problemas técnicos. "
             "Por favor intenta de nuevo en unos minutos. ¡Gracias!"
         )
-
-    # ── 6b. Escalation check for Professional+ plans ──────────────────────
-    # If the incoming message matches escalation keywords, mark the
-    # conversation as escalated so the frontend can prioritize it.
-    if agent and agent.business_config:
-        esc_keywords = agent.business_config.get("keywords_to_escalate") or []
-        if any(kw.lower() in parsed["content"].lower() for kw in esc_keywords):
-            conversation.status = "escalated"
-            logger.info(
-                "Conversation escalated | conv={cid} | tenant={tid} | plan={plan}",
-                cid=conversation.id, tid=tenant_id, plan=tenant.plan,
-            )
 
     # ── 7. Send via EvolutionAdapter (composing + delay + text) ─────────
     adapter = EvolutionAdapter()

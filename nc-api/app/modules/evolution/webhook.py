@@ -47,9 +47,12 @@ TEXT_MESSAGE_TYPES = {"conversation", "extendedTextMessage"}
 def extract_evolution_message(event: EvolutionEvent) -> ParsedMessage:
     """Extract a text message from an Evolution API webhook event.
 
+    Includes both customer messages (``fromMe == false``) and admin
+    messages (``fromMe == true``) so the handler can track when the
+    business owner is actively chatting with a client.
+
     Ignores:
     - Events other than ``messages.upsert``
-    - Messages sent by the bot itself (``fromMe == true``)
     - Non-text message types (image, audio, document, etc.)
 
     Args:
@@ -58,8 +61,8 @@ def extract_evolution_message(event: EvolutionEvent) -> ParsedMessage:
     Returns:
         A dict with ``external_user_id`` (cleaned phone number),
         ``external_message_id``, ``content``, ``remote_jid`` (full JID),
-        ``instance_name``, and ``push_name`` — or ``None`` if the event
-        does not contain a usable text message.
+        ``instance_name``, ``push_name``, and ``from_me`` (bool) — or
+        ``None`` if the event does not contain a usable text message.
     """
     # ── 1. Validate event type ───────────────────────────────────────────
     event_name = event.get("event", "")
@@ -84,15 +87,7 @@ def extract_evolution_message(event: EvolutionEvent) -> ParsedMessage:
         logger.debug("Ignoring Evolution event with missing key fields")
         return None
 
-    # ── 3. Skip own messages ─────────────────────────────────────────────
-    if from_me:
-        logger.debug(
-            "Ignoring own message (fromMe=True) | jid={jid}",
-            jid=remote_jid,
-        )
-        return None
-
-    # ── 4. Extract text content ──────────────────────────────────────────
+    # ── 3. Extract text content ──────────────────────────────────────────
     message = data.get("message") or {}
     message_type: str = data.get("messageType", "") or ""
 
@@ -137,6 +132,7 @@ def extract_evolution_message(event: EvolutionEvent) -> ParsedMessage:
         "remote_jid": remote_jid,
         "instance_name": instance_name,
         "push_name": push_name,
+        "from_me": from_me,
     }
 
 

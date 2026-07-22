@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAgentTemplates } from "@/hooks/use-agent-templates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ChefHat, Sparkles, Utensils, Bot } from "lucide-react";
+import { Loader2, ChefHat, Sparkles, Utensils } from "lucide-react";
 import type { AgentTemplate } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
@@ -14,7 +14,6 @@ const CATEGORIES = [
   { value: "restaurante", label: "Restaurante", Icon: Utensils },
   { value: "panaderia", label: "Panadería", Icon: ChefHat },
   { value: "hamburgueseria", label: "Hamburguesería", Icon: Sparkles },
-  { value: "nuncacierro", label: "NuncaCierro", Icon: Bot },
 ] as const;
 
 /* ------------------------------------------------------------------ */
