@@ -1,8 +1,8 @@
 export const landingHero = {
   sectionId: "inicio",
-  title: "Más clientes por WhatsApp con una página web para tu negocio",
+  title: "Más clientes para tu negocio con un sitio web profesional",
   subtitle:
-    "Te creamos un sitio web que lleva a tus clientes directo a WhatsApp para que te escriban, te pregunten y compren más rápido. Sin complicaciones.",
+    "Te creamos un sitio web diseñado para atraer, convertir y vender. Presencia profesional que hace crecer tu negocio todos los días. Sin complicaciones.",
   cta: {
     primary: {
       label: "Quiero más clientes",

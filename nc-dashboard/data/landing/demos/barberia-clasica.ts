@@ -9,6 +9,6 @@ export const barberiaClasicaDemo: DemoItem = {
   shortDescription:
     "Imagen sólida de marca para barberías que buscan vender más citas.",
   longDescription:
-    "Demo de páginas web para negocios de barbería con identidad visual fuerte, acceso rápido a WhatsApp y estructura enfocada en cerrar clientes desde móvil.",
+    "Demo de sitios web para negocios de barbería con identidad visual fuerte, acceso rápido a WhatsApp y estructura enfocada en cerrar clientes desde móvil.",
   features: ["Reserva rápida", "Galería de estilos", "Integración WhatsApp"],
 };

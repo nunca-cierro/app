@@ -25,9 +25,9 @@ export const siteBanner = siteContactInfo;
 
 export const siteWhatsAppMessages = {
   automation:
-    "Hola, vi NuncaCierro y quiero automatizar mi negocio.",
+    "Hola, quiero información sobre los planes de automatización de WhatsApp.",
   landing:
-    "Hola, quiero un sitio web para mi negocio.",
+    "Hola, quiero información sobre los precios de los sitios web.",
   get automationUrl() {
     return `https://wa.me/${siteContactInfo.whatsappNumber}?text=${encodeURIComponent(this.automation)}`;
   },
@@ -133,12 +133,12 @@ export const siteExamples = {
   label: "Ejemplos",
   title: "Así funciona con cada negocio",
   subtitle:
-    "Cada demo incluye página web profesional + automatización por WhatsApp.",
+    "Cada demo incluye sitio web profesional + automatización por WhatsApp.",
   secondarySubtitle:
     "Combinamos diseño web con automatización inteligente para que cada negocio atienda 24/7 y nunca pierda un cliente.",
   imageAltPrefix: "Demo",
   whatsappMessageTemplate:
-    "Hola, quiero una página + automatización similar al demo {demoName}. Quiero que mi negocio atienda 24/7.",
+    "Hola, quiero un sitio + automatización similar al demo {demoName}. Quiero que mi negocio atienda 24/7.",
   buttons: {
     viewDemo: "Ver Demo",
     quoteSimilar: "Quiero una así",
@@ -152,7 +152,7 @@ export const siteExamples = {
   cta: {
     title: "¿Quieres una solución como estas?",
     description:
-      "Te diseñamos una página con automatización WhatsApp a medida, con estructura de venta y branding sólido para que tu negocio nunca cierre.",
+      "Te diseñamos un sitio con automatización WhatsApp a medida, con estructura de venta y branding sólido para que tu negocio nunca cierre.",
     buttonLabel: "Cotizar por WhatsApp",
   },
   demos: [
@@ -426,7 +426,7 @@ export const siteFaq = {
     {
       question: "¿Cuánto tiempo toma tenerlo listo?",
       answer:
-        "El Bot WhatsApp lo configuramos en 2 horas hábiles. Los planes más avanzados pueden tomar hasta una semana, dependiendo de la página web.",
+        "El Bot WhatsApp lo configuramos en 2 horas hábiles. Los planes más avanzados pueden tomar hasta una semana, dependiendo del sitio web.",
     },
     {
       question: "¿Necesito conocimientos técnicos para usarlo?",
@@ -511,7 +511,7 @@ export const siteContact = {
 export const landingData = {
   hero: {
     sectionId: "inicio-landing",
-    title: "Más clientes por WhatsApp con una página web para tu negocio",
+    title: "Más clientes por WhatsApp con un sitio web para tu negocio",
     subtitle:
       "Te creamos un sitio web que lleva a tus clientes directo a WhatsApp para que te escriban, te pregunten y compren más rápido. Sin complicaciones.",
     cta: {
@@ -590,7 +590,7 @@ export const landingData = {
         number: "03",
         title: "Lo activamos",
         description:
-          "Hacemos los ajustes finales y dejamos tu página lista para empezar a generar contactos.",
+          "Hacemos los ajustes finales y dejamos tu sitio listo para empezar a generar contactos.",
       },
       {
         number: "04",
@@ -605,12 +605,12 @@ export const landingData = {
     sectionId: "ejemplos-landing",
     label: "Ejemplos",
     title: "Así podría verse tu sitio web",
-    subtitle: "Estos son ejemplos de páginas que podemos hacer para tu negocio.",
+    subtitle: "Estos son ejemplos de sitios web que podemos hacer para tu negocio.",
     secondarySubtitle:
-      "Creamos páginas web para negocios con enfoque en resultados, diseño profesional y contenido optimizado para atraer clientes.",
+      "Creamos sitios web para negocios con enfoque en resultados, diseño profesional y contenido optimizado para atraer clientes.",
     imageAltPrefix: "Demo",
     whatsappMessageTemplate:
-      "Hola, quiero una página web para mi negocio similar al demo {demoName}. Quiero un diseño profesional para mi marca.",
+      "Hola, quiero un sitio web para mi negocio similar al demo {demoName}. Quiero un diseño profesional para mi marca.",
     buttons: {
       viewDemo: "Ver Demo",
       quoteSimilar: "Quiero una web así",
@@ -624,7 +624,7 @@ export const landingData = {
     cta: {
       title: "¿Quieres una web como estas?",
       description:
-        "Te diseñamos una página a medida con estructura de venta, branding sólido y enfoque de resultados para tu negocio.",
+        "Te diseñamos un sitio a medida con estructura de venta, branding sólido y enfoque de resultados para tu negocio.",
       buttonLabel: "Cotizar por WhatsApp",
     },
     demos: [
@@ -661,7 +661,7 @@ export const landingData = {
         shortDescription:
           "Sitio de alto impacto para captar leads de clases y planes mensuales.",
         longDescription:
-          "Ejemplo de página web profesional para gimnasios que necesitan más clientes, mejor posicionamiento y una propuesta clara para conseguir miembros.",
+          "Ejemplo de sitio web profesional para gimnasios que necesitan más clientes, mejor posicionamiento y una propuesta clara para conseguir miembros.",
         features: ["Formulario de contacto", "Planes destacados", "Aparece en Google"],
       },
       {
@@ -673,7 +673,7 @@ export const landingData = {
         shortDescription:
           "Imagen sólida de marca para barberías que buscan vender más citas.",
         longDescription:
-          "Demo de páginas web para negocios de barbería con identidad visual fuerte, acceso rápido a WhatsApp y estructura enfocada en cerrar clientes desde móvil.",
+          "Demo de sitios web para negocios de barbería con identidad visual fuerte, acceso rápido a WhatsApp y estructura enfocada en cerrar clientes desde móvil.",
         features: ["Reserva rápida", "Galería de estilos", "Integración WhatsApp"],
       },
       {
@@ -775,7 +775,7 @@ export const landingData = {
         { item: "Botón WhatsApp integrado", included: [true, true, true] },
         { item: "Mensaje claro para vender", included: [true, true, true] },
         { item: "Optimización de mensajes", included: [false, true, true] },
-        { item: "Más secciones en la página", included: [false, true, true] },
+        { item: "Más secciones en el sitio", included: [false, true, true] },
         { item: "Acompañamiento y ajustes", included: [false, false, true] },
       ],
     },
@@ -892,7 +892,7 @@ export const landingData = {
     label: "Contacto",
     title: "Hablemos de tu negocio",
     subtitle:
-      "Cuéntanos qué necesitas y te mostramos cómo una página web puede ayudarte a recibir más clientes por WhatsApp.",
+      "Cuéntanos qué necesitas y te mostramos cómo un sitio web puede ayudarte a recibir más clientes por WhatsApp.",
     contacts: [
       {
         icon: "Mail",

@@ -9,6 +9,6 @@ export const gymPerformanceDemo: DemoItem = {
   shortDescription:
     "Sitio de alto impacto para captar leads de clases y planes mensuales.",
   longDescription:
-    "Ejemplo de página web profesional para gimnasios que necesitan más clientes, mejor posicionamiento y una propuesta clara para conseguir miembros.",
+    "Ejemplo de sitio web profesional para gimnasios que necesitan más clientes, mejor posicionamiento y una propuesta clara para conseguir miembros.",
   features: ["Formulario de contacto", "Planes destacados", "Aparece en Google"],
 };

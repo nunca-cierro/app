@@ -5,9 +5,11 @@ import { siteBanner, siteWhatsappFloat } from "@/data/site";
 
 export type Mode = "automation" | "landing";
 
-const automationMessage = encodeURIComponent(siteWhatsappFloat.whatsappText);
+const automationMessage = encodeURIComponent(
+  "Hola, vi NuncaCierro y quiero información sobre los planes de automatización.\n\nMi negocio es: \nCiudad: \n¿Qué problema tengo?: \n\n¿Qué información necesitas de mí?",
+);
 const landingMessage = encodeURIComponent(
-  "Hola, vi NuncaCierro y quiero una página web con WhatsApp para mi negocio.\n\nMi negocio es: \nCiudad: \n¿Qué tipo de página necesito?: \n\n¿Qué información necesitas de mí?",
+  "Hola, vi NuncaCierro y quiero información sobre los precios de los sitios web.\n\nMi negocio es: \nCiudad: \n¿Qué tipo de sitio necesito?: \n\n¿Qué información necesitas de mí?",
 );
 
 type Props = {

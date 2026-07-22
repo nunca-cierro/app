@@ -1,7 +1,7 @@
 export const landingServices = {
   sectionId: "servicios",
   label: "Servicios",
-  title: "Un servicio simple para conseguir más clientes por WhatsApp",
+  title: "Un servicio simple para conseguir más clientes con tu sitio web",
   badge: "Incluido en todos los planes, sin costos ocultos.",
   services: [
     {

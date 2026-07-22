@@ -67,10 +67,10 @@ export function HeroBackground({ images = "negocios" }: HeroBackgroundProps = {}
   }, []);
 
   return (
-    <div className="absolute inset-0">
+    <div className="absolute inset-0 bg-stone-950">
       {/* Current image — always visible */}
       <div
-        className="absolute inset-0 bg-cover bg-center"
+        className="absolute inset-0 bg-cover bg-center bg-stone-950"
         style={{
           backgroundImage: `url('${heroImages[currentIndex]}')`,
           zIndex: 2,

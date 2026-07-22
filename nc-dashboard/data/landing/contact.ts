@@ -3,7 +3,7 @@ export const landingContact = {
   label: "Contacto",
   title: "Hablemos de tu negocio",
   subtitle:
-    "Cuéntanos qué necesitas y te mostramos cómo una página web puede ayudarte a recibir más clientes por WhatsApp.",
+    "Cuéntanos qué necesitas y te mostramos cómo un sitio web puede ayudarte a recibir más clientes por WhatsApp.",
   contacts: [
     {
       icon: "Mail",

@@ -3,7 +3,7 @@ export const landingPricing = {
   label: "Precios",
   title: "Planes claros para empezar hoy",
   subtitle:
-    "Elige el plan según tu momento. Todos están enfocados en ayudarte a recibir más clientes por WhatsApp.",
+    "Elige el plan según tu momento. Todos están enfocados en ayudarte a recibir más clientes con tu sitio web.",
   whatsappBaseUrl: "https://wa.me/573219615338?text=Me interesa el plan ",
   buttonText: "Quiero este plan",
   cardLabels: {
@@ -13,6 +13,7 @@ export const landingPricing = {
   },
   footerText:
     "Precios de entrada para negocios locales. Podemos ajustarlo según lo que necesites.",
+  installmentNote: "Paga en 2 cuotas sin interés",
   guaranteeText:
     "Si no te gusta el diseño inicial, lo ajustamos hasta que te encante.",
   packages: [
@@ -35,7 +36,7 @@ export const landingPricing = {
       description:
         "Para negocios que quieren más visibilidad y más oportunidades de venta.",
       features: [
-        "Página con más secciones",
+        "Sitio con más secciones",
         "Botón WhatsApp + llamada a la acción",
         "Optimización de mensajes y textos",
         "Hasta 2 correcciones de contenido",
@@ -49,7 +50,7 @@ export const landingPricing = {
       description:
         "Para negocios que quieren una solución completa con acompañamiento.",
       features: [
-        "Página completa con diseño exclusivo",
+        "Sitio completo con diseño exclusivo",
         "Botón WhatsApp + enlaces directos",
         "Posicionamiento en Google",
         "Hasta 3 correcciones",
@@ -70,7 +71,7 @@ export const landingPricing = {
       { item: "Botón WhatsApp integrado", included: [true, true, true] },
       { item: "Mensaje claro para vender", included: [true, true, true] },
       { item: "Optimización de mensajes", included: [false, true, true] },
-      { item: "Más secciones en la página", included: [false, true, true] },
+      { item: "Más secciones en el sitio", included: [false, true, true] },
       { item: "Acompañamiento y ajustes", included: [false, false, true] },
     ],
   },
