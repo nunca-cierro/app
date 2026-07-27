@@ -83,52 +83,29 @@ export const landingPricing = {
       "Hola, me interesa el extra {extraName}. Quisiera más información y el precio final.",
     items: [
       {
-        name: "Dominio + Hosting Gestionado",
+        name: "Gestión de Dominio y Publicación",
         icon: "🌐",
         description:
-          "Asegura una base técnica confiable para que tu web se vea profesional desde el primer día.",
+          "Nos encargamos de publicar tu sitio web y dejarlo funcionando con tu dominio.",
         includes: [
-          "Dominio .com + alojamiento seguro",
-          "Configuración completa para salir en línea sin fricción",
-          "Soporte básico inicial para acompañar el arranque",
+          "Publicación del sitio en internet 24/7",
+          "Conexión con tu dominio .com (lo pagas aparte)",
+          "Configuración técnica completa para que esté en línea",
+          "Sin que tengas que hacer nada técnico",
         ],
-        price: "Desde $250.000 COP / año",
+        price: "Desde $150.000 COP / año",
       },
       {
         name: "Mantenimiento y Soporte Mensual",
         icon: "🛠️",
         description:
-          "Mantén tu sitio actualizado, seguro y ágil sin distraerte de la operación del negocio.",
+          "Tu sitio siempre actualizado y funcionando. Ideal si no querés meterte en temas técnicos.",
         includes: [
-          "Cambios pequeños de contenido cuando lo necesites",
-          "Actualizaciones y seguridad para una web estable",
-          "Soporte por WhatsApp con ajustes rápidos",
+          "Cambios de contenido cuando lo necesites (texto, imágenes)",
+          "Supervisión de estabilidad y seguridad",
+          "Soporte por WhatsApp con respuesta rápida",
         ],
-        price: "Desde $150.000 COP / mes",
-      },
-      {
-        name: "Pack de Reels Publicitarios",
-        icon: "🎬",
-        description:
-          "Contenido corto pensado para captar atención y reforzar tu presencia comercial en redes.",
-        includes: [
-          "3 a 5 videos verticales (15-30 segundos)",
-          "Producción rápida con herramientas modernas (IA + edición)",
-          "Texto promocional y edición dinámica lista para publicar",
-        ],
-        price: "Desde $450.000 COP",
-      },
-      {
-        name: "Pack de Contenido para Redes Sociales",
-        icon: "📣",
-        description:
-          "Publica con más consistencia y una imagen de marca clara para mejorar tu comunicación.",
-        includes: [
-          "10 diseños de posts listos para usar",
-          "5 historias (stories) en formato de alto impacto",
-          "Estilo de marca y textos listos para publicar",
-        ],
-        price: "Desde $350.000 COP",
+        price: "Desde $180.000 COP / mes",
       },
     ],
   },
