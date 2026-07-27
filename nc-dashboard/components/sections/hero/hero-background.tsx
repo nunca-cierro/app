@@ -34,6 +34,14 @@ export function HeroBackground({ images = "negocios" }: HeroBackgroundProps = {}
   const currentRef = useRef(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const rafRef = useRef<number | null>(null);
+
+  // Preload next image whenever the current image changes
+  useEffect(() => {
+    const nextIndex = (currentIndex + 1) % heroImages.length;
+    const img = new Image();
+    img.src = heroImages[nextIndex];
+  }, [currentIndex, heroImages]);
 
   useEffect(() => {
     intervalRef.current = setInterval(() => {
@@ -41,19 +49,19 @@ export function HeroBackground({ images = "negocios" }: HeroBackgroundProps = {}
       const next = (prev + 1) % heroImages.length;
       currentRef.current = next;
 
-      // Step 1: Show previous image (renders at opacity 1, no transition yet)
+      // Step 1: Show previous image on top (opacity 1), new image behind it
       setPreviousIndex(prev);
       setCurrentIndex(next);
       setFadeOut(false);
 
-      // Step 2: On the next frame, trigger the fade-out transition
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
+      // Step 2: Next frame — trigger the fade-out on the previous image
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = requestAnimationFrame(() => {
           setFadeOut(true);
         });
       });
 
-      // Step 3: After fade completes, clean up
+      // Step 3: After fade completes, remove the previous image layer
       timeoutRef.current = setTimeout(() => {
         setPreviousIndex(null);
         setFadeOut(false);
@@ -63,12 +71,13 @@ export function HeroBackground({ images = "negocios" }: HeroBackgroundProps = {}
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     };
   }, [heroImages]);
 
   return (
     <div className="absolute inset-0 bg-stone-950">
-      {/* Current image — always visible */}
+      {/* Current image — always rendered behind */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-stone-950"
         style={{
@@ -77,14 +86,15 @@ export function HeroBackground({ images = "negocios" }: HeroBackgroundProps = {}
         }}
       />
 
-      {/* Previous image — fades out when transitioning */}
+      {/* Previous image — fades out on top; bg-stone-950 prevents transparent flash */}
       {previousIndex !== null && (
         <div
-          className="absolute inset-0 bg-cover bg-center"
+          className="absolute inset-0 bg-cover bg-center bg-stone-950"
           style={{
             backgroundImage: `url('${heroImages[previousIndex]}')`,
             opacity: fadeOut ? 0 : 1,
             transition: fadeOut ? `opacity ${FADE_DURATION}ms ease-in-out` : "none",
+            willChange: "opacity",
             zIndex: 3,
           }}
         />
