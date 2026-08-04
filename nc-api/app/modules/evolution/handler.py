@@ -29,6 +29,10 @@ from app.modules.evolution.webhook import (
 )
 from app.modules.evolution.adapter import EvolutionAdapter
 from app.modules.evolution.anti_spam import _resolve_anti_spam_config, spam_detector
+from app.modules.platform_connections.sse import (
+    EVENT_CONNECTION_STATE_CHANGED,
+    notify_subscribers,
+)
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
@@ -94,6 +98,23 @@ async def handle_evolution_connection_update(
         connection.status = "active"
 
     session.add(connection)
+    # Persist the change — without this, the state update is rolled back
+    # when the webhook request's session closes and the dashboard never
+    # sees the new status.
+    await session.commit()
+
+    # Push to any SSE subscribers so the dashboard updates instantly
+    # instead of polling.
+    await notify_subscribers(
+        str(connection.id),
+        EVENT_CONNECTION_STATE_CHANGED,
+        {
+            "connection_id": str(connection.id),
+            "state": state,
+            "status": mapped,
+        },
+    )
+
     logger.info(
         "Evolution connection {id} | state={state} → status={status}",
         id=connection.id,
@@ -476,7 +497,7 @@ async def handle_evolution_incoming(
         try:
             evo_response = await adapter.send_message(
                 connection=connection,
-                to=parsed["external_user_id"],
+                to=parsed["remote_jid"],
                 text=payment_msg,
             )
             evo_msg_id = evo_response.get("key", {}).get("id") or evo_response.get("id")
@@ -613,7 +634,7 @@ async def handle_evolution_incoming(
         try:
             evo_response = await adapter.send_message(
                 connection=connection,
-                to=parsed["external_user_id"],
+                to=parsed["remote_jid"],
                 text=matched_answer,
             )
             evo_msg_id = evo_response.get("key", {}).get("id") or evo_response.get("id")
@@ -709,7 +730,7 @@ async def handle_evolution_incoming(
             try:
                 evo_response = await adapter.send_message(
                     connection=connection,
-                    to=parsed["external_user_id"],
+                    to=parsed["remote_jid"],
                     text=fallback,
                 )
                 evo_msg_id = evo_response.get("key", {}).get("id") or evo_response.get("id")
@@ -760,12 +781,27 @@ async def handle_evolution_incoming(
             "Por favor intenta de nuevo en unos minutos. ¡Gracias!"
         )
 
+    # ── 6b. Empty-response guard ─────────────────────────────────────────
+    # Groq occasionally returns an empty/whitespace-only completion. Sending
+    # blank text to Evolution fails with 400 "Text is required" and the
+    # customer receives NO reply. Substitute a fallback so the outbound
+    # message always carries content.
+    if not response.strip():
+        logger.warning(
+            "LLM returned empty response — using fallback | conn={conn}",
+            conn=connection.id,
+        )
+        response = (
+            "Disculpa, no pude procesar tu mensaje. "
+            "¿Podrías intentarlo de nuevo?"
+        )
+
     # ── 7. Send via EvolutionAdapter (composing + delay + text) ─────────
     adapter = EvolutionAdapter()
     try:
         evo_response = await adapter.send_message(
             connection=connection,
-            to=parsed["external_user_id"],
+            to=parsed["remote_jid"],
             text=response,
         )
         # Evolution API returns the message key in the response

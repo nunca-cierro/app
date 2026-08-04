@@ -97,7 +97,12 @@ class EvolutionAdapter(PlatformAdapter):
             connection: The ``PlatformConnection`` model instance.
                 Credentials must contain ``base_url``, ``api_key``, and
                 ``instance_name``.
-            to: Recipient phone number (e.g. ``573001234567``).
+            to: Recipient as the FULL JID as delivered in the webhook
+                (e.g. ``573001234567@s.whatsapp.net`` or
+                ``201442656784510@lid``). Evolution API v2 resolves bare
+                numbers to ``@s.whatsapp.net`` and rejects LID contacts
+                (``400 [object Object]`` / ``exists: false``), so the
+                suffix MUST be preserved — never strip it before sending.
             text: Message body.
             **kwargs: Optional overrides —
                 ``delay_ms`` (int): force a specific delay in ms.
