@@ -42,105 +42,145 @@ export interface NavItem {
   roles?: UserRole[];
 }
 
+export interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
 /* ------------------------------------------------------------------ */
-/*  Pure: getNavItems(role) — testable without React                   */
+/*  Pure: getNavSections(role) + getNavItems(role) — testable          */
 /* ------------------------------------------------------------------ */
 
 const CLIENT_ROUTES: UserRole[] = ["client", "agent"];
 const ADMIN_ROUTES: UserRole[] = ["superadmin", "admin", "agent", "client"];
 
-export function getNavItems(role?: UserRole | null, plan?: string | null): NavItem[] {
+function filterChildren(item: NavItem, role?: UserRole | null): NavItem {
+  if (!item.children) return item;
+  return {
+    ...item,
+    children: item.children.filter(
+      (child) => !child.roles || (role != null && child.roles.includes(role)),
+    ),
+  };
+}
+
+export function getNavSections(
+  role?: UserRole | null,
+  plan?: string | null,
+): NavSection[] {
+  void plan; // plan controls actions (capabilities), never navigation
   const isClientOrAgent = role && CLIENT_ROUTES.includes(role);
 
-  const items: NavItem[] = [];
+  const sections: NavSection[] = [];
 
-  // ── Sección: General ──
-  items.push({
-    href: "/dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    roles: ADMIN_ROUTES,
+  // ── General ──
+  sections.push({
+    label: "General",
+    items: [
+      {
+        href: "/dashboard",
+        label: "Dashboard",
+        icon: LayoutDashboard,
+        roles: ADMIN_ROUTES,
+      },
+    ],
   });
 
-  // Clients with Basic plan: no dashboard access
-  if (role === "client" && plan === "basic") {
-    return []; // No navigation items — access denied
-  }
-
-  // ── Sección: Gestión (solo superadmin/admin) ──
+  // ── Gestión (solo superadmin/admin) ──
   if (!isClientOrAgent) {
-    // Negocios
-    items.push({
-      href: "/dashboard/tenants",
-      label: "Negocios",
-      icon: Building2,
-      roles: ["superadmin", "admin"],
-    });
-
-    // Agentes IA
-    items.push({
-      href: "/dashboard/agents",
-      label: "Agentes",
-      icon: Bot,
-      roles: ["superadmin", "admin"],
-    });
-
-    // Conexiones (plataformas)
-    items.push({
-      href: "/dashboard/platforms",
-      label: "Conexiones",
-      icon: Phone,
-      roles: ["superadmin", "admin"],
-      children: [
-        { href: "/dashboard/platforms/evolution", label: "WhatsApp", icon: Phone, roles: ["superadmin", "admin"] },
-        { href: "/dashboard/platforms/whatsapp", label: "Meta API", icon: Phone, roles: ["superadmin"] },
-        { href: "/dashboard/platforms/telegram", label: "Telegram", icon: Send, roles: ["superadmin"] },
+    sections.push({
+      label: "Gestión",
+      items: [
+        {
+          href: "/dashboard/tenants",
+          label: "Negocios",
+          icon: Building2,
+          roles: ["superadmin", "admin"],
+        },
+        {
+          href: "/dashboard/agents",
+          label: "Agentes",
+          icon: Bot,
+          roles: ["superadmin", "admin"],
+        },
+        {
+          href: "/dashboard/platforms",
+          label: "Conexiones",
+          icon: Phone,
+          roles: ["superadmin", "admin"],
+          children: [
+            { href: "/dashboard/platforms/evolution", label: "WhatsApp", icon: Phone, roles: ["superadmin", "admin"] },
+            { href: "/dashboard/platforms/whatsapp", label: "Meta API", icon: Phone, roles: ["superadmin"] },
+            { href: "/dashboard/platforms/telegram", label: "Telegram", icon: Send, roles: ["superadmin"] },
+          ],
+        },
       ],
     });
   }
 
-  // ── Sección: Comunicación ──
-  items.push({
-    href: "/dashboard/conversations",
-    label: "Conversaciones",
-    icon: MessageSquare,
-    roles: ADMIN_ROUTES,
+  // ── Comunicación ──
+  sections.push({
+    label: "Comunicación",
+    items: [
+      {
+        href: "/dashboard/conversations",
+        label: "Conversaciones",
+        icon: MessageSquare,
+        roles: ADMIN_ROUTES,
+      },
+    ],
   });
 
-  // ── Sección: Admin (solo superadmin) ──
+  // ── Administración (solo superadmin) ──
   if (role === "superadmin") {
-    items.push({
-      href: "/dashboard/admin",
-      label: "Admin",
-      icon: Shield,
-      roles: ["superadmin"],
-      children: [
-        { href: "/dashboard/admin/users", label: "Usuarios", icon: Users, roles: ["superadmin"] },
+    sections.push({
+      label: "Administración",
+      items: [
+        {
+          href: "/dashboard/admin",
+          label: "Admin",
+          icon: Shield,
+          roles: ["superadmin"],
+          children: [
+            { href: "/dashboard/admin/users", label: "Usuarios", icon: Users, roles: ["superadmin"] },
+          ],
+        },
       ],
     });
   }
 
-  return items.map((item) => {
-    if (item.children) {
-      return {
-        ...item,
-        children: item.children.filter((child) => !child.roles || (role != null && child.roles.includes(role))),
-      };
-    }
-    return item;
-  });
+  return sections.map((section) => ({
+    ...section,
+    items: section.items
+      .filter(
+        (item) => !item.roles || (role != null && item.roles.includes(role)),
+      )
+      .map((item) => filterChildren(item, role)),
+  }));
+}
+
+export function getNavItems(role?: UserRole | null, plan?: string | null): NavItem[] {
+  return getNavSections(role, plan).flatMap((section) => section.items);
 }
 
 /* ------------------------------------------------------------------ */
 /*  Sidebar component                                                   */
 /* ------------------------------------------------------------------ */
 
-export function Sidebar() {
+export function Sidebar({
+  onNavigate,
+  headerAction,
+}: {
+  /** Called after navigating to a route (used to close the mobile drawer). */
+  onNavigate?: () => void;
+  /** Optional action rendered at the right of the logo row (mobile close button). */
+  headerAction?: React.ReactNode;
+}) {
   const pathname = usePathname();
   const { user, switchTenant, logout } = useAuth();
   const effectiveRole = user?.current_role ?? user?.role ?? null;
   const plan = user?.plan ?? null;
-  const navItems = getNavItems(effectiveRole, plan);
+  const navSections = getNavSections(effectiveRole, plan);
 
   /* ── Change password state ── */
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -180,42 +220,71 @@ export function Sidebar() {
     }
   };
 
+  const initials = (user?.name ?? user?.email ?? "?")
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+
   return (
-    <aside className="flex h-full w-56 flex-col border-r bg-background">
+    <aside className="flex h-full w-60 flex-col border-r bg-sidebar text-sidebar-foreground">
       {/* ── Logo ── */}
-      <div className="flex h-14 items-center border-b px-4">
-        <span className="text-lg font-bold tracking-tight">
+      <div className="flex h-14 items-center gap-2.5 border-b px-4">
+        <span className="flex size-6 items-center justify-center rounded-md bg-primary text-[11px] font-bold text-primary-foreground">
+          NC
+        </span>
+        <span className="flex-1 text-base font-bold tracking-tight">
           NuncaCierro
         </span>
+        {headerAction}
       </div>
 
       {/* ── Navigation ── */}
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {navItems.map((item) => {
-          if (item.children) {
-            return (
-              <CollapsibleSection
-                key={item.label}
-                item={item}
-                pathname={pathname}
-              />
-            );
-          }
-
-          return <NavLink key={item.href} item={item} pathname={pathname} />;
-        })}
+        {navSections.map((section) => (
+          <div key={section.label}>
+            <div className="px-3 pb-1.5 pt-3 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
+              {section.label}
+            </div>
+            <div className="space-y-0.5">
+              {section.items.map((item) =>
+                item.children ? (
+                  <CollapsibleSection
+                    key={item.label}
+                    item={item}
+                    pathname={pathname}
+                    onNavigate={onNavigate}
+                  />
+                ) : (
+                  <NavLink
+                    key={item.href}
+                    item={item}
+                    pathname={pathname}
+                    onNavigate={onNavigate}
+                  />
+                ),
+              )}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* ── Tenant Switcher ── */}
       <TenantSwitcher
         currentTenantId={user?.tenant_id ?? user?.current_tenant_id ?? null}
         onSwitch={switchTenant}
+        onSelect={onNavigate}
       />
 
       {/* ── User + Logout ── */}
       <div className="border-t p-3">
-        <div className="mb-2 truncate px-3 text-xs text-muted-foreground">
-          {user?.name ?? user?.email}
+        <div className="mb-2 flex items-center gap-2.5 rounded-lg px-2 py-1.5">
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+            {initials}
+          </div>
+          <div className="min-w-0 flex-1 truncate text-xs font-medium text-sidebar-foreground/80">
+            {user?.name ?? user?.email}
+          </div>
         </div>
 
         {/* ── Change Password ── */}
@@ -230,7 +299,7 @@ export function Sidebar() {
             Cambiar Contraseña
           </Button>
         ) : (
-          <div className="mb-2 space-y-2 rounded-md border p-2">
+          <div className="mb-2 space-y-2 rounded-md border bg-background p-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium">Nueva contraseña</span>
               <button
@@ -285,7 +354,7 @@ export function Sidebar() {
           variant="ghost"
           size="sm"
           onClick={logout}
-          className="w-full justify-start gap-3"
+          className="w-full justify-start gap-3 text-destructive hover:text-destructive"
         >
           <LogOut className="size-4" />
           Cerrar Sesión
@@ -302,9 +371,11 @@ export function Sidebar() {
 function NavLink({
   item,
   pathname,
+  onNavigate,
 }: {
   item: NavItem;
   pathname: string;
+  onNavigate?: () => void;
 }) {
   const Icon = item.icon;
   const isActive =
@@ -315,13 +386,21 @@ function NavLink({
   return (
     <Link
       href={item.href}
+      onClick={onNavigate}
+      aria-current={isActive ? "page" : undefined}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150",
         isActive
           ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+          : "text-sidebar-foreground/70 hover:bg-accent/60 hover:text-accent-foreground",
       )}
     >
+      {isActive ? (
+        <span
+          aria-hidden="true"
+          className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary"
+        />
+      ) : null}
       <Icon className="size-4 shrink-0" />
       {item.label}
     </Link>
@@ -335,9 +414,11 @@ function NavLink({
 function CollapsibleSection({
   item,
   pathname,
+  onNavigate,
 }: {
   item: NavItem;
   pathname: string;
+  onNavigate?: () => void;
 }) {
   const [open, setOpen] = useState(true);
   const Icon = item.icon;
@@ -350,13 +431,20 @@ function CollapsibleSection({
       <button
         type="button"
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
         className={cn(
-          "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+          "group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150",
           isActive
             ? "bg-primary/10 text-primary"
-            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+            : "text-sidebar-foreground/70 hover:bg-accent/60 hover:text-accent-foreground",
         )}
       >
+        {isActive ? (
+          <span
+            aria-hidden="true"
+            className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary"
+          />
+        ) : null}
         <Icon className="size-4 shrink-0" />
         <span className="flex-1 text-left">{item.label}</span>
         {open ? (
@@ -367,7 +455,7 @@ function CollapsibleSection({
       </button>
 
       {open && (
-        <div className="ml-2 mt-1 space-y-0.5 border-l pl-2">
+        <div className="ml-3 mt-1 space-y-0.5 border-l border-sidebar-border pl-2">
           {item.children?.map((child) => {
             const ChildIcon = child.icon;
             const isChildActive = pathname.startsWith(child.href);
@@ -376,11 +464,13 @@ function CollapsibleSection({
               <Link
                 key={child.href}
                 href={child.href}
+                onClick={onNavigate}
+                aria-current={isChildActive ? "page" : undefined}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors",
+                  "flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors duration-150",
                   isChildActive
                     ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                    : "text-sidebar-foreground/70 hover:bg-accent/60 hover:text-accent-foreground",
                 )}
               >
                 <ChildIcon className="size-4 shrink-0" />
@@ -394,7 +484,6 @@ function CollapsibleSection({
   );
 }
 
-
 /* ------------------------------------------------------------------ */
 /*  TenantSwitcher                                                     */
 /* ------------------------------------------------------------------ */
@@ -402,9 +491,11 @@ function CollapsibleSection({
 function TenantSwitcher({
   currentTenantId,
   onSwitch,
+  onSelect,
 }: {
   currentTenantId: string | null;
   onSwitch: (tenantId: string) => Promise<void>;
+  onSelect?: () => void;
 }) {
   const [tenants, setTenants] = useState<TenantEntry[]>([]);
   const [open, setOpen] = useState(false);
@@ -437,6 +528,7 @@ function TenantSwitcher({
     try {
       await onSwitch(tenantId);
       toast.success("Negocio cambiado");
+      onSelect?.();
     } catch {
       toast.error("Error al cambiar de negocio");
     } finally {
@@ -446,7 +538,7 @@ function TenantSwitcher({
 
   return (
     <div className="border-t px-3 py-2">
-      <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+      <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">
         Negocio activo
       </div>
       <div className="relative">
@@ -455,24 +547,24 @@ function TenantSwitcher({
           onClick={() => setOpen(!open)}
           disabled={isSwitching}
           className={cn(
-            "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
-            "hover:bg-accent hover:text-accent-foreground",
+            "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors duration-150",
+            "hover:bg-accent/60 hover:text-accent-foreground",
             "disabled:opacity-50",
           )}
         >
-          <Building2 className="size-4 shrink-0 text-muted-foreground" />
+          <Building2 className="size-4 shrink-0 text-sidebar-foreground/60" />
           <span className="flex-1 truncate text-left">
             {currentTenant?.name ?? "Seleccionar..."}
           </span>
           {isSwitching ? (
             <LoaderIcon className="size-3.5 animate-spin" />
           ) : (
-            <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground/60" />
+            <ChevronsUpDown className="size-3.5 shrink-0 text-sidebar-foreground/40" />
           )}
         </button>
 
         {open && (
-          <div className="absolute bottom-full left-0 right-0 mb-1 rounded-md border bg-popover shadow-md">
+          <div className="absolute bottom-full left-0 right-0 mb-1 rounded-md border bg-popover text-popover-foreground shadow-lg">
             <div className="py-1">
               {tenants.map((t) => (
                 <button
@@ -480,7 +572,7 @@ function TenantSwitcher({
                   type="button"
                   onClick={() => handleSwitch(t.id)}
                   className={cn(
-                    "flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors",
+                    "flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors duration-150",
                     "hover:bg-accent hover:text-accent-foreground",
                     t.id === currentTenantId
                       ? "bg-accent/50 font-medium text-accent-foreground"
