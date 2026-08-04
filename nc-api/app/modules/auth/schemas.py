@@ -35,6 +35,7 @@ class TokenResponse(BaseModel):
     tenant_plan: str | None = None
     payment_status: str | None = None
     plan_activated_at: datetime | None = None
+    capabilities: list[str] = []
 
 
 class UserResponse(BaseModel):
@@ -49,10 +50,13 @@ class UserResponse(BaseModel):
 
 class MeResponse(UserResponse):
     current_role: str | None = None
-    current_tenant_id: str | None = None
+    # get_current_user attaches current_tenant_id as a UUID — accept both
+    # (serializes to str in JSON).
+    current_tenant_id: str | uuid.UUID | None = None
     current_plan: str | None = None
     payment_status: str | None = None
     plan_activated_at: datetime | None = None
+    capabilities: list[str] = []
 
 
 class ChangePasswordRequest(BaseModel):

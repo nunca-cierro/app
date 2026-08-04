@@ -5,14 +5,16 @@ Referencia única para el comportamiento de autorización de rutas del dashboard
 
 ## Allowed routes by role
 
-| Role           | Allowed routes              |
-| -------------- | --------------------------- |
-| `admin`        | `/dashboard`, `/auth/login` |
-| `basic`        | `/dashboard`, `/auth/login` |
-| `professional` | `/dashboard`, `/auth/login` |
-| `enterprise`   | `/dashboard`, `/auth/login` |
+Source of truth: `nc-dashboard/lib/rbac.ts` (`ROLE_ROUTE_MATRIX` + `isRouteAllowed`). The `/dashboard` home and `/auth/login` are allowed for every authenticated role; section routes are role-scoped:
 
-> The matrix will grow as new dashboard sections are added (e.g. `/dashboard/businesses`, `/dashboard/leads`, `/dashboard/settings`).
+| Role           | Allowed routes                                                                                              |
+| -------------- | ----------------------------------------------------------------------------------------------------------- |
+| `superadmin`   | `/dashboard`, `/dashboard/admin`, `/dashboard/tenants`, `/dashboard/agents`, `/dashboard/platforms`, `/dashboard/conversations` |
+| `admin`        | `/dashboard`, `/dashboard/tenants`, `/dashboard/agents`, `/dashboard/platforms`, `/dashboard/conversations` |
+| `agent`        | `/dashboard`, `/dashboard/conversations`                                                                    |
+| `client`       | `/dashboard`, `/dashboard/conversations`                                                                    |
+
+> New dashboard sections must be added to `ROLE_ROUTE_MATRIX` in `lib/rbac.ts` and mirrored here.
 
 ## Deny behavior
 

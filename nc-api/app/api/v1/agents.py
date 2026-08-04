@@ -9,11 +9,16 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
-from app.modules.auth.deps import RoleChecker, get_current_user
+from app.modules.auth.deps import get_current_user
 from app.modules.auth.models import User, UserRole
+from app.modules.plans.capabilities import CAP_AGENTS_MANAGE
+from app.modules.plans.deps import require_capability
 
-admin_or_super = RoleChecker(allowed_roles=[UserRole.ADMIN, UserRole.SUPERADMIN])
-superadmin_only = RoleChecker(allowed_roles=[UserRole.SUPERADMIN])
+# Creating/managing agents requires an operator role AND a plan that includes
+# agent management (professional/enterprise). Superadmin is exempt (operator).
+agents_manage = require_capability(
+    CAP_AGENTS_MANAGE, [UserRole.ADMIN, UserRole.SUPERADMIN]
+)
 from app.modules.agents.models import AiAgent, Prompt
 from app.modules.agents.schemas import (
     AiAgentCreate,
@@ -25,6 +30,7 @@ from app.modules.agents.schemas import (
 )
 from app.modules.agents.template_models import AgentTemplate
 from app.modules.agents.templates import PlaceholderResolver
+from app.core.config import DEFAULT_GROQ_MODEL
 from app.modules.tenants.models import Tenant
 
 router = APIRouter(prefix="/agents", tags=["agents"])
@@ -34,7 +40,7 @@ router = APIRouter(prefix="/agents", tags=["agents"])
 async def create_agent_from_template(
     body: AiAgentFromTemplate,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(superadmin_only),
+    current_user: User = Depends(agents_manage),
 ) -> AiAgent:
     """Create an AI agent from a pre-built template with placeholder resolution.
 
@@ -78,7 +84,7 @@ async def create_agent_from_template(
         name=body.name or template.name,
         business_config=resolved_content,
         provider="groq",
-        model="llama-3.3-70b-versatile",
+        model=DEFAULT_GROQ_MODEL,
         temperature=0,
         max_tokens=512,
     )
@@ -92,7 +98,7 @@ async def create_agent_from_template(
 async def create_new_agent(
     body: AiAgentCreate,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(superadmin_only),
+    current_user: User = Depends(agents_manage),
 ) -> AiAgent:
     """Create a new AI Agent for the current tenant."""
     if current_user.current_role != UserRole.SUPERADMIN:
@@ -160,7 +166,7 @@ async def update_agent_info(
     agent_id: uuid.UUID,
     body: AiAgentUpdate,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(admin_or_super),
+    current_user: User = Depends(agents_manage),
 ) -> AiAgent:
     """Update agent information with isolation."""
     from sqlalchemy import select
@@ -180,7 +186,24 @@ async def update_agent_info(
     update_data = body.model_dump(exclude_unset=True)
     # Never allow changing tenant_id via patch
     update_data.pop("tenant_id", None)
-    
+
+    # business_config edits require the business.edit capability (in addition
+    # to the agents.manage gate of this endpoint) — mirrors the frontend
+    # matrix so the protection is enforced server-side, not just visually.
+    # Superadmin (platform operator) is exempt.
+    if "business_config" in update_data and current_user.current_role != UserRole.SUPERADMIN:
+        from app.modules.plans.capabilities import CAP_BUSINESS_EDIT, plan_has_capability
+
+        tenant = await session.get(Tenant, agent.tenant_id)
+        if not plan_has_capability(tenant.plan if tenant else None, CAP_BUSINESS_EDIT):
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Tu plan no incluye editar la información del negocio. "
+                    "Contactá a tu administrador para hacer upgrade."
+                ),
+            )
+
     for key, value in update_data.items():
         setattr(agent, key, value)
 
@@ -194,7 +217,7 @@ async def update_agent_info(
 async def delete_agent(
     agent_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(admin_or_super),
+    current_user: User = Depends(agents_manage),
 ):
     """Delete an agent and its prompts with isolation."""
     from sqlalchemy import select
@@ -249,7 +272,7 @@ async def create_agent_prompt(
     agent_id: uuid.UUID,
     body: PromptCreate,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(admin_or_super),
+    current_user: User = Depends(agents_manage),
 ) -> Prompt:
     """Create a new prompt version for an agent with isolation."""
     from sqlalchemy import select, func

@@ -13,7 +13,11 @@ export interface AuthUser {
   current_role?: UserRole;
   current_tenant_id?: string | null;
   plan?: string | null;
+  /** Backend /auth/me returns the tenant plan as `current_plan`. */
+  current_plan?: string | null;
   payment_status?: string | null;
+  /** Effective plan capabilities announced by the backend (/auth/me). */
+  capabilities?: string[] | null;
 }
 
 export interface LoginResponse {
@@ -27,6 +31,7 @@ export interface LoginResponse {
   tenant_plan?: string | null;
   payment_status?: string | null;
   plan_activated_at?: string | null;
+  capabilities?: string[] | null;
 }
 
 export interface TenantAssociation {

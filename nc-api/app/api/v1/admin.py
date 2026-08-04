@@ -173,14 +173,47 @@ async def assign_tenant(
 ) -> t.Any:
     """Assign a user to a tenant with a specific role.
 
-    Requires admin or superadmin role.
+    Requires admin or superadmin role. The assigned role MUST be a real
+    tenant role — superadmin can never be granted through this endpoint
+    (prevents privilege escalation to superadmin via switch-tenant).
     """
+
+    # Validate role against assignable tenant roles
+    ASSIGNABLE_ROLES = {r.value for r in UserRole} - {UserRole.SUPERADMIN.value}
+    if body.role not in ASSIGNABLE_ROLES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid role. Must be one of: {', '.join(sorted(ASSIGNABLE_ROLES))}",
+        )
+
+    # Tenant ownership: non-superadmin admins may only assign users to their
+    # ACTIVE tenant — never cross-tenant (closes unauthorized assignment).
+    role = getattr(current_user, "current_role", current_user.role)
+    if role != UserRole.SUPERADMIN:
+        active_tid = getattr(current_user, "current_tenant_id", None)
+        if active_tid is None or active_tid != body.tenant_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
 
     # Verify user exists
     user_result = await session.execute(select(User).where(User.id == body.user_id))
     user = user_result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Privilege guards (non-superadmin callers):
+    # (a) cannot grant the admin role — agent/client only;
+    # (b) cannot modify the assignment of a superadmin user.
+    if role != UserRole.SUPERADMIN:
+        if body.role == UserRole.ADMIN.value:
+            raise HTTPException(
+                status_code=403,
+                detail="Only superadmins can assign the admin role",
+            )
+        if user.role == UserRole.SUPERADMIN:
+            raise HTTPException(
+                status_code=403,
+                detail="Only superadmins can modify superadmin assignments",
+            )
 
     # Verify tenant exists
     tenant_result = await session.execute(select(Tenant).where(Tenant.id == body.tenant_id))

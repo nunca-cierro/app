@@ -86,7 +86,8 @@ async def test_register_short_password_returns_422(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_register_superadmin_role(client: AsyncClient, db_session: AsyncSession):
+async def test_register_superadmin_role_rejected(client: AsyncClient, db_session: AsyncSession):
+    """superadmin is NOT assignable via public self-registration (escalation guard)."""
     payload = {
         "email": "super@test.com",
         "password": "securepassword123",
@@ -95,11 +96,8 @@ async def test_register_superadmin_role(client: AsyncClient, db_session: AsyncSe
     }
     response = await client.post("/api/v1/auth/register", json=payload)
 
-    assert response.status_code == 201
-    data = response.json()
-    assert data["role"] == "superadmin"
+    assert response.status_code == 422
 
+    # No user should have been created
     result = await db_session.execute(select(User).where(User.email == "super@test.com"))
-    user = result.scalar_one_or_none()
-    assert user is not None
-    assert user.role == UserRole.SUPERADMIN
+    assert result.scalar_one_or_none() is None

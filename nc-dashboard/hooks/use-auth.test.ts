@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { restoreUserFromProfile } from "@/hooks/use-auth";
+
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
   return {
@@ -7,6 +9,47 @@ vi.mock("@/lib/api", async () => {
     TOKEN_KEYS: { access: "test_token", user: "test_user" },
     switchTenant: vi.fn(),
   };
+});
+
+describe("restoreUserFromProfile — silent /auth/me restore", () => {
+  it("maps current_plan to plan", () => {
+    const restored = restoreUserFromProfile({
+      id: "1",
+      email: "a@b.co",
+      name: "A",
+      role: "client",
+      tenant_id: "t1",
+      current_role: "client",
+      current_plan: "professional",
+      payment_status: "active",
+      capabilities: ["dashboard.view"],
+    });
+    expect(restored.plan).toBe("professional");
+    expect(restored.capabilities).toEqual(["dashboard.view"]);
+  });
+
+  it("keeps an existing plan when current_plan is absent", () => {
+    const restored = restoreUserFromProfile({
+      id: "1",
+      email: "a@b.co",
+      name: "A",
+      role: "admin",
+      tenant_id: "t1",
+      plan: "basic",
+    });
+    expect(restored.plan).toBe("basic");
+  });
+
+  it("falls back to null when neither plan field is present", () => {
+    const restored = restoreUserFromProfile({
+      id: "1",
+      email: "a@b.co",
+      name: "A",
+      role: "client",
+      tenant_id: null,
+    });
+    expect(restored.plan).toBeNull();
+  });
 });
 
 describe("use-auth", () => {

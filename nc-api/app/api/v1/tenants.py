@@ -12,9 +12,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
+from app.core.config import settings
 from app.modules.auth.deps import RoleChecker, get_current_user
 from app.modules.auth.models import User, UserRole
 from app.modules.auth.user_tenant import UserTenant
+from app.modules.tenants.internal import is_internal_tenant
 from app.modules.tenants.models import Tenant
 
 admin_or_super = RoleChecker(allowed_roles=[UserRole.ADMIN, UserRole.SUPERADMIN])
@@ -50,7 +52,13 @@ async def create_new_tenant(
         raise HTTPException(status_code=403, detail="Forbidden")
 
     try:
-        tenant = Tenant(**body.model_dump())
+        data = body.model_dump()
+        if role != UserRole.SUPERADMIN:
+            # Self-service onboarding: tenants always start on the basic plan
+            # (active status is the model default). A tenant admin/client must
+            # never self-assign a higher plan or a custom status.
+            data["plan"] = "basic"
+        tenant = Tenant(**data)
         session.add(tenant)
         await session.flush()
 
@@ -107,9 +115,9 @@ async def list_tenants(
     
     result = await session.execute(query.offset(skip).limit(limit))
     tenants = result.scalars().all()
-    # NuncaCierro is internal — exempt from payment
+    # Internal tenant is exempt from payment (configurable via settings)
     for t in tenants:
-        if t.slug == "nuncacierro":
+        if is_internal_tenant(t.slug, settings.internal_tenant_slug):
             t.payment_status = "active"
     return tenants
 
@@ -137,7 +145,7 @@ async def get_tenant(
     tenant = await session.get(Tenant, tenant_id)
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
-    if tenant.slug == "nuncacierro":
+    if is_internal_tenant(tenant.slug, settings.internal_tenant_slug):
         tenant.payment_status = "active"
     return tenant
 
@@ -150,11 +158,28 @@ async def update_tenant_info(
     session: AsyncSession = Depends(get_session),
 ) -> Tenant:
     """Update tenant information."""
+    # Isolation: non-superadmin users can only update their ACTIVE tenant
+    # (mirrors agents/platform-connections) — prevents cross-tenant mutation
+    # by UUID guessing.
+    role = getattr(current_user, "current_role", current_user.role)
+    if role != UserRole.SUPERADMIN:
+        active_tid = getattr(current_user, "current_tenant_id", None)
+        if active_tid is None or active_tid != tenant_id:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     tenant = await session.get(Tenant, tenant_id)
     if not tenant:
         raise HTTPException(status_code=404, detail="Tenant not found")
 
     update_data = body.model_dump(exclude_unset=True)
+    # plan/status are restricted to superadmin or the authorized activation
+    # flow (PATCH /tenants/{id}/activate-plan). Non-superadmin admins can
+    # never change them — silently dropped so the edit form keeps working
+    # without privilege creep (self-upgrade to enterprise / status tampering).
+    if role != UserRole.SUPERADMIN:
+        update_data.pop("plan", None)
+        update_data.pop("status", None)
+
     for key, value in update_data.items():
         setattr(tenant, key, value)
 
