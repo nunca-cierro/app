@@ -81,7 +81,7 @@ export function canonicalizeCategory(value: string | null | undefined): string |
 /** True when the value canonicalizes to a registered category slug. */
 export function isKnownCategory(value: string | null | undefined): boolean {
   const slug = canonicalizeCategory(value);
-  return Boolean(slug) && slug in BUSINESS_CATEGORIES;
+  return slug != null && slug in BUSINESS_CATEGORIES;
 }
 
 /** Display label for a canonical slug (undefined when unknown). */
