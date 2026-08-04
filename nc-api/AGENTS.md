@@ -11,7 +11,7 @@ Backend API para el ecosistema **NuncaCierro**, una plataforma multi-tenant de a
 | **Framework** | FastAPI 0.136+ |
 | **Runtime** | Python 3.12 (via uv) |
 | **Database** | PostgreSQL + SQLAlchemy (Async) |
-| **AI** | Groq API — LLaMA 3.3 70B Versatile |
+| **AI** | Groq API — OpenAI GPT-OSS 120B (default; override con GROQ_MODEL) |
 | **Gateways** | Evolution API v2.x, Meta Cloud API v22.0, Telegram Bot API |
 | **Encryption** | Fernet (AES-128) para credenciales de clientes |
 | **Config** | pydantic-settings + .env |
@@ -34,7 +34,7 @@ Backend API para el ecosistema **NuncaCierro**, una plataforma multi-tenant de a
           │       │                                      │
           │       ├── Identifica Tenant & Agente         │
           │       ├── Carga historial de DB              │
-          │       ├── Groq LLaMA 3.3 (Contexto Negocio)  │
+          │       ├── Groq GPT-OSS 120B (Contexto Negocio) │
           │       │                                      │
           │  evolution/adapter.py ─── envía respuesta    │
           │       │                                      │

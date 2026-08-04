@@ -33,7 +33,10 @@ export default function TenantDetailPage() {
   const { user } = useAuth();
   const { tenant, isLoading, error, updateTenant, deleteTenant, refetch } =
     useTenant(id);
-  const isSuperadmin = user?.role === "superadmin";
+  // Backend authorizes activate-plan by the JWT current_role — gate the
+  // action with the same source so it never shows a button that 403s after
+  // switching tenant context.
+  const isSuperadmin = (user?.current_role ?? user?.role) === "superadmin";
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);

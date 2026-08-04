@@ -3,6 +3,7 @@ import type { DemoItem } from "./types";
 export const clinicaDentalProDemo: DemoItem = {
   name: "Clínica Dental Pro",
   category: "Dental",
+  categorySlug: "clinica",
   href: "/demo/dental",
   image:
     "https://images.unsplash.com/photo-1606811971618-4486d14f3f99?auto=format&fit=crop&w=1400&q=80",

@@ -6,7 +6,16 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from app.modules.auth.models import TenantStatus
+from app.modules.plans.capabilities import SUPPORTED_PLANS
+from app.modules.agents.categories import canonicalize_category
+from app.modules.tenants.business_profile import validate_business_profile
+
+
+def _valid_plans() -> str:
+    return ", ".join(sorted(SUPPORTED_PLANS))
 
 
 class TenantCreate(BaseModel):
@@ -17,6 +26,25 @@ class TenantCreate(BaseModel):
     locale: str = "es-CO"
     notes: str | None = None
     category: str | None = None
+    business_profile: dict | None = None
+
+    @field_validator("plan")
+    @classmethod
+    def validate_plan(cls, v: str) -> str:
+        if v not in SUPPORTED_PLANS:
+            raise ValueError(f"plan must be one of: {_valid_plans()}")
+        return v
+
+    @field_validator("category")
+    @classmethod
+    def canonicalize_tenant_category(cls, v: str | None) -> str | None:
+        """Map display labels / legacy slugs to the canonical category slug."""
+        return canonicalize_category(v)
+
+    @field_validator("business_profile")
+    @classmethod
+    def validate_profile(cls, v: dict | None) -> dict | None:
+        return validate_business_profile(v)
 
 
 class TenantUpdate(BaseModel):
@@ -27,6 +55,32 @@ class TenantUpdate(BaseModel):
     locale: str | None = None
     notes: str | None = None
     category: str | None = None
+    business_profile: dict | None = None
+
+    @field_validator("plan")
+    @classmethod
+    def validate_plan(cls, v: str | None) -> str | None:
+        if v is not None and v not in SUPPORTED_PLANS:
+            raise ValueError(f"plan must be one of: {_valid_plans()}")
+        return v
+
+    @field_validator("status")
+    @classmethod
+    def validate_status(cls, v: str | None) -> str | None:
+        allowed = {s.value for s in TenantStatus}
+        if v is not None and v not in allowed:
+            raise ValueError(f"status must be one of: {', '.join(sorted(allowed))}")
+        return v
+
+    @field_validator("category")
+    @classmethod
+    def canonicalize_tenant_category(cls, v: str | None) -> str | None:
+        return canonicalize_category(v)
+
+    @field_validator("business_profile")
+    @classmethod
+    def validate_profile(cls, v: dict | None) -> dict | None:
+        return validate_business_profile(v)
 
 
 class TenantResponse(BaseModel):

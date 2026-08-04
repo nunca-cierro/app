@@ -3,6 +3,7 @@ import type { DemoItem } from "./types";
 export const gymPerformanceDemo: DemoItem = {
   name: "Gym Performance",
   category: "Gimnasio",
+  categorySlug: "gimnasio",
   href: "/demo/gym",
   image:
     "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1400&q=80",

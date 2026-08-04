@@ -9,6 +9,7 @@ from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Te
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.config import DEFAULT_GROQ_MODEL
 from app.db.base import Base
 
 
@@ -27,7 +28,7 @@ class AiAgent(Base):
         String(50), nullable=False, default="groq"
     )
     model: Mapped[str] = mapped_column(
-        String(100), nullable=False, default="llama-3.3-70b-versatile"
+        String(100), nullable=False, default=DEFAULT_GROQ_MODEL
     )
     temperature: Mapped[float] = mapped_column(Float, default=0)
     max_tokens: Mapped[int] = mapped_column(Integer, default=512)

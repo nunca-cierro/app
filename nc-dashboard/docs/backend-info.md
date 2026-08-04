@@ -2,6 +2,8 @@
 
 > **Propósito**: Este documento describe el estado actual del backend (nc-api) y del frontend (nc-dashboard), su arquitectura, los endpoints existentes, los planificados, y la hoja de ruta futura.
 
+> ⚠️ **Estado actual (ago 2026)**: el backend es FastAPI multi-tenant con **PostgreSQL + Alembic**, canal WhatsApp = **Evolution API v2.x** (gateway auto-hospedado en **Hetzner**, Docker Compose + Caddy), modelo IA = **`openai/gpt-oss-120b`** (Groq). Las secciones que mencionan Railway, archivos `businesses/*.json` o `llama-3.3-70b-versatile` corresponden a la fase legacy y se mantienen como referencia histórica. Fuentes autoritativas: `nc-api/AGENTS.md`, `nc-api/EVOLUTION.md`, `.env.production` y `docker-compose.yml`.
+
 ---
 
 ## 1. Stack Actual
@@ -10,21 +12,23 @@
 | ---------------------- | ------------------------------------------------------------------------- |
 | **Backend Framework**  | FastAPI (Python 3.12)                                                     |
 | **Frontend Framework** | Next.js 16 (App Router, Turbopack)                                        |
-| **Runtime (Backend)**  | uv + uvicorn                                                              |
-| **Runtime (Frontend)** | Node.js 22 + pnpm                                                         |
-| **WhatsApp**           | Meta WhatsApp Cloud API v22.0                                             |
-| **IA**                 | Groq API — LLaMA 3 70B                                                    |
-| **HTTP Client**        | httpx (async)                                                             |
-| **Config**             | pydantic-settings + .env                                                  |
-| **Logging**            | loguru                                                                    |
-| **UI Components**      | shadcn/ui + Radix UI + Tailwind CSS 4                                     |
-| **Hosting Backend**    | Railway (nunca-cierro.up.railway.app)                                     |
-| **Hosting Frontend**   | Pendiente                                                                 |
+| **Runtime (Backend)**  | uv + uvicorn (Docker Compose)                                        |
+| **Runtime (Frontend)** | Node.js 22 + pnpm                                                     |
+| **WhatsApp**           | Evolution API v2.x (gateway auto-hospedado; Meta Cloud API = legacy)  |
+| **IA**                 | Groq API — openai/gpt-oss-120b (default; llama-3.3-70b-versatile deprecado) |
+| **HTTP Client**        | httpx (async)                                                         |
+| **Config**             | pydantic-settings + .env                                              |
+| **Logging**            | loguru                                                                |
+| **UI Components**      | shadcn/ui + Radix UI + Tailwind CSS 4                                 |
+| **Hosting Backend**    | Hetzner VPS — Docker Compose + Caddy (`api.nuncacierro.com`)          |
+| **Hosting Frontend**   | Hetzner VPS — Docker Compose + Caddy (`nuncacierro.com`)              |
 | **Repos**              | `github.com/nunca-cierro/nc-api` · `github.com/nunca-cierro/nc-dashboard` |
 
 ---
 
 ## 2. Estado Actual de la App de Meta
+
+> ⚠️ **Legacy**: esta tabla describe el path de Meta Cloud API (fase inicial). En producción el canal WhatsApp actual es **Evolution API v2.x** (instancias WhatsApp-Baileys auto-hospedadas en Hetzner).
 
 | Item                       | Estado                                            |
 | -------------------------- | ------------------------------------------------- |
@@ -40,6 +44,8 @@
 ---
 
 ## 3. Arquitectura del Backend
+
+> ⚠️ **Legacy**: la arquitectura de abajo describe la fase de archivos JSON. El backend actual es FastAPI multi-tenant con PostgreSQL + Alembic; los módulos viven en `nc-api/app/modules/*` (agents, evolution, telegram, tenants, platform_connections) y la cadena de webhooks se documenta en `nc-api/AGENTS.md` y `nc-api/EVOLUTION.md`.
 
 ```
 webhook (WhatsApp Cloud API → Railway)
@@ -103,7 +109,7 @@ Actualmente existen 4 archivos de negocio:
 }
 ```
 
-> ⚠️ **No hay BD aún.** Todo el estado vive en archivos JSON. En producción futura se migrará a una base de datos.
+> ⚠️ **Legacy**: esta sección describe la fase de archivos JSON. Desde la fase PostgreSQL, el backend usa una base de datos real (tablas `tenants`, `users`, `ai_agents`, `messages`, `agent_templates`, …) gestionada con Alembic. Los `businesses/*.json` ya no son la fuente de verdad.
 
 ### Archivos existentes
 
@@ -133,8 +139,10 @@ Actualmente existen 4 archivos de negocio:
 
 ### Backend (.env)
 
+> Fuente de verdad de variables de producción: `.env.production` (raíz del repo). Las de abajo son las clásicas de desarrollo; las Meta (`WHATSAPP_*`) pertenecen al path legacy.
+
 ```env
-# Meta WhatsApp Cloud API
+# Meta WhatsApp Cloud API (LEGACY — el canal actual es Evolution API)
 WHATSAPP_TOKEN="EAA..."                      # Token permanente (System User)
 WHATSAPP_PHONE_NUMBER_ID="1328965352380089"  # ID del número principal (fallback)
 WHATSAPP_VERIFY_TOKEN="nuncacierro2026"      # Token de verificación del webhook
@@ -143,10 +151,18 @@ WHATSAPP_BASE_URL="https://graph.facebook.com"
 
 # Groq AI
 GROQ_API_KEY="gsk_..."
-GROQ_MODEL="llama-3.3-70b-versatile"
+GROQ_MODEL="openai/gpt-oss-120b"             # default; llama-3.3-70b-versatile deprecado
 GROQ_MAX_TOKENS=512
 GROQ_TEMPERATURE=0.7
 GROQ_RATE_LIMIT_RPM=30
+
+# Evolution API (WhatsApp gateway — Hetzner)
+EVO_API_KEY="..."                            # API key global del gateway
+EVO_API_BASE_URL="http://evolution-api:8080" # red interna Docker
+
+# Webhooks / URLs públicas
+WEBHOOK_PUBLIC_BASE_URL="https://api.nuncacierro.com"  # callbacks (Telegram/Evolution)
+EVO_INTERNAL_BASE_URL="http://nc-api:8000"   # red interna Docker
 
 # App
 APP_NAME="NuncaCierro WhatsApp Bot"
@@ -176,9 +192,11 @@ NEXT_PUBLIC_AUTH_DISABLED=true
 | `GET`  | `/webhook?hub.mode=subscribe&hub.verify_token=...&hub.challenge=...` | Verificación del webhook con Meta      |
 | `POST` | `/webhook`                                                           | Recibir mensajes entrantes de WhatsApp |
 
-**URL base:** `https://nunca-cierro.up.railway.app`
+**URL base:** `https://api.nuncacierro.com`
 
 ### API REST del Dashboard
+
+> ⚠️ **Legacy**: los endpoints `/api/businesses`, `/api/leads`, … describen la fase JSON (bot/*). La API actual es versionada bajo `/api/v1/*` (auth, tenants, agents, platform-connections, conversations, …) — ver `nc-api/AGENTS.md`.
 
 > Todos los endpoints están implementados en `bot/api.py` y accesibles bajo `/api`.
 
@@ -326,7 +344,7 @@ El frontend incluye un sistema RBAC (`lib/rbac.ts`) que define qué rutas puede 
 
 ## 8. Planes y Precios (desde el backend)
 
-Los planes se definen en cada `businesses/*.json` con el campo `"plan"`:
+> Los planes viven en la tabla `tenants.plan` del backend (trial / basic / professional / enterprise). El esquema legacy los definía en cada `businesses/*.json` con el campo `"plan"`; esta sección describe ese esquema histórico.
 
 | Plan        | Campo            | Características                                               |
 | ----------- | ---------------- | ------------------------------------------------------------- |
@@ -353,7 +371,7 @@ Precios de referencia (desde `BRAND.md`):
 - [x] Planes (basic, professional, enterprise) con límites
 - [x] Token permanente de Meta (System User, nunca expira)
 - [x] Sin secrets en el repo (credentials.json gitignored)
-- [x] Deploy en Railway
+- [x] Deploy en Hetzner (Docker Compose + Caddy, SSL automático)
 - [x] Frontend con Next.js + App Router + Tailwind + shadcn/ui
 - [x] Landing page pública (Hero, Servicios, Planes, FAQ, Contacto)
 - [x] Modo demo (offline) del dashboard
@@ -371,18 +389,18 @@ Precios de referencia (desde `BRAND.md`):
 - [ ] Frontend: tabla de leads con filtros por estado
 - [ ] Frontend: estadísticas de uso
 
-### Fase 3 — Producción (🚧 Pendiente de Business Verification)
+### Fase 3 — Producción (✅ Domino propio + Hetzner)
 
-- [ ] Publicar app de Meta
+- [ ] Publicar app de Meta (solo si se reactiva el path Meta Cloud)
 - [ ] Registrar número real colombiano
-- [ ] Dominio fijo (reemplazar Railway.app por dominio propio)
+- [x] Dominio propio (`nuncacierro.com` + `api.nuncacierro.com` vía Caddy, sin Railway)
 - [ ] Endpoint de pago (Epayco, Wompi, Bold)
 - [ ] Facturación automática mensual
 
-### Fase 4 — Escalamiento (📋 Planificado)
+### Fase 4 — Escalamiento (📋 Parcialmente completado)
 
-- [ ] Base de datos (PostgreSQL / Supabase)
-- [ ] Migrar de JSON a DB
+- [x] Base de datos PostgreSQL (en producción desde la fase DB)
+- [x] Migrar de JSON a DB (Alembic; los `businesses/*.json` son legacy)
 - [ ] Sesiones / memoria de conversación (Redis)
 - [ ] Dashboard para clientes (ver sus propias stats)
 - [ ] Webhooks para eventos (nuevo lead, límite alcanzado, etc.)
@@ -401,17 +419,15 @@ Precios de referencia (desde `BRAND.md`):
 
 ### Despliegue
 
-- **Backend**: Railway auto-detecta Python y usa `Procfile` para arrancar
-  - Comando: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-- **Frontend**: Desplegable en Vercel / Railway / cualquier host Node.js
-  - Comando: `pnpm run build && pnpm start`
+- **Backend**: Docker Compose en VPS Hetzner (`docker compose up -d`); Caddy termina SSL y enruta `api.{DOMAIN}` → nc-api. Ver `docker-compose.yml` y `.env.production`.
+- **Frontend**: Mismo host, contenedor `nc-dashboard`; Caddy enruta `{DOMAIN}` → nc-dashboard. Comando de build: `pnpm run build && pnpm start`.
 
 ### Costos
 
 - **Meta**: Solo cobra por mensajes template enviados. Service messages (responder a clientes) son GRATIS
 - **Groq**: Tier gratis (30 req/min). Suficiente para MVP
-- **Railway**: Plan gratis con créditos iniciales. Después ~$5-10 USD/mes
-- **ngrok**: Ya no se usa en producción. Reemplazado por Railway
+- **Hetzner**: VPS dedicado con Docker Compose + Caddy (dominio propio con SSL gratis). Reemplazó a Railway
+- **ngrok**: Ya no se usa en producción. Reemplazado por Hetzner + Caddy
 
 ---
 
@@ -419,8 +435,8 @@ Precios de referencia (desde `BRAND.md`):
 
 | Recurso               | URL                                            |
 | --------------------- | ---------------------------------------------- |
-| Backend en producción | `https://nunca-cierro.up.railway.app`          |
-| Health check          | `https://nunca-cierro.up.railway.app/health`   |
+| Backend en producción | `https://api.nuncacierro.com`                  |
+| Health check          | `https://api.nuncacierro.com/health`           |
 | Repo backend          | `https://github.com/nunca-cierro/nc-api`       |
 | Repo frontend         | `https://github.com/nunca-cierro/nc-dashboard` |
 | Manual de marca       | `nc-api/BRAND.md`                              |
@@ -435,3 +451,4 @@ Precios de referencia (desde `BRAND.md`):
 | ---------- | ------- | --------------------------------------------------------------- |
 | 2026-05-12 | 1.0     | Documento inicial con estado actual y roadmap                   |
 | 2026-05-13 | 1.1     | Agregada sección de frontend (rutas, modo demo, RBAC, env vars) |
+| 2026-08-03 | 1.2     | Actualizado a estado actual: Hetzner + Caddy, Evolution API, modelo openai/gpt-oss-120b, PostgreSQL/Alembic; marcadas secciones legacy |

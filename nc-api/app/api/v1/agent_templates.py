@@ -18,6 +18,7 @@ from app.modules.agents.template_schemas import (
     AgentTemplateUpdate,
     AgentTemplateResponse,
 )
+from app.modules.agents.categories import canonicalize_category
 
 router = APIRouter(prefix="/agent-templates", tags=["agent-templates"])
 
@@ -32,12 +33,20 @@ async def list_templates(
 ) -> t.Sequence[AgentTemplate]:
     """List all agent templates, optionally filtered by *category*."""
     query = select(AgentTemplate).order_by(AgentTemplate.category, AgentTemplate.name)
+    result = await session.execute(query)
+    templates = list(result.scalars().all())
 
     if category:
-        query = query.where(AgentTemplate.category == category)
+        # Legacy template categories remain stored as-is. Compare their
+        # canonical forms at read time instead of rewriting client data.
+        requested_category = canonicalize_category(category)
+        templates = [
+            template
+            for template in templates
+            if canonicalize_category(template.category) == requested_category
+        ]
 
-    result = await session.execute(query)
-    return result.scalars().all()
+    return templates
 
 
 @router.get("/{template_id}", response_model=AgentTemplateResponse)

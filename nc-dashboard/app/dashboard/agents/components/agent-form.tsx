@@ -51,7 +51,7 @@ export function AgentForm({
       tenant_id: "",
       name: "",
       provider: "groq",
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       temperature: 0.7,
       max_tokens: 512,
       ...defaultValues,
@@ -149,12 +149,12 @@ export function AgentForm({
           <div className="space-y-2">
             <label className="text-sm font-medium">Modelo</label>
             <div className="flex h-10 items-center rounded-md border bg-muted/50 px-3 text-sm text-muted-foreground">
-              llama-3.3-70b-versatile
+              openai/gpt-oss-120b
             </div>
           </div>
 
           <input type="hidden" {...register("provider")} value="groq" />
-          <input type="hidden" {...register("model")} value="llama-3.3-70b-versatile" />
+          <input type="hidden" {...register("model")} value="openai/gpt-oss-120b" />
 
           {/* Temperature */}
           <div className="space-y-2">

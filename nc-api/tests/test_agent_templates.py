@@ -114,6 +114,26 @@ class TestTemplateList:
         data = resp.json()
         assert data == []
 
+    @pytest.mark.asyncio
+    async def test_list_filter_matches_legacy_category_alias(
+        self, client: AsyncClient, db_session: AsyncSession
+    ):
+        """Canonical filters include templates stored with a legacy label."""
+        db_session.add(
+            AgentTemplate(
+                category="Clínica Dental",
+                name="Legacy Clinic Template",
+                content={"instructions": "legacy"},
+                is_system=False,
+            )
+        )
+        await db_session.commit()
+
+        resp = await client.get("/api/v1/agent-templates?category=clinica")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert any(t["name"] == "Legacy Clinic Template" for t in data)
+
 
 class TestTemplateGet:
     @pytest.mark.asyncio
@@ -322,6 +342,48 @@ class TestAgentFromTemplate:
         assert resp.status_code == 404
 
 
+# ── Seed Shape ───────────────────────────────────────────────────────────────
+
+
+class TestSeedTemplateShape:
+    """SEED_TEMPLATES must be deduplicated: one template per category."""
+
+    def test_seed_has_one_template_per_category(self):
+        from collections import Counter
+
+        counts = Counter(t["category"] for t in SEED_TEMPLATES)
+        assert all(count == 1 for count in counts.values()), counts
+
+    def test_seed_has_five_templates(self):
+        assert len(SEED_TEMPLATES) == 5
+
+    def test_seed_names_are_unique(self):
+        names = [t["name"] for t in SEED_TEMPLATES]
+        assert len(names) == len(set(names))
+
+    def test_no_plain_variant_duplicates(self):
+        """The emoji/plain duplicate pairs must be gone (plain variants removed)."""
+        names = [t["name"] for t in SEED_TEMPLATES]
+        for plain in ["Restaurante", "Panadería", "Hamburguesería", "Barbería", "Clínica"]:
+            assert plain not in names, plain
+
+    def test_all_seed_templates_are_system(self):
+        assert all(t.get("is_system") is True for t in SEED_TEMPLATES)
+
+    def test_seed_categories_are_registered(self):
+        from app.modules.agents.categories import is_known_category
+
+        for tpl in SEED_TEMPLATES:
+            assert is_known_category(tpl["category"]), tpl["category"]
+
+    def test_seed_template_names_keep_emoji_for_ux(self):
+        """Decision: emoji lives in the display name, not in the instructions."""
+        for tpl in SEED_TEMPLATES:
+            assert "{{business_name}}" in tpl["content"]["instructions"]
+            # instructions keep the plain wording (no emoji noise for the LLM)
+            assert "🍽️" not in tpl["content"]["instructions"]
+
+
 # ── Seed Idempotency Tests ─────────────────────────────────────────────────
 
 
@@ -349,3 +411,162 @@ class TestSeedIdempotency:
         # Verify SEED_TEMPLATES upsert doesn't duplicate existing test template
         names = [t.name for t in templates]
         assert names.count("Test Template") == 1
+
+
+class TestSeedPrune:
+    """Prune deletes ONLY stale system templates — custom ones survive."""
+
+    @pytest.mark.asyncio
+    async def test_prune_removes_stale_system_templates(
+        self, db_session: AsyncSession
+    ):
+        from app.seed import _prune_system_templates, _seed_templates
+
+        # A stale system template (plain variant, NOT in SEED_TEMPLATES)
+        stale = AgentTemplate(
+            category="restaurante",
+            name="Restaurante",
+            description="old duplicate",
+            content={"instructions": "old"},
+            is_system=True,
+        )
+        db_session.add(stale)
+        await db_session.commit()
+
+        await _seed_templates(db_session)
+        await _prune_system_templates(db_session)
+
+        result = await db_session.execute(
+            select(AgentTemplate).where(AgentTemplate.name == "Restaurante")
+        )
+        assert result.scalar_one_or_none() is None
+
+    @pytest.mark.asyncio
+    async def test_prune_keeps_custom_templates(self, db_session: AsyncSession):
+        from app.seed import _prune_system_templates, _seed_templates
+
+        custom = AgentTemplate(
+            category="restaurante",
+            name="Mi plantilla personalizada",
+            description="client customization",
+            content={"instructions": "custom {{business_name}}"},
+            is_system=False,
+        )
+        db_session.add(custom)
+        await db_session.commit()
+
+        await _seed_templates(db_session)
+        await _prune_system_templates(db_session)
+
+        result = await db_session.execute(
+            select(AgentTemplate).where(AgentTemplate.name == "Mi plantilla personalizada")
+        )
+        assert result.scalar_one_or_none() is not None
+
+    @pytest.mark.asyncio
+    async def test_prune_keeps_current_system_templates(
+        self, db_session: AsyncSession
+    ):
+        from app.seed import _prune_system_templates, _seed_templates
+
+        await _seed_templates(db_session)
+        await _prune_system_templates(db_session)
+
+        result = await db_session.execute(
+            select(AgentTemplate).where(AgentTemplate.is_system.is_(True))
+        )
+        system = result.scalars().all()
+        assert len(system) == len(SEED_TEMPLATES)
+
+    @pytest.mark.asyncio
+    async def test_seed_plus_prune_is_idempotent(self, db_session: AsyncSession):
+        """seed + prune twice leaves the same system template set."""
+        from app.seed import _prune_system_templates, _seed_templates
+
+        # stale leftovers from the old seed (5 plain variants)
+        for category, name in [
+            ("restaurante", "Restaurante"),
+            ("panaderia", "Panadería"),
+            ("hamburgueseria", "Hamburguesería"),
+            ("barberia", "Barbería"),
+            ("clinica", "Clínica"),
+        ]:
+            db_session.add(
+                AgentTemplate(
+                    category=category,
+                    name=name,
+                    content={"instructions": "old"},
+                    is_system=True,
+                )
+            )
+        await db_session.commit()
+
+        async def run_flow() -> list[str]:
+            await _seed_templates(db_session)
+            await _prune_system_templates(db_session)
+            result = await db_session.execute(select(AgentTemplate))
+            return sorted(t.name for t in result.scalars().all())
+
+        first = await run_flow()
+        second = await run_flow()
+
+        assert first == second
+        # Exactly the 5 canonical templates remain (stale variants gone)
+        assert len(first) == len(SEED_TEMPLATES)
+        assert "Restaurante" not in first
+
+    @pytest.mark.asyncio
+    async def test_seed_does_not_update_custom_template_with_same_key(
+        self, db_session: AsyncSession
+    ):
+        from app.seed import _seed_templates
+
+        seed_template = SEED_TEMPLATES[0]
+        custom = AgentTemplate(
+            category=seed_template["category"],
+            name=seed_template["name"],
+            description="custom description",
+            content={"instructions": "custom content"},
+            is_system=False,
+        )
+        db_session.add(custom)
+        await db_session.commit()
+
+        await _seed_templates(db_session)
+
+        result = await db_session.execute(
+            select(AgentTemplate).where(
+                AgentTemplate.category == seed_template["category"],
+                AgentTemplate.name == seed_template["name"],
+            )
+        )
+        templates = result.scalars().all()
+        custom_rows = [template for template in templates if not template.is_system]
+        assert len(custom_rows) == 1
+        assert custom_rows[0].description == "custom description"
+        assert custom_rows[0].content == {"instructions": "custom content"}
+
+    @pytest.mark.asyncio
+    async def test_reset_system_templates_keeps_custom_templates(
+        self, db_session: AsyncSession
+    ):
+        from app.seed import _reset_system_templates, _seed_templates
+
+        custom = AgentTemplate(
+            category="restaurante",
+            name="Mi plantilla personalizada",
+            content={"instructions": "custom"},
+            is_system=False,
+        )
+        db_session.add(custom)
+        await db_session.commit()
+
+        await _seed_templates(db_session)
+        await _reset_system_templates(db_session)
+        await db_session.commit()
+
+        result = await db_session.execute(select(AgentTemplate))
+        templates = result.scalars().all()
+        assert [template.name for template in templates] == [
+            "Mi plantilla personalizada"
+        ]

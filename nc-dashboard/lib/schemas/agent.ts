@@ -53,18 +53,19 @@ export const defaultAgentValues: AgentFormValues = {
   tenant_id: "",
   name: "",
   provider: "groq",
-  model: "llama-3.3-70b-versatile",
+  model: "openai/gpt-oss-120b",
   temperature: 0,
   max_tokens: 512,
 };
 
-/** Models disponibles por proveedor */
+/** Models disponibles por proveedor — solo modelos vigentes (Groq deprecó
+ *  llama-3.3-70b-versatile, llama-3.1-8b-instant, mixtral-8x7b-32768 y
+ *  gemma2-9b-it). Fuente: console.groq.com/docs/deprecations */
 export const MODELS_BY_PROVIDER: Record<string, string[]> = {
   groq: [
-    "llama-3.3-70b-versatile",
-    "llama-3.1-8b-instant",
-    "mixtral-8x7b-32768",
-    "gemma2-9b-it",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
+    "qwen/qwen3.6-27b",
   ],
   openai: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"],
   anthropic: ["claude-sonnet-4-20250514", "claude-haiku-3-5-20241022"],

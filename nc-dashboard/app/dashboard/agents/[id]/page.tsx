@@ -32,6 +32,8 @@ import {
 } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
+import { CAPABILITIES, hasCapability } from "@/lib/capabilities";
 import type { AgentEditFormValues } from "@/lib/schemas/agent";
 import type { BusinessConfig } from "@/lib/types/agent";
 
@@ -49,11 +51,27 @@ export default function AgentDetailPage() {
   } = useAgent(id);
 
   const { tenants, isLoading: loadingTenants } = useTenants();
+  const { user } = useAuth();
 
   const [activeTab, setActiveTab] = useState("info");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSavingBusiness, setIsSavingBusiness] = useState(false);
+
+  /* ── Capability gates (same source as the main dashboard; backend is authority) ── */
+  const effectiveRole = user?.current_role ?? user?.role;
+  const isOperator = effectiveRole === "admin" || effectiveRole === "superadmin";
+  const canManageAgents = isOperator && hasCapability(user, CAPABILITIES.agentsManage);
+  const canEditBusiness = isOperator && hasCapability(user, CAPABILITIES.businessEdit);
+
+  // If the active tab is no longer permitted (e.g. after switching tenant),
+  // fall back to the read-only Info tab.
+  const resolvedTab =
+    activeTab === "edit" && !canManageAgents
+      ? "info"
+      : activeTab === "business" && !canEditBusiness
+        ? "info"
+        : activeTab;
 
   /* ── Loading ── */
   if (isLoading) {
@@ -164,12 +182,14 @@ export default function AgentDetailPage() {
         </Button>
 
         <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm">
-              <Trash2 className="mr-2 size-4" />
-              Eliminar
-            </Button>
-          </AlertDialogTrigger>
+          {canManageAgents && (
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="mr-2 size-4" />
+                Eliminar
+              </Button>
+            </AlertDialogTrigger>
+          )}
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>¿Eliminar agente?</AlertDialogTitle>
@@ -200,17 +220,21 @@ export default function AgentDetailPage() {
       </div>
 
       {/* ── Tabs ── */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={resolvedTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="info">Información</TabsTrigger>
-          <TabsTrigger value="business">
-            <Building2 className="mr-2 size-4" />
-            Negocio
-          </TabsTrigger>
-          <TabsTrigger value="edit">
-            <Pencil className="mr-2 size-4" />
-            Editar
-          </TabsTrigger>
+          {canEditBusiness && (
+            <TabsTrigger value="business">
+              <Building2 className="mr-2 size-4" />
+              Negocio
+            </TabsTrigger>
+          )}
+          {canManageAgents && (
+            <TabsTrigger value="edit">
+              <Pencil className="mr-2 size-4" />
+              Editar
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* ── Tab: Info ── */}
@@ -218,42 +242,46 @@ export default function AgentDetailPage() {
           <AgentInfo agent={agent} plan={tenants.find(t => t.id === agent.tenant_id)?.plan} />
         </TabsContent>
 
-        {/* ── Tab: Negocio ── */}
-        <TabsContent value="business" className="mt-6">
-          <BusinessConfigForm
-            config={agent.business_config}
-            onSave={handleSaveBusinessConfig}
-            isSaving={isSavingBusiness}
-          />
-        </TabsContent>
+        {/* ── Tab: Negocio (business.edit capability) ── */}
+        {canEditBusiness && (
+          <TabsContent value="business" className="mt-6">
+            <BusinessConfigForm
+              config={agent.business_config}
+              onSave={handleSaveBusinessConfig}
+              isSaving={isSavingBusiness}
+            />
+          </TabsContent>
+        )}
 
-        {/* ── Tab: Edit ── */}
-        <TabsContent value="edit" className="mt-6">
-          <Card className="max-w-2xl">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold tracking-tight">
-                Editar Agente
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <AgentForm
-                defaultValues={{
-                  name: agent.name,
-                  provider: "groq",
-                  model: agent.model,
-                  temperature: agent.temperature,
-                  max_tokens: agent.max_tokens,
-                }}
-                onSubmit={handleUpdate}
-                isSubmitting={isSubmitting}
-                mode="edit"
-                tenants={tenants}
-                tenantsLoading={loadingTenants}
-                selectedPlan={tenants.find(t => t.id === agent.tenant_id)?.plan}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {/* ── Tab: Edit (agents.manage capability) ── */}
+        {canManageAgents && (
+          <TabsContent value="edit" className="mt-6">
+            <Card className="max-w-2xl">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold tracking-tight">
+                  Editar Agente
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AgentForm
+                  defaultValues={{
+                    name: agent.name,
+                    provider: "groq",
+                    model: agent.model,
+                    temperature: agent.temperature,
+                    max_tokens: agent.max_tokens,
+                  }}
+                  onSubmit={handleUpdate}
+                  isSubmitting={isSubmitting}
+                  mode="edit"
+                  tenants={tenants}
+                  tenantsLoading={loadingTenants}
+                  selectedPlan={tenants.find(t => t.id === agent.tenant_id)?.plan}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
