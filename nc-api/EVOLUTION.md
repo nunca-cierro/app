@@ -429,6 +429,60 @@ aborta:
 
 ---
 
+## Riesgos y plan de contingencia
+
+### ¿Por qué Evolution API y no Meta Cloud API oficial?
+
+**Meta Cloud API** requiere:
+- Verificación del negocio (cámara de comercio, RUT, etc.)
+- Aprobación de caso de uso (puede tardar días/semanas)
+- Cumplimiento estricto de políticas anti-spam
+- Costo por mensaje después de las primeras 1,000 conversaciones/mes
+
+**Evolution API** es una solución self-hosted que:
+- No requiere verificación (usás tu propio número de WhatsApp)
+- Es gratis (solo el costo del servidor)
+- Funciona igual que WhatsApp Web (escaneás QR)
+- Te da control total
+
+### Riesgos de Evolution API
+
+| Riesgo | Probabilidad | Impacto | Mitigación |
+|--------|--------------|---------|------------|
+| WhatsApp cambia el protocolo interno | Media | Alto | La abstracción en `adapter.py` permite migrar en 1-2 semanas |
+| Evolution API deja de mantenerse | Baja | Alto | Alternativas: whatsapp-web.js, Baileys (mismo enfoque) |
+| Número baneado por spam | Media | Alto | Implementar delay anti-baneo, respetar horas, no enviar mensajes masivos sin opt-in |
+| Sesión se desconecta frecuentemente | Baja | Medio | Monitorear con health checks, auto-reconectar si es posible |
+
+### Plan de contingencia: migrar a otro proveedor
+
+La arquitectura ya está preparada para cambiar de proveedor:
+
+```
+nc-api/
+├── app/modules/
+│   ├── evolution/        ← Gateway actual (adapter.py, handler.py)
+│   ├── telegram/         ← Otro gateway (ejemplo)
+│   └── [futuro]/         ← Nuevo gateway (misma interfaz)
+```
+
+**Pasos para migrar:**
+1. Crear nuevo módulo `app/modules/[nuevo_gateway]/` con `adapter.py` y `handler.py`
+2. Implementar la misma interfaz: `send_message()`, `validate_webhook()`, etc.
+3. Agregar endpoint de webhook: `POST /webhook/[nuevo_gateway]/{id}`
+4. Actualizar `PlatformConnection.platform_type` para soportar el nuevo tipo
+5. Migrar conexiones existentes (o crear nuevas)
+
+**Tiempo estimado:** 1-2 semanas de trabajo.
+
+**Alternativas si Evolution falla:**
+- **whatsapp-web.js** (Node.js, mismo enfoque que Evolution)
+- **Baileys** (TypeScript, librería pura, más ligero)
+- **Twilio WhatsApp** (oficial, costo por mensaje)
+- **360dialog** (oficial, costo mensual)
+
+---
+
 ## ¿Qué sigue después de la prueba?
 
 Cuando mañana crees la instancia de Evolution:
