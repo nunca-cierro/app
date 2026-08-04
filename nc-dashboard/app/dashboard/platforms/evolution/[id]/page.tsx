@@ -87,14 +87,25 @@ export default function PlatformEvolutionDetailPage({
     if (evoStatus === "awaiting_scan" || evoStatus === "connecting") {
       pollCountRef.current = 0;
 
-      pollRef.current = setInterval(() => {
+      pollRef.current = setInterval(async () => {
         pollCountRef.current += 1;
 
         if (pollCountRef.current >= MAX_POLLS) {
-          // Timeout — stop polling, show manual-check state
+          // Timeout — stop polling, check real state from Evolution API
           if (pollRef.current) clearInterval(pollRef.current);
           pollRef.current = null;
           dispatchTimedOut(true);
+          // Auto-check real state from Evolution API to update local state
+          try {
+            const result = await checkEvolutionState();
+            if (result.state === "open") {
+              // Evolution says connected — refresh to update local state
+              await refetchConnection();
+              dispatchTimedOut(false);
+            }
+          } catch {
+            // Ignore errors — user can still click "Verificar" manually
+          }
           return;
         }
 
@@ -113,7 +124,7 @@ export default function PlatformEvolutionDetailPage({
     }
     // Reset timeout when status changes
     dispatchTimedOut(false);
-  }, [evoStatus, refetchConnection]);
+  }, [evoStatus, refetchConnection, checkEvolutionState]);
 
   /* ── Connection state check ── */
   const [evoStateCheck, setEvoStateCheck] = useState<{
