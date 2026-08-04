@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 import typing as t
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import get_session
-from app.modules.auth.deps import get_current_user
+from app.modules.auth.deps import get_current_user, get_current_user_sse
 from app.modules.auth.models import User, UserRole
 from app.modules.plans.capabilities import CAP_CONNECTIONS_MANAGE
 from app.modules.plans.deps import require_capability
@@ -33,9 +36,80 @@ from app.modules.platform_connections.service import (
     list_connections,
     update_connection,
 )
+from app.modules.platform_connections.sse import subscribe, unsubscribe
 from app.modules.telegram.client import TelegramClient
 
 router = APIRouter(prefix="/platform-connections", tags=["platform-connections"])
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SSE events — real-time connection state pushes
+# ═══════════════════════════════════════════════════════════════════════════════
+# Separate router: EventSource cannot send Authorization headers, so this
+# endpoint authenticates via ?token= (get_current_user_sse) instead of the
+# header-based admin_deps applied to the main router.
+
+sse_router = APIRouter(prefix="/platform-connections", tags=["platform-connections"])
+
+
+@sse_router.get("/{connection_id}/events")
+async def platform_connection_events(
+    connection_id: uuid.UUID,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user_sse),
+) -> StreamingResponse:
+    """Subscribe to real-time events for a platform connection (SSE).
+
+    Streams ``connection_state_changed`` events when a webhook updates the
+    connection (e.g. WhatsApp QR scanned → ``state: open``). Keeps the
+    stream alive with periodic comment keepalives so proxies don't close it.
+    """
+    connection = await get_connection(session, connection_id)
+    if not connection or (
+        current_user.current_role != UserRole.SUPERADMIN
+        and connection.tenant_id != current_user.current_tenant_id
+    ):
+        raise HTTPException(status_code=404, detail="Platform connection not found")
+
+    return StreamingResponse(
+        _connection_event_generator(str(connection_id), request),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+async def _connection_event_generator(
+    connection_id: str,
+    request: Request,
+):
+    """SSE generator: subscribe to the hub and stream events as they arrive.
+
+    Emits an initial ``: connected`` comment, then ``data:`` frames for
+    each event. Sends ``: keepalive`` comments every 5s of silence so
+    proxies don't close idle streams. Terminates (and unsubscribes) when
+    the client disconnects.
+    """
+    queue = subscribe(connection_id)
+    try:
+        yield ": connected\n\n"
+        while True:
+            # Check for client disconnect between polls so the generator
+            # terminates (and unsubscribes) when the browser closes.
+            if await request.is_disconnected():
+                break
+            try:
+                event = await asyncio.wait_for(queue.get(), timeout=5.0)
+            except asyncio.TimeoutError:
+                yield ": keepalive\n\n"
+                continue
+            yield f"data: {json.dumps(event)}\n\n"
+    finally:
+        unsubscribe(connection_id, queue)
 
 
 class TelegramTokenValidationRequest(BaseModel):

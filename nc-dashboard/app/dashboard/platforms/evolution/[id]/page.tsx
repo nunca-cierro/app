@@ -4,6 +4,8 @@ import { useState, use, useEffect, useRef, useReducer } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePlatformConnection, type EvolutionConnectionState } from "@/hooks/use-platform-connections";
+import { TOKEN_KEYS } from "@/lib/api";
+import { isConnectionStateChanged, parseSseMessage } from "@/lib/sse";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -80,40 +82,141 @@ export default function PlatformEvolutionDetailPage({
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollCountRef = useRef(0);
-  const MAX_POLLS = 12; // 60 seconds at 5s intervals
+  const TIMEOUT_THRESHOLD = 12; // Show timeout UI after 60s (12 × 5s)
+  const MAX_POLLS = 60; // Stop completely after 5 minutes
+  // SSE is the primary channel; polling is the fallback when the stream
+  // is unavailable (no session token) or has failed.
+  const [sseFailed, setSseFailed] = useState(
+    () => typeof window !== "undefined" && !localStorage.getItem(TOKEN_KEYS.access),
+  );
+  const [sseTick, setSseTick] = useState(0);
 
-  /* ── Poll connection status when awaiting_scan or connecting ── */
+  /* ── SSE subscription — real-time connection state updates ──
+   *
+   * Replaces polling as the primary detection mechanism: the backend
+   * pushes `connection_state_changed` the moment a webhook updates the
+   * connection (QR scanned → open, phone lost network → close). The
+   * browser refetches the connection immediately on each event.
+   *
+   * EventSource auto-reconnects on transient drops (onopen resets the
+   * error counter). Only when the stream is definitively dead (repeated
+   * errors with no successful open) do we fall back to polling.
+   */
   useEffect(() => {
+    if (!params.id) return;
+
+    const accessToken = localStorage.getItem(TOKEN_KEYS.access);
+    if (!accessToken) return; // sseFailed already true → polling fallback
+
+    let errorCount = 0;
+    const es = new EventSource(
+      `/api/v1/platform-connections/${params.id}/events?token=${encodeURIComponent(accessToken)}`,
+    );
+
+    es.onopen = () => {
+      errorCount = 0;
+      setSseFailed(false);
+    };
+
+    es.onmessage = (event) => {
+      const msg = parseSseMessage(event.data);
+      if (isConnectionStateChanged(msg)) {
+        dispatchTimedOut(false);
+        setSseTick((t) => t + 1);
+        refetchConnection();
+      }
+    };
+
+    es.onerror = () => {
+      errorCount += 1;
+      if (errorCount >= 3) {
+        setSseFailed(true);
+        es.close();
+      }
+    };
+
+    return () => {
+      es.close();
+    };
+  }, [params.id, refetchConnection]);
+
+  /* ── Timeout watchdog — event-driven (SSE) or poll-driven (fallback) ──
+   *
+   * After 60s waiting for a scan WITHOUT any state change event, show the
+   * timeout UI offering a manual "Verificar ahora" check. Resets whenever
+   * the status changes or an SSE event arrives.
+   */
+  useEffect(() => {
+    if (evoStatus !== "awaiting_scan" && evoStatus !== "connecting") {
+      dispatchTimedOut(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      dispatchTimedOut(true);
+    }, TIMEOUT_THRESHOLD * 5000);
+    return () => clearTimeout(timer);
+  }, [evoStatus, sseTick, dispatchTimedOut]);
+
+  /* ── Polling fallback — only when SSE has failed ── */
+  useEffect(() => {
+    if (!sseFailed) {
+      // SSE is live (or initializing) — no polling needed
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+      return;
+    }
+
     if (evoStatus === "awaiting_scan" || evoStatus === "connecting") {
       pollCountRef.current = 0;
 
-      pollRef.current = setInterval(async () => {
+      const poll = async () => {
         pollCountRef.current += 1;
 
-        if (pollCountRef.current >= MAX_POLLS) {
-          // Timeout — stop polling, check real state from Evolution API
-          if (pollRef.current) clearInterval(pollRef.current);
-          pollRef.current = null;
+        // Show timeout UI after 60s but keep polling
+        if (pollCountRef.current === TIMEOUT_THRESHOLD) {
           dispatchTimedOut(true);
-          // Auto-check real state from Evolution API to update local state
+          // Auto-check real state from Evolution API
           try {
             const result = await checkEvolutionState();
             if (result.state === "open") {
-              // Evolution says connected — refresh to update local state
               await refetchConnection();
               dispatchTimedOut(false);
+              return; // Status changed, effect will re-run
             }
           } catch {
-            // Ignore errors — user can still click "Verificar" manually
+            // Ignore errors — continue polling
           }
+        }
+
+        // Stop completely after 5 minutes
+        if (pollCountRef.current >= MAX_POLLS) {
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null;
           return;
         }
 
         refetchConnection();
-      }, 5000);
+      };
+
+      // Poll every 5s for first 60s, then every 10s
+      const getInterval = () =>
+        pollCountRef.current < TIMEOUT_THRESHOLD ? 5000 : 10000;
+
+      pollRef.current = setInterval(poll, getInterval());
+
+      // Adjust interval after timeout threshold
+      const timeoutTimer = setTimeout(() => {
+        if (pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = setInterval(poll, 10000);
+        }
+      }, TIMEOUT_THRESHOLD * 5000);
 
       return () => {
         if (pollRef.current) clearInterval(pollRef.current);
+        clearTimeout(timeoutTimer);
       };
     }
 
@@ -122,9 +225,7 @@ export default function PlatformEvolutionDetailPage({
       clearInterval(pollRef.current);
       pollRef.current = null;
     }
-    // Reset timeout when status changes
-    dispatchTimedOut(false);
-  }, [evoStatus, refetchConnection, checkEvolutionState]);
+  }, [evoStatus, sseFailed, refetchConnection, checkEvolutionState]);
 
   /* ── Connection state check ── */
   const [evoStateCheck, setEvoStateCheck] = useState<{
@@ -300,24 +401,39 @@ export default function PlatformEvolutionDetailPage({
               </div>
             )}
 
-            {/* Timeout: polling exceeded max attempts */}
+            {/* Timeout: polling exceeded initial threshold but still checking */}
             {evoState === "timeout" && (
               <div className="flex flex-col items-center gap-3 py-4 border-t text-sm">
-                <p className="text-amber-600 font-medium">
-                  Sin confirmación aún
-                </p>
+                <div className="flex items-center gap-2 text-amber-600">
+                  <LoaderIcon className="size-4 animate-spin" />
+                  <p className="font-medium">
+                    Verificando conexión...
+                  </p>
+                </div>
                 <p className="text-muted-foreground text-xs text-center max-w-xs">
-                  El QR sigue activo. Si tu cliente ya lo escaneó, presiona
-                  &ldquo;Verificar&rdquo; para confirmar la conexión.
+                  El QR sigue activo. El sistema detectará automáticamente cuando
+                  tu cliente escanee. Si ya lo hizo y no se actualiza, presiona
+                  &ldquo;Verificar&rdquo;.
                 </p>
                 <Button
-                  onClick={refetchConnection}
+                  onClick={async () => {
+                    try {
+                      const result = await checkEvolutionState();
+                      if (result.state === "open") {
+                        await refetchConnection();
+                        dispatchTimedOut(false);
+                      }
+                    } catch {
+                      // Ignore
+                    }
+                    refetchConnection();
+                  }}
                   variant="outline"
                   size="sm"
                   className="gap-2"
                 >
                   <LoaderIcon className="size-4" />
-                  Refrescar estado
+                  Verificar ahora
                 </Button>
               </div>
             )}
