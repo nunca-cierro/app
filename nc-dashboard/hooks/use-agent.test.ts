@@ -39,7 +39,7 @@ describe("updateAgent payload validation", () => {
     const valid: AgentEditFormValues = {
       name: "Updated",
       provider: "groq",
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       temperature: 0,
       max_tokens: 512,
     };
@@ -51,7 +51,7 @@ describe("updateAgent payload validation", () => {
     const result = agentEditFormSchema.safeParse({
       name: "X",
       provider: "groq",
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       temperature: 5, // out of range
       max_tokens: 512,
     });
@@ -62,7 +62,7 @@ describe("updateAgent payload validation", () => {
     const result = agentEditFormSchema.safeParse({
       name: "",
       provider: "groq",
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       temperature: 0,
       max_tokens: 512,
     });

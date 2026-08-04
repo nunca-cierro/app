@@ -97,6 +97,17 @@ describe("sidebar nav items — client", () => {
     const items = getNavItems(role);
     expect(items.length).toBe(2);
   });
+
+  it("client on basic plan still sees Dashboard and Conversaciones", () => {
+    // Plan must control actions, never dashboard entry
+    const items = getNavItems(role, "basic");
+    const labels = items.map((i) => i.label);
+    expect(items.length).toBe(2);
+    expect(labels).toContain("Dashboard");
+    expect(labels).toContain("Conversaciones");
+    expect(labels).not.toContain("Agentes");
+    expect(labels).not.toContain("Conexiones");
+  });
 });
 
 describe("sidebar nav items — agent", () => {
