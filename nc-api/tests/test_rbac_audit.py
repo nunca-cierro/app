@@ -298,14 +298,15 @@ async def test_superadmin_accesses_admin_panel_200(client: AsyncClient, db_sessi
 
 @pytest.mark.asyncio
 async def test_admin_can_assign_tenant(client: AsyncClient, db_session: AsyncSession, admin_user: User):
-    """ADMIN role should be able to assign users to tenants (per updated spec)."""
+    """ADMIN role can assign users to tenants they manage (per updated spec)."""
     tenant = _create_tenant(db_session, "Assign Tenant", "assign")
     target_user = User(id=uuid.uuid4(), email="target@test.com", name="Target", password_hash="hash")
     db_session.add(target_user)
     await db_session.commit()
 
     setattr(admin_user, "current_role", UserRole.ADMIN)
-    setattr(admin_user, "current_tenant_id", None)
+    # Admin must be acting within their ACTIVE tenant — cross-tenant assignment is blocked
+    setattr(admin_user, "current_tenant_id", tenant.id)
 
     async def mock_get_current_user():
         return admin_user

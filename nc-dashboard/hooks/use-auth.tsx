@@ -31,6 +31,24 @@ export interface AuthContextType {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Pure: silent profile restore mapping (testable without rendering)  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Normalize a profile fetched from `/auth/me` for storage as `AuthUser`.
+ *
+ * `/auth/me` returns the tenant plan as `current_plan`; the rest of the app
+ * reads `user.plan` — map it so the dashboard/capabilities work after a
+ * silent profile restore (e.g. page reload with a stored token).
+ */
+export function restoreUserFromProfile(profile: AuthUser): AuthUser {
+  return {
+    ...profile,
+    plan: profile.current_plan ?? profile.plan ?? null,
+  };
+}
+
+/* ------------------------------------------------------------------ */
 /*  Context                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -61,8 +79,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     apiGetProfile()
       .then((profile) => {
         if (cancelled) return;
-        setUser(profile);
-        localStorage.setItem(TOKEN_KEYS.user, JSON.stringify(profile));
+        // /auth/me returns the tenant plan as `current_plan` — map it onto
+        // `plan` so the rest of the app (dashboard, sidebar, capabilities
+        // fallback) reads the plan after silent profile restore.
+        const restored = restoreUserFromProfile(profile);
+        setUser(restored);
+        localStorage.setItem(TOKEN_KEYS.user, JSON.stringify(restored));
       })
       .catch(() => {
         if (cancelled) return;
@@ -91,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       tenant_id: data.tenant_id,
       plan: data.tenant_plan ?? null,
       payment_status: data.payment_status ?? null,
+      capabilities: data.capabilities ?? null,
     });
   };
 
@@ -105,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       tenant_id: data.tenant_id,
       plan: data.tenant_plan ?? null,
       payment_status: data.payment_status ?? null,
+      capabilities: data.capabilities ?? null,
     });
   };
 
@@ -119,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       tenant_id: data.tenant_id,
       plan: data.tenant_plan ?? null,
       payment_status: data.payment_status ?? null,
+      capabilities: data.capabilities ?? null,
     });
   };
 

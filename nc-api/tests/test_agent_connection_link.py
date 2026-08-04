@@ -103,6 +103,7 @@ class TestEvolutionHandlerAgentResolution:
         tenant = MagicMock()
         tenant.id = connection.tenant_id
         tenant.name = "Test Tenant"
+        tenant.plan = "enterprise"  # AI-capable plan → Groq pipeline
         session.get.return_value = tenant
 
         # Mock linked agent
@@ -135,7 +136,13 @@ class TestEvolutionHandlerAgentResolution:
         result_prompts = MagicMock()
         result_prompts.scalars.return_value.all.return_value = []
 
-        session.execute.side_effect = [result_conv, result_history, result_agent, result_prompts]
+        # First call is the dedup guard (handler skips re-delivered events)
+        result_dup = MagicMock()
+        result_dup.scalar_one_or_none.return_value = None
+
+        session.execute.side_effect = [
+            result_dup, result_conv, result_history, result_agent, result_prompts
+        ]
 
         with patch("app.modules.evolution.handler.groq_client") as mock_groq, \
              patch("app.modules.evolution.handler.EvolutionAdapter") as mock_adapter:
@@ -146,8 +153,8 @@ class TestEvolutionHandlerAgentResolution:
             await handle_evolution_incoming(event, connection, session)
 
             # Verify that the agent query used agent_id
-            # Agent query is the 3rd one
-            agent_query = session.execute.call_args_list[2][0][0]
+            # Agent query is the 4th one (after dedup, conv and history)
+            agent_query = session.execute.call_args_list[3][0][0]
             # Verify agent_id was used in bind params
             params = agent_query.compile().params
             assert params["id_1"] == connection.agent_id
@@ -276,6 +283,7 @@ class TestPlatformConnectionServiceValidation:
         tenant = MagicMock()
         tenant.id = connection.tenant_id
         tenant.name = "Test Tenant"
+        tenant.plan = "enterprise"  # AI-capable plan → Groq pipeline
         session.get.return_value = tenant
 
         # Mock default agent
@@ -296,7 +304,6 @@ class TestPlatformConnectionServiceValidation:
         result_history = MagicMock()
         result_history.scalars.return_value.all.return_value = []
 
-        # First call for agent: returns None (because we mock it as disabled in the query)
         result_linked_agent = MagicMock()
         result_linked_agent.scalar_one_or_none.return_value = None
 
@@ -307,7 +314,12 @@ class TestPlatformConnectionServiceValidation:
         result_prompts = MagicMock()
         result_prompts.scalars.return_value.all.return_value = []
 
+        # First call is the dedup guard (handler skips re-delivered events)
+        result_dup = MagicMock()
+        result_dup.scalar_one_or_none.return_value = None
+
         session.execute.side_effect = [
+            result_dup,
             result_conv, 
             result_history, 
             result_linked_agent, # query with agent_id
@@ -323,12 +335,12 @@ class TestPlatformConnectionServiceValidation:
 
             await handle_evolution_incoming(event, connection, session)
 
-            # 3rd call: query with agent_id
-            agent_query_1 = session.execute.call_args_list[2][0][0]
+            # 4th call: query with agent_id (after dedup, conv and history)
+            agent_query_1 = session.execute.call_args_list[3][0][0]
             assert agent_query_1.compile().params["id_1"] == connection.agent_id
             
-            # 4th call: fallback query without agent_id
-            agent_query_2 = session.execute.call_args_list[3][0][0]
+            # 5th call: fallback query without agent_id
+            agent_query_2 = session.execute.call_args_list[4][0][0]
             assert "id_1" not in agent_query_2.compile().params
             
             # Verify groq was called with default agent's model

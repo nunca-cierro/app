@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
+from app.core.config import settings
 from app.modules.auth.models import PaymentStatus, User, UserRole
 from app.modules.auth.user_tenant import UserTenant
 from app.modules.tenants.models import Tenant
@@ -27,6 +28,8 @@ from app.modules.auth.service import (
     verify_password,
 )
 from app.modules.auth.deps import get_current_user
+from app.modules.plans.capabilities import effective_capabilities
+from app.modules.tenants.internal import is_internal_tenant
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -54,7 +57,9 @@ async def register(
         )
 
     # Validate role against allowed values
-    ALLOWED_ROLES = {r.value for r in UserRole}
+    # superadmin is NOT assignable via public self-registration — that role is
+    # granted only through operator tooling. Allows admin/agent/client.
+    ALLOWED_ROLES = {r.value for r in UserRole} - {UserRole.SUPERADMIN.value}
     if body.role not in ALLOWED_ROLES:
         raise HTTPException(
             status_code=422,
@@ -84,6 +89,7 @@ async def register(
         tenant_id=None,
         tenant_plan=None,
         payment_status=None,
+        capabilities=sorted(effective_capabilities(user.role, None)),
     )
 
 
@@ -140,7 +146,8 @@ async def switch_tenant(
         role=ut.role,
         tenant_id=str(tenant.id),
         tenant_plan=tenant.plan,
-        payment_status=PaymentStatus.ACTIVE if tenant.slug == "nuncacierro" else tenant.payment_status,
+        payment_status=PaymentStatus.ACTIVE if is_internal_tenant(tenant.slug, settings.internal_tenant_slug) else tenant.payment_status,
+        capabilities=sorted(effective_capabilities(ut.role, tenant.plan)),
     )
 
 
@@ -185,8 +192,8 @@ async def login(
                 tenant_plan = tenant.plan
                 payment_status = getattr(tenant, "payment_status", None)
                 plan_activated_at = getattr(tenant, "plan_activated_at", None)
-                # NuncaCierro is internal — exempt from payment
-                if tenant.slug == "nuncacierro":
+                # Internal tenant is exempt from payment (configurable)
+                if is_internal_tenant(tenant.slug, settings.internal_tenant_slug):
                     payment_status = PaymentStatus.ACTIVE
 
     token = create_access_token(
@@ -203,6 +210,7 @@ async def login(
         tenant_plan=tenant_plan,
         payment_status=payment_status,
         plan_activated_at=plan_activated_at,
+        capabilities=sorted(effective_capabilities(role, tenant_plan)),
     )
 
 
@@ -223,13 +231,19 @@ async def me(
             current_plan = tenant.plan
             payment_status = getattr(tenant, "payment_status", None)
             plan_activated_at = getattr(tenant, "plan_activated_at", None)
-            if tenant.slug == "nuncacierro":
+            if is_internal_tenant(tenant.slug, settings.internal_tenant_slug):
                 payment_status = PaymentStatus.ACTIVE
 
     response = MeResponse.model_validate(current_user)
     response.current_plan = current_plan
     response.payment_status = payment_status
     response.plan_activated_at = plan_activated_at
+    response.capabilities = sorted(
+        effective_capabilities(
+            getattr(current_user, "current_role", current_user.role),
+            current_plan,
+        )
+    )
     return response
 
 

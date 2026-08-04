@@ -9,11 +9,18 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.db.session import get_session
-from app.modules.auth.deps import RoleChecker, get_current_user
+from app.modules.auth.deps import get_current_user
 from app.modules.auth.models import User, UserRole
+from app.modules.plans.capabilities import CAP_CONNECTIONS_MANAGE
+from app.modules.plans.deps import require_capability
 
-admin_or_super = RoleChecker(allowed_roles=[UserRole.ADMIN, UserRole.SUPERADMIN])
+# Managing connections requires an operator role AND a plan that includes
+# connection management (professional/enterprise). Superadmin is exempt.
+connections_manage = require_capability(
+    CAP_CONNECTIONS_MANAGE, [UserRole.ADMIN, UserRole.SUPERADMIN]
+)
 from app.modules.platform_connections.schemas import (
     PlatformConnectionCreate,
     PlatformConnectionResponse,
@@ -237,7 +244,7 @@ async def list_platform_connections(
 async def create_platform_connection(
     body: PlatformConnectionCreate,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(admin_or_super),
+    current_user: User = Depends(connections_manage),
 ) -> t.Any:
     """Register a new platform connection for the current tenant."""
     if current_user.current_role != UserRole.SUPERADMIN:
@@ -274,7 +281,7 @@ async def update_platform_connection(
     connection_id: uuid.UUID,
     body: PlatformConnectionUpdate,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(admin_or_super),
+    current_user: User = Depends(connections_manage),
 ) -> t.Any:
     """Update an existing platform connection with isolation."""
     connection = await get_connection(session, connection_id)
@@ -291,7 +298,7 @@ async def update_platform_connection(
 async def delete_platform_connection(
     connection_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(admin_or_super),
+    current_user: User = Depends(connections_manage),
 ):
     """Remove a platform connection with isolation."""
     connection = await get_connection(session, connection_id)
@@ -321,7 +328,7 @@ async def validate_telegram_token(
 async def register_telegram_webhook(
     connection_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(admin_or_super),
+    current_user: User = Depends(connections_manage),
 ) -> dict[str, str]:
     """Register (or re-register) the Telegram webhook for this connection with isolation."""
     connection = await get_connection(session, connection_id)
@@ -349,8 +356,10 @@ async def register_telegram_webhook(
         raise HTTPException(status_code=400, detail="No bot_token found in credentials")
 
     # ── Register webhook with Telegram ─────────────────────────────────
+    # Public base URL is configurable (WEBHOOK_PUBLIC_BASE_URL) instead of
+    # a hardcoded domain — see app/core/config.py.
     webhook_url = (
-        f"https://nunca-cierro.up.railway.app"
+        f"{settings.webhook_public_base_url}"
         f"/webhook/telegram/{connection_id}"
     )
 
@@ -388,7 +397,7 @@ async def register_telegram_webhook(
 async def register_evolution_webhook(
     connection_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(admin_or_super),
+    current_user: User = Depends(connections_manage),
     base_url_override: str | None = None,
 ) -> dict[str, str]:
     """Register (or re-register) the Evolution API webhook for this connection with isolation."""
@@ -407,13 +416,18 @@ async def register_evolution_webhook(
 
     # ── Decrypt credentials ────────────────────────────────────────────
     from app.core.encryption import decrypt
+    from app.modules.evolution.webhook_registration import (
+        resolve_effective_api_key,
+        set_instance_webhook,
+    )
 
     creds = decrypt(connection.credentials)
     if not isinstance(creds, dict):
         raise HTTPException(status_code=500, detail="Invalid credential format")
 
     base_url: str = (creds.get("base_url") or "").rstrip("/")
-    api_key: str = (creds.get("api_key", "") or "").strip()
+    # Effective key = own credential key, else the global EVO_API_KEY (W3).
+    api_key = resolve_effective_api_key(creds, settings.evo_api_key)
     instance_name: str = (creds.get("instance_name", "") or "").strip()
 
     if not base_url or not instance_name:
@@ -424,77 +438,50 @@ async def register_evolution_webhook(
 
     # ── Build the webhook URL where Evolution should send events ───────
     # Cuando Evolution API y nc-api están en el mismo Docker (Hetzner),
-    # usamos la URL interna de Docker. El override permite apuntar a
-    # una URL pública si Evolution está en otro servidor.
+    # usamos la URL interna de Docker (configurable vía EVO_INTERNAL_BASE_URL).
+    # El override permite apuntar a una URL pública si Evolution está en
+    # otro servidor.
     public_url = (base_url_override or "").strip().rstrip("/")
     if not public_url:
         # Internal Docker network (Hetzner) — Evolution API → nc-api
-        public_url = "http://nc-api:8000"
+        public_url = settings.evo_internal_base_url
 
     webhook_url = f"{public_url}/webhook/evolution/{connection_id}"
 
-    # ── Register webhook with Evolution API ────────────────────────────
+    # ── Register webhook with Evolution API (v2 payload + auth header) ──
     import httpx
     from loguru import logger
 
-    headers = {"Content-Type": "application/json"}
-    if api_key:
-        headers["apikey"] = api_key
-
-    set_webhook_payload = {
-        "webhook": {
-            "url": webhook_url,
-            "enabled": True,
-            "webhookByEvents": True,
-            "webhookBase64": False,
-            "events": [
-                "MESSAGES_UPSERT",
-                "CONNECTION_UPDATE",
-                "QRCODE_UPDATED",
-            ],
-        }
-    }
-
     try:
-        async with httpx.AsyncClient(timeout=15.0, verify=False) as client:
-            url = f"{base_url}/webhook/set/{instance_name}"
-            logger.info("Registering Evolution webhook. URL: {url} | Payload: {payload}", url=url, payload=set_webhook_payload)
-            
-            resp = await client.post(
-                url,
-                json=set_webhook_payload,
-                headers=headers,
-            )
-            
-            logger.info("Evolution response status: {status} | body: {body}", status=resp.status_code, body=resp.text)
-            
-            if not resp.is_success:
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"Evolution API error ({resp.status_code}): {resp.text}",
-                )
-            
-            # Evolution often returns success even if body is empty or non-JSON
-            try:
-                data = resp.json()
-            except Exception:
-                data = {"status": "ok", "raw_response": resp.text}
-                
-            # Update extra_data
-            extra = dict(connection.extra_data or {})
-            extra["webhook_url"] = webhook_url
-            extra["webhook_status"] = "registered"
-            connection.extra_data = extra
-            await session.commit()
-
-            return {"status": "ok", "webhook_url": webhook_url}
-
+        resp = await set_instance_webhook(
+            base_url, instance_name, webhook_url, api_key, verify_ssl=False
+        )
     except httpx.RequestError as exc:
         logger.error("Evolution API unreachable: {exc}", exc=exc)
         raise HTTPException(
             status_code=502,
             detail=f"Evolution API unreachable: {exc}",
         ) from exc
+
+    logger.info(
+        "Evolution webhook set | status={status} | body={body}",
+        status=resp.status_code,
+        body=resp.text[:300],
+    )
+    if not resp.is_success:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Evolution API error ({resp.status_code}): {resp.text}",
+        )
+
+    # Update extra_data
+    extra = dict(connection.extra_data or {})
+    extra["webhook_url"] = webhook_url
+    extra["webhook_status"] = "registered"
+    connection.extra_data = extra
+    await session.commit()
+
+    return {"status": "ok", "webhook_url": webhook_url}
 
 
 
@@ -517,7 +504,7 @@ class EvolutionConnectResponse(BaseModel):
 async def connect_evolution(
     connection_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(admin_or_super),
+    current_user: User = Depends(connections_manage),
     regenerate: bool = False,  # query param: force QR regeneration
 ) -> EvolutionConnectResponse:
     """Create an Evolution API instance and return the QR code.
@@ -540,6 +527,10 @@ async def connect_evolution(
 
     from app.core.config import settings
     from app.core.encryption import decrypt, encrypt
+    from app.modules.evolution.webhook_registration import (
+        build_evolution_webhook_payload,
+        resolve_effective_api_key,
+    )
 
     # ── 1. Get connection ───────────────────────────────────────────────
     connection = await get_connection(session, connection_id)
@@ -561,7 +552,8 @@ async def connect_evolution(
         raise HTTPException(status_code=500, detail="Invalid credential format")
 
     base_url: str = (creds.get("base_url") or settings.evo_api_base_url).rstrip("/")
-    api_key: str = creds.get("api_key", "") or settings.evo_api_key
+    # Effective key = own credential key, else the global EVO_API_KEY (W3).
+    api_key: str = resolve_effective_api_key(creds, settings.evo_api_key)
     instance_name: str = (creds.get("instance_name") or "").strip()
 
     # Auto-generate instance name if missing
@@ -579,7 +571,9 @@ async def connect_evolution(
             # ── 3. Create instance in Evolution API ───────────────────────
             # Try to create — if it already exists (409), continue to get QR
             instance_created = False
-            webhook_url = f"http://nc-api:8000/webhook/evolution/{connection_id}"
+            webhook_url = (
+                f"{settings.evo_internal_base_url}/webhook/evolution/{connection_id}"
+            )
 
             create_payload: dict[str, t.Any] = {
                 "instanceName": instance_name,
@@ -629,19 +623,7 @@ async def connect_evolution(
             try:
                 webhook_resp = await client.post(
                     f"{base_url}/webhook/set/{instance_name}",
-                    json={
-                        "webhook": {
-                            "url": webhook_url,
-                            "enabled": True,
-                            "webhookByEvents": True,
-                            "webhookBase64": False,
-                            "events": [
-                                "MESSAGES_UPSERT",
-                                "CONNECTION_UPDATE",
-                                "QRCODE_UPDATED",
-                            ],
-                        }
-                    },
+                    json=build_evolution_webhook_payload(webhook_url, api_key),
                     headers=headers,
                 )
                 if webhook_resp.is_success:
@@ -801,7 +783,7 @@ async def connect_evolution_pairing(
     connection_id: uuid.UUID,
     phone_number: str,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(admin_or_super),
+    current_user: User = Depends(connections_manage),
 ) -> EvolutionPairingCodeResponse:
     """Generate a pairing code instead of a QR.
 
@@ -1002,7 +984,7 @@ async def connect_evolution_pairing(
 async def disconnect_evolution(
     connection_id: uuid.UUID,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(admin_or_super),
+    current_user: User = Depends(connections_manage),
 ) -> dict[str, str]:
     """Logout + delete the Evolution API instance AND the platform connection."""
     import httpx
