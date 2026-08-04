@@ -56,13 +56,21 @@ def mock_groq() -> AsyncMock:
 
 @pytest.fixture
 def mock_adapter() -> MagicMock:
-    """Mock EvolutionAdapter.send_message to return success."""
+    """Mock EvolutionAdapter.send_message to return success.
+
+    NOTE: each send returns a UNIQUE message id — Evolution/WhatsApp
+    message ids are unique per message. A static id would collide with the
+    (platform_connection_id, external_message_id) unique constraint when a
+    test sends multiple outbound messages (e.g. the flood test).
+    """
     with patch(
         "app.modules.evolution.handler.EvolutionAdapter",
     ) as mock_cls:
         instance = MagicMock()
         instance.send_message = AsyncMock(
-            return_value={"key": {"id": "evo_msg_out_1"}},
+            side_effect=lambda **kwargs: {
+                "key": {"id": f"evo_msg_out_{uuid.uuid4().hex[:8]}"}
+            },
         )
         mock_cls.return_value = instance
         yield instance

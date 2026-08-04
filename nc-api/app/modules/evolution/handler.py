@@ -137,6 +137,27 @@ async def handle_evolution_incoming(
         )
         return
 
+    # ── 1b. Dedup guard ───────────────────────────────────────────────
+    # Evolution retries webhooks (exponential backoff) and echoes bot
+    # messages back — both resend the same external_message_id. Skip rows
+    # that already exist instead of processing (and re-inserting) the same
+    # message twice. Backed by the unique constraint
+    # `uq_messages_conn_external_msg` (platform_connection_id +
+    # external_message_id) as a safety net.
+    if parsed.get("external_message_id"):
+        dup_check = await session.execute(
+            select(Message).where(
+                Message.platform_connection_id == connection.id,
+                Message.external_message_id == parsed["external_message_id"],
+            )
+        )
+        if dup_check.scalar_one_or_none():
+            logger.debug(
+                "Skipping duplicate Evolution message | id={mid}",
+                mid=parsed["external_message_id"],
+            )
+            return
+
     # ── 2. Resolve tenant ───────────────────────────────────────────────
     tenant_id = connection.tenant_id
 
@@ -417,13 +438,31 @@ async def handle_evolution_incoming(
         await session.commit()
         return
 
+    # ── 4d2. Status guard — inactive/suspended tenants never reply ────────
+    # A suspended/inactive business must not keep auto-responding to
+    # WhatsApp. The inbound message was already persisted; we halt the reply
+    # with a clear log. Connections are NOT disconnected or deleted here —
+    # only message processing is skipped.
+    if tenant.status in ("inactive", "suspended"):
+        logger.info(
+            "Inbound ignored | tenant={tid} | status={status} | user={user}",
+            tid=tenant_id,
+            status=tenant.status,
+            user=parsed["external_user_id"],
+        )
+        await session.commit()
+        return
+
     # ── 4e. Payment keyword pre-processing ───────────────────────────────
-    # If the user is asking about payment (pagos, QR, Nequi, etc.), reply
-    # with account info immediately and skip the AI pipeline entirely.
-    # Skip for NuncaCierro itself — let its AI respond with the sales template.
-    if tenant.slug == "nuncacierro":
-        pass  # fall through to AI pipeline
-    elif _has_payment_keyword(parsed["content"]):
+    # The platform's own payment info (Bre-B account, dashboard) is sent ONLY
+    # in conversations of the internal tenant (Settings.internal_tenant_slug,
+    # default "nuncacierro"). It must NEVER leak to end customers of client
+    # tenants — their payment keywords flow through their own FAQ/AI pipeline.
+    from app.modules.tenants.internal import is_internal_tenant
+
+    if is_internal_tenant(tenant.slug, settings.internal_tenant_slug) and _has_payment_keyword(
+        parsed["content"]
+    ):
         payment_msg = (
             "¡Claro! Podés pagar tu plan por:\n"
             f"• Bre-B: {settings.payment_breb_number}\n"
@@ -500,8 +539,8 @@ async def handle_evolution_incoming(
         agent = agent_result.scalar_one_or_none()
 
     # ── 5b. Trial expiration check ──────────────────────────────────────
-    TRIAL_DAYS = 7
-    
+    from app.modules.plans.capabilities import CAP_AI, TRIAL_DAYS, plan_has_capability
+
     if tenant.plan == "trial":
         trial_end = tenant.created_at.replace(tzinfo=UTC) + timedelta(days=TRIAL_DAYS)
         if datetime.now(UTC) >= trial_end:
@@ -512,8 +551,8 @@ async def handle_evolution_incoming(
             logger.info("Trial expired for tenant {tid}, message ignored", tid=tenant_id)
             return
 
-    # ── 5c. Programmed responses for Basic/Trial plans ──────────────────────
-    if tenant.plan in ("basic", "trial"):
+    # ── 5c. Programmed responses for plans without AI capability ───────────
+    if not plan_has_capability(tenant.plan, CAP_AI):
         # Use agent's business_config FAQ + keywords for matching
         biz_config = (agent.business_config or {}) if agent else {}
         faq = biz_config.get("faq") or []

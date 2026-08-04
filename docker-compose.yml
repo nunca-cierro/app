@@ -42,17 +42,28 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Debe definir JWT_SECRET}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Debe definir ENCRYPTION_KEY}
       GROQ_API_KEY: ${GROQ_API_KEY:?Debe definir GROQ_API_KEY}
-      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
       LOG_LEVEL: ${LOG_LEVEL:-info}
 
       # ── Evolution API (WhatsApp Gateway - red Docker interna) ────────
       EVO_API_KEY: ${EVO_API_KEY:?Debe definir EVO_API_KEY}
       EVO_API_BASE_URL: "http://evolution-api:8080"
 
+      # ── Webhooks (Hetzner: api.nuncacierro.com + red interna Docker) ──
+      WEBHOOK_PUBLIC_BASE_URL: ${WEBHOOK_PUBLIC_BASE_URL:-https://api.nuncacierro.com}
+      EVO_INTERNAL_BASE_URL: ${EVO_INTERNAL_BASE_URL:-http://nc-api:8000}
+
       APP_HOST: "0.0.0.0"
       APP_PORT: "8000"
     ports:
       - "127.0.0.1:8000:8000"
+    healthcheck:
+      # Readiness real: verifica DB (SELECT 1) vía GET /ready
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=3).status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   # ── Dashboard (Next.js) ─────────────────────────────────────────────
   nc-dashboard:
@@ -62,7 +73,8 @@ services:
         NEXT_PUBLIC_API_URL: "http://nc-api:8000"
     restart: unless-stopped
     depends_on:
-      - nc-api
+      nc-api:
+        condition: service_healthy
     ports:
       - "127.0.0.1:3000:3000"
 

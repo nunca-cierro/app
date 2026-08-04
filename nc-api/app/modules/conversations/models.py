@@ -12,7 +12,7 @@ import uuid
 from datetime import UTC, datetime
 
 from loguru import logger
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
@@ -121,6 +121,20 @@ class Message(Base):
     """A single message within a conversation — platform-agnostic."""
 
     __tablename__ = "messages"
+
+    # Deduplication constraint: a given platform delivers each message
+    # once per connection (external_message_id is unique per WhatsApp
+    # account). Evolution retries webhooks with exponential backoff, so
+    # without this the same inbound message could be stored (and answered)
+    # multiple times. NULL external_message_id values are allowed (they are
+    # distinct in PostgreSQL unique constraints).
+    __table_args__ = (
+        UniqueConstraint(
+            "platform_connection_id",
+            "external_message_id",
+            name="uq_messages_conn_external_msg",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4

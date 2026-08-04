@@ -12,7 +12,7 @@ import typing as t
 from groq import AsyncGroq
 from loguru import logger
 
-from app.core.config import settings
+from app.core.config import DEPRECATED_GROQ_MODELS, settings
 
 
 # ── Security guard — injected at the start of every system prompt ──────────
@@ -70,6 +70,18 @@ class GroqClient:
             The model's response text.
         """
         self._track_rate_limit()
+
+        # ── Deprecated-model compatibility (C2) ────────────────────────
+        # Agents that still store a deprecated/retired Groq model id are
+        # routed to the configured default (settings.groq_model). Custom
+        # models are never rewritten. The alembic data migration fixes rows.
+        if model in DEPRECATED_GROQ_MODELS:
+            logger.info(
+                "Agent uses deprecated Groq model {old} — routing to {new}",
+                old=model,
+                new=settings.groq_model,
+            )
+            model = None
 
         full_system_prompt = f"{SECURITY_PROMPT}\n\n{system_prompt}"
         messages: list[dict[str, str]] = [
