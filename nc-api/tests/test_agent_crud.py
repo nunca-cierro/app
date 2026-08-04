@@ -44,7 +44,7 @@ def _create_agent(db_session: AsyncSession, tenant_id: uuid.UUID, name: str = "T
         name=name,
         business_config={"instructions": "test"},
         provider="groq",
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         temperature=0,
         max_tokens=512,
     )

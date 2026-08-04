@@ -46,5 +46,8 @@ openspec
 # docs
 docs/
 
+# Docs operativas versionadas
+docs/*
+
 # sdd
 .sdd
