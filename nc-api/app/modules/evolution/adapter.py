@@ -254,8 +254,16 @@ class EvolutionAdapter(PlatformAdapter):
             )
             return False
 
-        # ── Optional: verify API key header ──────────────────────────────
-        stored_api_key: str = creds.get("api_key", "") or ""
+        # ── Verify API key header (fail-closed when a key is stored) ────
+        # The EFFECTIVE key is the connection's own api_key, else the global
+        # EVO_API_KEY — this mirrors how the webhook was registered (W3).
+        # If neither exists, the connection keeps instance-only validation
+        # (backward compat). If a key DOES exist, the webhook MUST present
+        # an exact match — a missing or mismatched header is rejected
+        # outright, closing the forged-webhook vector.
+        from app.core.config import settings  # lazy import
+
+        stored_api_key: str = creds.get("api_key", "") or settings.evo_api_key
         if stored_api_key:
             header_key = (
                 headers.get("apikey")
@@ -263,16 +271,13 @@ class EvolutionAdapter(PlatformAdapter):
                 or headers.get("ApiKey")
                 or ""
             )
-            if header_key != stored_api_key:
+            if not header_key or header_key != stored_api_key:
                 logger.warning(
-                    "Evolution webhook apikey header mismatch "
-                    "for connection {id}",
+                    "Evolution webhook apikey missing/mismatch for "
+                    "connection {id} — rejecting (fail-closed)",
                     id=connection.id,
                 )
-                # Instance match is sufficient — log but don't fail on api key
-                logger.info(
-                    "Evolution webhook proceeding with instance validation only"
-                )
+                return False
 
         logger.info(
             "Evolution webhook validated | instance={inst}",

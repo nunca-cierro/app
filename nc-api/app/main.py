@@ -14,6 +14,7 @@ The old ``main.py`` (root) is kept for backward compatibility only.
 
 from __future__ import annotations
 
+import re
 from contextlib import asynccontextmanager
 from collections.abc import AsyncGenerator
 
@@ -21,12 +22,22 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from app.api.v1.router import router as v1_router
 from app.api.webhooks import router as webhook_router
 from app.core.config import settings
 from app.db.session import engine
+
+# Matches credentials inside URLs (scheme://user:pass@...) so DB exceptions
+# (which embed the DSN, including the password) never leak secrets to logs.
+_DSN_CREDENTIALS_RE = re.compile(r"://[^/@\s]+@")
+
+
+def _safe_exc(exc: Exception) -> str:
+    """Exception message with embedded URL credentials redacted."""
+    return _DSN_CREDENTIALS_RE.sub("://***@", str(exc))
 
 
 @asynccontextmanager
@@ -42,7 +53,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             )
             logger.info("Database connection OK")
     except Exception as exc:
-        logger.warning("Database not available yet: {exc}", exc=exc)
+        logger.warning("Database not available yet: {exc}", exc=_safe_exc(exc))
 
     yield
 
@@ -86,6 +97,45 @@ async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSON
     return JSONResponse(
         status_code=409,
         content={"detail": "Ya existe un recurso con ese identificador único."},
+    )
+
+
+# ── Health / readiness probes ──────────────────────────────────────────
+
+@app.get("/health")
+async def health() -> dict:
+    """Liveness probe — the process is up and serving requests.
+
+    Deliberately does NOT touch the database or any external service:
+    liveness must stay cheap and never fail because of a dependency.
+    """
+    return {
+        "status": "ok",
+        "service": settings.app_name,
+        "version": app.version,
+    }
+
+
+@app.get("/ready")
+async def ready() -> JSONResponse:
+    """Readiness probe — verifies the database connection (SELECT 1).
+
+    Only asserts what is actually checked: if the DB is reachable the app
+    can serve webhooks. It does NOT claim health of dependencies that are
+    not verified here (Evolution API, Redis, Groq, …).
+    """
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+    except Exception as exc:
+        logger.warning("Readiness check failed: {exc}", exc=_safe_exc(exc))
+        return JSONResponse(
+            status_code=503,
+            content={"status": "not_ready", "database": "error"},
+        )
+    return JSONResponse(
+        status_code=200,
+        content={"status": "ready", "database": "ok"},
     )
 
 

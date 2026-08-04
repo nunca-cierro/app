@@ -66,8 +66,13 @@ class TestHandlerPaymentKeywords:
     async def test_keyword_returns_payment_info(
         self, client: AsyncClient, db_session: AsyncSession
     ):
-        """When a payment keyword is detected, payment info is returned and AI is NOT called."""
-        tenant, connection = await _create_test_evolution_connection(db_session)
+        """When a payment keyword is detected, payment info is returned and AI is NOT called.
+
+        Only the internal tenant slug "nuncacierro" receives the payment info.
+        """
+        tenant, connection = await _create_test_evolution_connection(
+            db_session, slug="nuncacierro"
+        )
 
         # Mock the EvolutionAdapter.send_message to avoid real API calls
         with patch(
@@ -142,7 +147,9 @@ class TestHandlerPaymentKeywords:
         self, client: AsyncClient, db_session: AsyncSession
     ):
         """Payment keyword response saves the outbound message in the DB."""
-        tenant, connection = await _create_test_evolution_connection(db_session)
+        tenant, connection = await _create_test_evolution_connection(
+            db_session, slug="nuncacierro"
+        )
 
         with patch(
             "app.modules.evolution.handler.EvolutionAdapter.send_message",
@@ -178,7 +185,9 @@ class TestHandlerPaymentKeywords:
         self, client: AsyncClient, db_session: AsyncSession
     ):
         """Just 'bre-b' as the message also triggers payment response."""
-        tenant, connection = await _create_test_evolution_connection(db_session)
+        tenant, connection = await _create_test_evolution_connection(
+            db_session, slug="nuncacierro"
+        )
 
         with patch(
             "app.modules.evolution.handler.EvolutionAdapter.send_message",
@@ -201,6 +210,84 @@ class TestHandlerPaymentKeywords:
 
                 mock_send.assert_awaited_once()
                 mock_groq.assert_not_awaited()
+
+    @pytest.mark.parametrize("status", ["inactive", "suspended"])
+    @pytest.mark.asyncio
+    async def test_inactive_or_suspended_tenant_never_responds(
+        self, client: AsyncClient, db_session: AsyncSession, status: str
+    ) -> None:
+        """Inactive/suspended tenants never auto-respond (regression guard)."""
+        tenant, connection = await _create_test_evolution_connection(db_session)
+        tenant.status = status
+        await db_session.commit()
+
+        with patch(
+            "app.modules.evolution.handler.EvolutionAdapter.send_message",
+            new_callable=AsyncMock,
+        ) as mock_send:
+            with patch(
+                "app.modules.evolution.handler.groq_client.generate",
+                new_callable=AsyncMock,
+            ) as mock_groq:
+                from app.modules.evolution.handler import handle_evolution_incoming
+
+                event = _make_evolution_event("hola, necesito información")
+                await handle_evolution_incoming(
+                    event=event,
+                    connection=connection,
+                    session=db_session,
+                )
+
+                # No reply, no AI — message processing halted
+                mock_send.assert_not_awaited()
+                mock_groq.assert_not_awaited()
+
+                # Inbound message IS still persisted (state preserved)
+                from app.modules.conversations.models import Message
+                from sqlalchemy import select as sa_select
+
+                result = await db_session.execute(
+                    sa_select(Message).where(
+                        Message.platform_connection_id == connection.id,
+                        Message.direction == "in",
+                    )
+                )
+                assert len(result.scalars().all()) == 1
+
+    @pytest.mark.asyncio
+    async def test_payment_keyword_never_leaks_to_client_tenant(
+        self, client: AsyncClient, db_session: AsyncSession
+    ):
+        """A client tenant's customers NEVER receive NuncaCierro's payment info."""
+        tenant, connection = await _create_test_evolution_connection(db_session)
+
+        with patch(
+            "app.modules.evolution.handler.EvolutionAdapter.send_message",
+            new_callable=AsyncMock,
+        ) as mock_send:
+            mock_send.return_value = {"key": {"id": "mock-evo-msg-id"}}
+
+            with patch(
+                "app.modules.evolution.handler.groq_client.generate",
+                new_callable=AsyncMock,
+            ) as mock_groq:
+                mock_groq.return_value = "Hola, soy un asistente."
+
+                from app.modules.evolution.handler import handle_evolution_incoming
+
+                event = _make_evolution_event("quiero pagar mi plan")
+                await handle_evolution_incoming(
+                    event=event,
+                    connection=connection,
+                    session=db_session,
+                )
+
+                # Normal flow runs — AI answers; NuncaCierro payment info is NOT sent
+                mock_groq.assert_awaited_once()
+                mock_send.assert_awaited_once()
+                sent_text = mock_send.call_args[1]["text"]
+                assert "Bre-B" not in sent_text
+                assert "dashboard" not in sent_text.lower()
 
 
 # ── Post-activation WhatsApp confirmation ────────────────────────────────────
@@ -606,15 +693,20 @@ class TestEscalationSilence:
 
 async def _create_test_evolution_connection(
     db_session: AsyncSession,
+    slug: str | None = None,
 ) -> tuple:
-    """Create a tenant + Evolution PlatformConnection for testing."""
+    """Create a tenant + Evolution PlatformConnection for testing.
+
+    Pass ``slug="nuncacierro"`` for tests of the internal tenant's payment
+    flow; the default generates an isolated client-tenant slug.
+    """
     from app.modules.tenants.models import Tenant
     from app.modules.platform_connections.models import PlatformConnection
 
     tenant = Tenant(
         id=uuid.uuid4(),
         name="Test Co",
-        slug=f"test-evo-{uuid.uuid4().hex[:6]}",
+        slug=slug or f"test-evo-{uuid.uuid4().hex[:6]}",
         plan="professional",
         timezone="America/Bogota",
         locale="es-CO",
