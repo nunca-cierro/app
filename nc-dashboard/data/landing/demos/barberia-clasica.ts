@@ -3,6 +3,7 @@ import type { DemoItem } from "./types";
 export const barberiaClasicaDemo: DemoItem = {
   name: "Barbería Clásica",
   category: "Barbería",
+  categorySlug: "barberia",
   href: "/demo/barberia",
   image:
     "https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=1400&q=80",

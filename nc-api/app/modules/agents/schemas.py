@@ -8,6 +8,8 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from app.core.config import DEFAULT_GROQ_MODEL
+
 
 # ── AiAgent from template ────────────────────────────────────────────────
 
@@ -29,7 +31,7 @@ class AiAgentCreate(BaseModel):
     name: str
     description: str | None = None
     provider: str = "groq"
-    model: str = "llama-3.3-70b-versatile"
+    model: str = DEFAULT_GROQ_MODEL
     temperature: float = 0
     max_tokens: int = 512
     enabled: bool = True

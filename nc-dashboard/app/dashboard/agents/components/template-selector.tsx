@@ -3,18 +3,21 @@
 import { useState } from "react";
 import { useAgentTemplates } from "@/hooks/use-agent-templates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ChefHat, Sparkles, Utensils } from "lucide-react";
+import { Loader2, ChefHat, Sparkles, Utensils, Scissors, Stethoscope } from "lucide-react";
 import type { AgentTemplate } from "@/lib/types";
+import { templateCategoryEntries } from "@/lib/business-categories";
 
 /* ------------------------------------------------------------------ */
-/*  Category → display mapping                                          */
+/*  Category icons (keys come from the shared registry)                */
 /* ------------------------------------------------------------------ */
 
-const CATEGORIES = [
-  { value: "restaurante", label: "Restaurante", Icon: Utensils },
-  { value: "panaderia", label: "Panadería", Icon: ChefHat },
-  { value: "hamburgueseria", label: "Hamburguesería", Icon: Sparkles },
-] as const;
+const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  restaurante: Utensils,
+  panaderia: ChefHat,
+  hamburgueseria: Sparkles,
+  barberia: Scissors,
+  clinica: Stethoscope,
+};
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -38,6 +41,8 @@ export function TemplateSelector({
     activeCategory ?? undefined,
   );
 
+  const categories = templateCategoryEntries();
+
   const handleCategoryClick = (category: string) => {
     setActiveCategory((prev) => (prev === category ? null : category));
     onSelect(null); // reset template selection when switching category
@@ -60,21 +65,24 @@ export function TemplateSelector({
           ¿Qué tipo de negocio quieres configurar?
         </h3>
         <div className="grid gap-3 sm:grid-cols-4">
-          {CATEGORIES.map(({ value, label, Icon }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => handleCategoryClick(value)}
-              className={`flex flex-col items-center gap-2 rounded-lg border p-4 text-center transition-all hover:border-primary hover:bg-accent/50 ${
-                activeCategory === value
-                  ? "border-primary bg-accent ring-1 ring-primary"
-                  : "border-input"
-              }`}
-            >
-              <Icon className="size-6 text-muted-foreground" />
-              <span className="text-sm font-medium">{label}</span>
-            </button>
-          ))}
+          {categories.map(({ value, label }) => {
+            const Icon = CATEGORY_ICONS[value];
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => handleCategoryClick(value)}
+                className={`flex flex-col items-center gap-2 rounded-lg border p-4 text-center transition-all hover:border-primary hover:bg-accent/50 ${
+                  activeCategory === value
+                    ? "border-primary bg-accent ring-1 ring-primary"
+                    : "border-input"
+                }`}
+              >
+                {Icon ? <Icon className="size-6 text-muted-foreground" /> : null}
+                <span className="text-sm font-medium">{label}</span>
+              </button>
+            );
+          })}
 
           {/* Personalizado */}
           <button

@@ -266,3 +266,63 @@ class TestPlaceholderResolver:
             "Hola {{business_name}}!", {}
         )
         assert result == "Hola !"
+
+
+# ── business_cta placeholder ─────────────────────────────────────────────────
+
+
+class TestBusinessCtaPlaceholder:
+    """The CTA placeholder lets tenants configure a call-to-action per business."""
+
+    def test_business_cta_is_registered_in_placeholder_keys(self):
+        from app.modules.agents.templates import PLACEHOLDER_KEYS
+
+        assert "business_cta" in PLACEHOLDER_KEYS
+
+    def test_business_cta_resolves_from_profile(self):
+        resolved = PlaceholderResolver.resolve(
+            {"cta": "Agendá tu cita ahora: {{business_cta}}"},
+            {"business_cta": "Escríbenos por WhatsApp al +57 300 000 0000"},
+        )
+        assert resolved["cta"] == (
+            "Agendá tu cita ahora: Escríbenos por WhatsApp al +57 300 000 0000"
+        )
+
+    def test_business_cta_missing_cleans_to_empty(self):
+        resolved = PlaceholderResolver.resolve({"cta": "{{business_cta}}"}, {})
+        assert resolved["cta"] == ""
+
+    def test_business_cta_in_nested_faq(self):
+        resolved = PlaceholderResolver.resolve(
+            {"faq": [{"answer": "Pedinos por WhatsApp: {{business_cta}}"}]},
+            {"business_cta": "Escríbenos al 123"},
+        )
+        assert resolved["faq"][0]["answer"] == "Pedinos por WhatsApp: Escríbenos al 123"
+
+
+# ── Placeholder usage validation ─────────────────────────────────────────────
+
+
+class TestPlaceholderUsageValidation:
+    """Template authors must only use registered placeholders."""
+
+    def test_seed_templates_use_only_known_placeholders(self):
+        from app.modules.agents.templates import SEED_TEMPLATES, unknown_placeholders
+
+        for tpl in SEED_TEMPLATES:
+            assert unknown_placeholders(tpl["content"]) == set(), tpl["name"]
+
+    def test_unknown_placeholder_is_detected(self):
+        from app.modules.agents.templates import unknown_placeholders
+
+        content = {
+            "instructions": "Hola {{business_name}} y {{mystery_token}}",
+            "business_info": {"name": "{{business_name}}"},
+        }
+        assert unknown_placeholders(content) == {"mystery_token"}
+
+    def test_known_placeholders_are_not_reported(self):
+        from app.modules.agents.templates import unknown_placeholders
+
+        content = {"instructions": "Bienvenido a {{business_name}}"}
+        assert unknown_placeholders(content) == set()

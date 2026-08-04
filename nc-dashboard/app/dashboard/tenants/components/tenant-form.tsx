@@ -9,6 +9,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -62,6 +63,12 @@ export function TenantForm({
   isSubmitting,
   mode,
 }: TenantFormProps) {
+  const { user } = useAuth();
+  const effectiveRole = user?.current_role ?? user?.role;
+  // Plan changes are restricted to superadmin server-side (self-upgrade guard);
+  // only superadmin sees the plan selector.
+  const canManagePlan = effectiveRole === "superadmin";
+
   const {
     register,
     handleSubmit,
@@ -95,26 +102,28 @@ export function TenantForm({
         )}
       </div>
 
-      {/* ── Plan ── */}
-      <div className="space-y-2">
-        <label htmlFor="plan" className="text-sm font-medium">
-          Plan
-        </label>
-        <select
-          id="plan"
-          {...register("plan")}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {PLANS.map((plan) => (
-            <option key={plan.value} value={plan.value}>
-              {plan.label}
-            </option>
-          ))}
-        </select>
-        {errors.plan && (
-          <p className="text-xs text-destructive">{errors.plan.message}</p>
-        )}
-      </div>
+      {/* ── Plan (superadmin only — self-upgrade guard) ── */}
+      {canManagePlan && (
+        <div className="space-y-2">
+          <label htmlFor="plan" className="text-sm font-medium">
+            Plan
+          </label>
+          <select
+            id="plan"
+            {...register("plan")}
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {PLANS.map((plan) => (
+              <option key={plan.value} value={plan.value}>
+                {plan.label}
+              </option>
+            ))}
+          </select>
+          {errors.plan && (
+            <p className="text-xs text-destructive">{errors.plan.message}</p>
+          )}
+        </div>
+      )}
 
       {/* ── Timezone + Locale ── */}
       <div className="grid gap-4 sm:grid-cols-2">
@@ -176,6 +185,118 @@ export function TenantForm({
         {errors.notes && (
           <p className="text-xs text-destructive">{errors.notes.message}</p>
         )}
+      </div>
+
+      {/* ── Business profile (fills template placeholders) ── */}
+      <div className="space-y-3 rounded-lg border p-4">
+        <div>
+          <h3 className="text-sm font-medium">Perfil de negocio</h3>
+          <p className="text-xs text-muted-foreground">
+            Estos datos llenan automáticamente las plantillas de tu agente
+            (nombre, ciudad, horarios, CTA...). Opcional — podés completarlos
+            después.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="business_name" className="text-sm font-medium">
+            Nombre comercial
+          </label>
+          <Input
+            id="business_name"
+            {...register("business_profile.business_name")}
+            placeholder="Ej: La Casa de las Arepas"
+          />
+          {errors.business_profile?.business_name && (
+            <p className="text-xs text-destructive">
+              {errors.business_profile.business_name.message}
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="business_description" className="text-sm font-medium">
+            ¿Qué hace el negocio?
+          </label>
+          <textarea
+            id="business_description"
+            {...register("business_profile.business_description")}
+            rows={2}
+            placeholder="Ej: Restaurante de comida tradicional colombiana"
+            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <label htmlFor="business_schedule" className="text-sm font-medium">
+              Horarios
+            </label>
+            <Input
+              id="business_schedule"
+              {...register("business_profile.business_schedule")}
+              placeholder="Ej: Lun–Sáb 8:00–22:00"
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="business_phone" className="text-sm font-medium">
+              Teléfono
+            </label>
+            <Input
+              id="business_phone"
+              {...register("business_profile.business_phone")}
+              placeholder="Ej: +57 300 123 4567"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="business_location" className="text-sm font-medium">
+            Ciudad / Ubicación
+          </label>
+          <Input
+            id="business_location"
+            {...register("business_profile.business_location")}
+            placeholder="Ej: Calle 45 #23-12, Bogotá"
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <label htmlFor="business_website" className="text-sm font-medium">
+              Sitio web
+            </label>
+            <Input
+              id="business_website"
+              {...register("business_profile.business_website")}
+              placeholder="https://..."
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="business_social" className="text-sm font-medium">
+              Redes sociales
+            </label>
+            <Input
+              id="business_social"
+              {...register("business_profile.business_social")}
+              placeholder="Ej: @lacasaarepas"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label htmlFor="business_cta" className="text-sm font-medium">
+            Llamado a la acción (CTA)
+          </label>
+          <Input
+            id="business_cta"
+            {...register("business_profile.business_cta")}
+            placeholder="Ej: Escríbenos por WhatsApp al +57 300 123 4567"
+          />
+          <p className="text-xs text-muted-foreground">
+            Frase que el agente usará para invitar al cliente a contactar.
+          </p>
+        </div>
       </div>
 
       {/* ── Submit ── */}

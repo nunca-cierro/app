@@ -3,6 +3,7 @@ import type { DemoItem } from "./types";
 export const spaSerenityDemo: DemoItem = {
   name: "Spa Serenity",
   category: "Spa",
+  categorySlug: "spa",
   href: "/demo/spa",
   image:
     "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1400&q=80",

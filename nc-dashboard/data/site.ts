@@ -364,7 +364,7 @@ export const sitePlans = {
       hasClientAccess: true,
       clientAccessType: "read",
       supportLevel: "whatsapp_email",
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       maxTokens: 512,
     },
     enterprise: {
@@ -379,7 +379,7 @@ export const sitePlans = {
       hasClientAccess: true,
       clientAccessType: "full",
       supportLevel: "priority_24_7",
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       maxTokens: 1024,
     },
   },

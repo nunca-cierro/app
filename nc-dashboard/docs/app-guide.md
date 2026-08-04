@@ -3,6 +3,8 @@
 > Panel de administración para automatización WhatsApp con IA.
 > Este documento explica cómo funciona todo: desde el registro hasta la configuración de números reales en Meta.
 
+> ⚠️ **Estado actual (ago 2026)**: el canal WhatsApp en producción es **Evolution API v2.x** (gateway auto-hospedado en Hetzner), no Meta Cloud API. El modelo IA por defecto es **`openai/gpt-oss-120b`** (Groq). Las secciones que describen Meta Cloud API / `llama-3.3-70b-versatile` corresponden al esquema legacy y se mantienen como referencia histórica. Fuente autoritativa: `nc-api/AGENTS.md` y `.env.production`.
+
 ---
 
 ## Arquitectura Rápida
@@ -11,7 +13,7 @@
 Usuario (cliente WhatsApp)
        │
        ▼
-Meta WhatsApp Cloud API ──► nc-api (FastAPI/PostgreSQL) ──► nc-dashboard (Next.js)
+Evolution API v2.x (WhatsApp gateway, Hetzner) ──► nc-api (FastAPI/PostgreSQL) ──► nc-dashboard (Next.js)
        │                                                            │
        │                                                    Admin del negocio
        │                                                    (tú o tu cliente)
@@ -107,8 +109,9 @@ Cada negocio puede tener uno o más agentes de IA.
 Formulario:
 ├── Negocio: Seleccionas el tenant creado antes
 ├── Nombre: Atención al Cliente
-├── Proveedor: Groq (gratis) / OpenAI / Anthropic
-├── Modelo: llama-3.3-70b-versatile
+├── Proveedor: Groq
+├── Modelo: openai/gpt-oss-120b (default; el anterior
+│           llama-3.3-70b-versatile se deprecó el 2026-08-16)
 ├── Temperatura: 0.7 (0 = preciso, 2 = creativo)
 └── Max tokens: 512
        │
@@ -144,6 +147,8 @@ Backend guarda versión v1 (auto-incrementada)
 ---
 
 ## 4. WhatsApp Numbers — Conectar número real
+
+> ⚠️ **Canal actual**: en producción el número se conecta vía **Evolution API** (instancia WhatsApp-Baileys auto-hospedada en Hetzner, QR + webhook hacia nc-api). La ruta de Meta Cloud API descrita abajo corresponde al esquema legacy y queda como referencia.
 
 **Ruta:** `/dashboard/whatsapp/new`
 
@@ -210,12 +215,12 @@ Business Manager
 Cliente escribe a tu número WhatsApp
        │
        ▼
-Meta envía POST al webhook:
-POST /webhook (en nc-api)
+Evolution API envía POST al webhook de nc-api:
+POST /webhook/evolution/{connection_id} (o el endpoint Meta legacy /webhook)
        │
        ▼
 Backend:
-1. Identifica el tenant por phone_number_id
+1. Identifica el tenant por la conexión de plataforma
 2. Busca o crea la conversación
 3. Guarda el mensaje
 4. Responde con el bot (si hay agente configurado)

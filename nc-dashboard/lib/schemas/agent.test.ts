@@ -11,7 +11,7 @@ describe("agentFormSchema", () => {
     tenant_id: "00000000-0000-0000-0000-000000000000",
     name: "Test Agent",
     provider: "groq",
-    model: "llama-3.3-70b-versatile",
+    model: "openai/gpt-oss-120b",
     temperature: 0,
     max_tokens: 512,
   };
@@ -53,7 +53,7 @@ describe("agentEditFormSchema", () => {
   const validEdit: AgentEditFormValues = {
     name: "Updated Agent",
     provider: "groq",
-    model: "llama-3.3-70b-versatile",
+    model: "openai/gpt-oss-120b",
     temperature: 0.5,
     max_tokens: 1024,
   };
