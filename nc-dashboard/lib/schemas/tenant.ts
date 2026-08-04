@@ -53,7 +53,7 @@ export type TenantFormValues = z.infer<typeof tenantFormSchema>;
 /* ------------------------------------------------------------------ */
 
 export const defaultTenantValues: TenantFormValues = {
-  name: "",
+  name: "Nuevo Negocio",
   plan: "basic",
   timezone: "America/Bogota",
   locale: "es-CO",

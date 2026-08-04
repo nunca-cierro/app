@@ -298,6 +298,31 @@ docker compose exec nc-api uv run alembic revision --autogenerate -m "descripcio
 
 ---
 
+## 📡 Server-Sent Events (SSE)
+
+El dashboard usa SSE para recibir actualizaciones en tiempo real cuando cambia el estado de una conexión (ej: cuando un cliente escanea el QR de WhatsApp).
+
+### Endpoint
+
+```
+GET /api/v1/platform-connections/{id}/events?token={jwt}
+```
+
+El frontend se suscribe con `EventSource` y recibe eventos `connection_state_changed` inmediatamente, sin polling.
+
+### Restricción: Single-worker
+
+El hub de SSE usa `asyncio.Queue` en memoria (un proceso). **Si escalás uvicorn a múltiples workers, los eventos no se propagarán entre workers.**
+
+**Solución actual**: El entrypoint corre un solo worker (`uvicorn app.main:app --host 0.0.0.0 --port 8000`). Esto es suficiente para cargas moderadas (~1000 conexiones simultáneas).
+
+**Si necesitás escalar**: Migrar el hub a Redis Pub/Sub:
+1. Reemplazar `_subscribers: dict[str, list[asyncio.Queue]]` por channels de Redis (`PUBLISH`/`SUBSCRIBE`).
+2. Cada worker se suscribe al canal de su conexión.
+3. Los webhooks hacen `PUBLISH` en lugar de llamar al hub local.
+
+---
+
 ## 📊 Sistema de planes y trial
 
 | Plan | IA | Productos | Conversaciones/mes | Negocios |
