@@ -71,8 +71,8 @@ export default function NewAgentPage() {
             Plantilla de configuración
           </CardTitle>
           <p className="text-muted-foreground mt-1 text-sm">
-            Elegí una plantilla para empezar con una configuración
-            predefinida, o seleccioná &ldquo;Personalizado&rdquo; para configurar
+            Elige una plantilla para empezar con una configuración
+            predefinida, o selecciona &ldquo;Personalizado&rdquo; para configurar
             desde cero.
           </p>
         </CardHeader>
@@ -93,7 +93,7 @@ export default function NewAgentPage() {
           </CardTitle>
           <p className="text-muted-foreground mt-1 text-sm">
             {selectedTemplate
-              ? "Completá los datos del agente. La configuración del negocio se cargará desde la plantilla."
+              ? "Completa los datos del agente. La configuración del negocio se cargará desde la plantilla."
               : "Crea un asistente de IA para un negocio."}
           </p>
         </CardHeader>

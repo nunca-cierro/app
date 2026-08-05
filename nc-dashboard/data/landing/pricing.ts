@@ -99,7 +99,7 @@ export const landingPricing = {
         name: "Mantenimiento y Soporte Mensual",
         icon: "🛠️",
         description:
-          "Tu sitio siempre actualizado y funcionando. Ideal si no querés meterte en temas técnicos.",
+          "Tu sitio siempre actualizado y funcionando. Ideal si no quieres meterte en temas técnicos.",
         includes: [
           "Cambios de contenido cuando lo necesites (texto, imágenes)",
           "Supervisión de estabilidad y seguridad",

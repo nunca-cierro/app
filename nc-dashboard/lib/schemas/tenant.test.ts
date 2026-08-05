@@ -13,7 +13,7 @@ describe("tenantFormSchema - business_profile", () => {
         business_name: "Panadería El Trigal",
         business_location: "Calle 10 #5-20, Medellín",
         business_schedule: "Lun-Dom 6:00-21:00",
-        business_cta: "Pedí por WhatsApp al +57 300 000 0000",
+        business_cta: "Pide por WhatsApp al +57 300 000 0000",
       },
     });
     expect(result.success).toBe(true);

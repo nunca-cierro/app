@@ -818,7 +818,7 @@ async def connect_evolution(
                     instance_name=instance_name,
                     qrcode=None,
                     status="timeout",
-                    message="El QR no se generó a tiempo. Intentá de nuevo con ?regenerate=true",
+                    message="El QR no se generó a tiempo. Intenta de nuevo con ?regenerate=true",
                 )
 
             return EvolutionConnectResponse(
@@ -826,7 +826,7 @@ async def connect_evolution(
                 instance_name=instance_name,
                 qrcode=qrcode,
                 status="connecting",
-                message="Escaneá el QR con WhatsApp para conectar",
+                message="Escanea el QR con WhatsApp para conectar",
             )
 
     except httpx.RequestError as exc:

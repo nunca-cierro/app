@@ -114,7 +114,7 @@ export function TemplateSelector({
           ) : (
             <div className="space-y-3">
               <h3 className="text-sm font-medium">
-                Elegí una plantilla para empezar:
+                Elige una plantilla para empezar:
               </h3>
               <div className="grid gap-3 sm:grid-cols-2">
                 {templates.map((template) => (

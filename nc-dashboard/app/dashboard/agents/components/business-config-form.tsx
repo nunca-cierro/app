@@ -317,7 +317,7 @@ export function BusinessConfigForm({
         <CardContent className="space-y-3">
           {(form.products_services ?? []).length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-4">
-              Agregá los productos o servicios que ofrece el negocio.
+              Agrega los productos o servicios que ofrece el negocio.
             </p>
           )}
           {(form.products_services ?? []).map((item, idx) => (
@@ -373,7 +373,7 @@ export function BusinessConfigForm({
         <CardContent className="space-y-3">
           {(form.faq ?? []).length === 0 && (
             <p className="text-xs text-muted-foreground text-center py-4">
-              Agregá preguntas frecuentes y sus respuestas.
+              Agrega preguntas frecuentes y sus respuestas.
             </p>
           )}
           {(form.faq ?? []).map((item, idx) => (

@@ -281,11 +281,11 @@ class TestBusinessCtaPlaceholder:
 
     def test_business_cta_resolves_from_profile(self):
         resolved = PlaceholderResolver.resolve(
-            {"cta": "Agendá tu cita ahora: {{business_cta}}"},
+            {"cta": "Agenda tu cita ahora: {{business_cta}}"},
             {"business_cta": "Escríbenos por WhatsApp al +57 300 000 0000"},
         )
         assert resolved["cta"] == (
-            "Agendá tu cita ahora: Escríbenos por WhatsApp al +57 300 000 0000"
+            "Agenda tu cita ahora: Escríbenos por WhatsApp al +57 300 000 0000"
         )
 
     def test_business_cta_missing_cleans_to_empty(self):
