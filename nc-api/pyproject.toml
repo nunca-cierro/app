@@ -29,6 +29,12 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# All async fixtures AND tests share ONE session-scoped event loop, so the test
+# DB lifecycle is genuinely session-scoped instead of being torn down per
+# test/loop. Tests must share the loop too: fixtures flush/commit the shared
+# AsyncSession, and asyncpg connections are bound to the loop that created them.
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 filterwarnings = [
     # AsyncMock coroutine not awaited — harmless mock internals in integration tests
     "ignore:coroutine 'AsyncMockMixin._execute_mock_call' was never awaited:RuntimeWarning",
