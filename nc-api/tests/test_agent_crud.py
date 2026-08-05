@@ -23,13 +23,13 @@ from app.db.session import get_session
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-def _create_tenant(db_session: AsyncSession, name: str, slug: str) -> Tenant:
+def _create_tenant(db_session: AsyncSession, name: str, slug: str, plan: str = "basic") -> Tenant:
     tenant = Tenant(
         id=uuid.uuid4(),
         name=name,
         slug=slug,
         status="active",
-        plan="basic",
+        plan=plan,
         timezone="UTC",
         locale="en",
     )
@@ -83,6 +83,54 @@ async def superadmin_client(db_session: AsyncSession) -> AsyncClient:
         yield ac
 
     app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def admin_client_factory(db_session: AsyncSession):
+    """Factory: httpx client authenticated as an ADMIN of a tenant on the given plan.
+
+    Returns ``(client, tenant)`` so tests can create agents under the same tenant
+    (tenant isolation requires the agent to live in the caller's tenant).
+    """
+    clients: list[AsyncClient] = []
+
+    async def _build(plan: str) -> tuple[AsyncClient, Tenant]:
+        tenant = _create_tenant(
+            db_session,
+            name=f"Admin Tenant {plan}",
+            slug=f"admin-tenant-{plan}",
+            plan=plan,
+        )
+        await db_session.flush()
+
+        user = User(
+            id=uuid.uuid4(),
+            email=f"admin-{plan}@test.com",
+            password_hash="not-a-real-hash",
+            name=f"Admin {plan}",
+        )
+        db_session.add(user)
+        await db_session.flush()
+
+        user.current_role = UserRole.ADMIN
+        user.current_tenant_id = tenant.id
+
+        async def override_auth() -> User:
+            return user
+
+        app.dependency_overrides[get_current_user] = override_auth
+        app.dependency_overrides[get_session] = lambda: db_session
+
+        transport = ASGITransport(app=app)  # type: ignore[arg-type]
+        client = AsyncClient(transport=transport, base_url="http://test")
+        clients.append(client)
+        return client, tenant
+
+    yield _build
+
+    app.dependency_overrides.clear()
+    for client in clients:
+        await client.aclose()
 
 
 # ── PATCH /api/v1/agents/{id} ────────────────────────────────────────────────
@@ -167,3 +215,81 @@ class TestUpdateAgent:
         assert response.status_code == 200
         data = response.json()
         assert data["tenant_id"] == str(tenant_a.id)
+
+
+# ── PATCH business_config → CAP_BUSINESS_EDIT gate ──────────────────────────
+# Audit finding (2026-08-05): the business_config capability gate on PATCH was
+# only exercised via the superadmin path — no 403-path test existed. These
+# tests cover the effective server-side behavior for tenant admins.
+
+
+class TestUpdateAgentBusinessConfigCapabilityGate:
+    """PATCH /api/v1/agents/{id} + business_config → business.edit capability."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("plan", "expected_detail"),
+        [
+            (
+                "basic",
+                "Tu plan actual (basic) no incluye esta función. "
+                "Contacta a tu administrador para hacer upgrade.",
+            ),
+            (
+                "trial",
+                "Tu plan actual (trial) no incluye esta función. "
+                "Contacta a tu administrador para hacer upgrade.",
+            ),
+        ],
+    )
+    async def test_business_config_update_denied_without_capability(
+        self,
+        admin_client_factory,
+        db_session: AsyncSession,
+        plan: str,
+        expected_detail: str,
+    ):
+        """ADMIN on a plan lacking CAP_BUSINESS_EDIT gets 403 — and no write happens.
+
+        The rejection fires in the ``agents.manage`` dependency (plan gate)
+        before the endpoint's inline ``business_config`` gate is reached, so the
+        error shape is the dependency's plan-gate detail.
+        """
+        client, tenant = await admin_client_factory(plan)
+        agent = _create_agent(db_session, tenant.id)
+        await db_session.commit()
+
+        response = await client.patch(
+            f"/api/v1/agents/{agent.id}",
+            json={"business_config": {"instructions": "should-not-persist"}},
+        )
+
+        assert response.status_code == 403
+        assert response.json()["detail"] == expected_detail
+
+        # The gate must reject BEFORE any write lands in the DB
+        await db_session.refresh(agent)
+        assert agent.business_config == {"instructions": "test"}
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("plan", ["professional", "enterprise"])
+    async def test_business_config_update_allowed_with_capability(
+        self,
+        admin_client_factory,
+        db_session: AsyncSession,
+        plan: str,
+    ):
+        """ADMIN on a plan with CAP_BUSINESS_EDIT gets 200 and the config updates."""
+        client, tenant = await admin_client_factory(plan)
+        agent = _create_agent(db_session, tenant.id)
+        await db_session.commit()
+
+        response = await client.patch(
+            f"/api/v1/agents/{agent.id}",
+            json={"business_config": {"instructions": "updated", "new_field": "value"}},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["business_config"]["instructions"] == "updated"
+        assert data["business_config"]["new_field"] == "value"
