@@ -10,6 +10,7 @@ and reuses the same Groq pipeline and conversation logic.
 
 from __future__ import annotations
 
+import re
 import typing as t
 from datetime import UTC, datetime, timedelta
 
@@ -52,6 +53,128 @@ def _has_payment_keyword(text: str) -> bool:
     """Check if *text* contains any payment-related keyword (case-insensitive)."""
     lower = text.lower().strip()
     return any(kw in lower for kw in PAYMENT_KEYWORDS)
+
+
+# ── Text-matching helpers (programmed responses) ──────────────────────────────
+# Basic/trial plans lack CAP_AI — programmed keyword/FAQ responses are their
+# ONLY reply path, so matching quality here IS product quality for those plans.
+# All matchers normalize Spanish accents and ignore function words; the ORIGINAL
+# text is always kept for sending — normalization only happens for scoring.
+
+# Accent folding map: á→a, é→e, í→i, ó→o, ú→u, ü→u, ñ→n (upper + lower).
+_ACCENT_FOLD: dict[int, int] = str.maketrans(
+    "áéíóúüñÁÉÍÓÚÜÑ",
+    "aeiouunAEIOUUN",
+)
+
+# Function words that must never count as a match — prevents "dónde"+"están"
+# from falsely matching unrelated messages and lets short questions like
+# "Precios" match their FAQ entry. Includes the interrogative pronouns
+# (cuál/cómo/dónde/cuándo) AND the present-tense copula "estar" forms
+# (esta/estas/estan/estamos/estoy/hay) — a question like "¿Dónde están?"
+# is reduced to zero significant words and therefore never false-matches a
+# message that merely happens to contain those words.
+SPANISH_STOPWORDS: frozenset[str] = frozenset(
+    {
+        "de", "la", "el", "los", "las", "y", "o", "a", "en", "que",
+        "cual", "cuál", "como", "cómo", "donde", "dónde", "cuando", "cuándo",
+        "para", "por", "con", "es", "un", "una", "al", "del", "mi", "su",
+        "me", "se", "te",
+        "esta", "estas", "estan", "estamos", "estoy", "hay",
+    }
+)
+
+# Word tokenizer — after accent folding everything is ASCII, so a simple
+# [a-z0-9]+ pass cleanly strips punctuation (¿ ? ¡ ! , hyphens, etc).
+_WORD_RE: re.Pattern[str] = re.compile(r"[a-z0-9]+")
+
+
+def _fold_accents(text: str) -> str:
+    """Return *text* lowercased with Spanish accents folded.
+
+    "atención" → "atencion", "¿Dónde están?" → "¿donde estan?". Only used for
+    matching — the original text is kept for sending.
+    """
+    return text.translate(_ACCENT_FOLD).lower()
+
+
+def _significant_words(text: str) -> set[str]:
+    """Accent-folded, punctuation-stripped, stopword-free word set.
+
+    This is the token space for FAQ scoring and escalation phrase matching.
+    """
+    return set(_WORD_RE.findall(_fold_accents(text))) - SPANISH_STOPWORDS
+
+
+def _faq_answer_for(user_text: str, faq: list[dict]) -> str | None:
+    """Best FAQ answer for *user_text*, or None when nothing matches.
+
+    Matching rule (deterministic, unit-tested):
+    - User text and each FAQ question are reduced to their significant words
+      (accent-folded, punctuation stripped, stopwords removed).
+    - A question with 1 significant word matches when that word appears in the
+      user message (score >= 1) — "Precios" hits the "precios" FAQ.
+    - A question with 2+ significant words matches when at least 2 words
+      overlap OR the overlap covers >= 50% of the question's significant
+      words — so a 2-word question like "¿Cuál es el horario de atención?"
+      (significant words: horario, atencion) matches a one-word query like
+      "atencion", while longer questions still need a real 2-word overlap.
+    - Questions reduced to zero significant words (pure function words, e.g.
+      "¿Dónde están?") NEVER match — avoids stopword-collision false positives.
+    - Ties broken by highest overlap; equal scores keep the first entry.
+      The answer is returned verbatim (original spelling, not folded).
+    """
+    if not faq:
+        return None
+    user_words = _significant_words(user_text)
+    best_answer: str | None = None
+    best_score = 0
+
+    for item in faq:
+        if not isinstance(item, dict):
+            continue
+        q = item.get("question") or item.get("q", "")
+        a = item.get("answer") or item.get("a", "")
+        if not q or not a:
+            continue
+        q_words = _significant_words(q)
+        if not q_words:
+            continue
+        overlap = len(user_words & q_words)
+        # 1 word → 1; 2+ words → at least 2, unless 50% of the question words
+        # is lower (a 2-word question matches on a single overlap).
+        required = 1 if len(q_words) == 1 else min(2, (len(q_words) + 1) // 2)
+        if overlap >= required and overlap > best_score:
+            best_score = overlap
+            best_answer = a
+
+    return best_answer
+
+
+def _matches_escalation_keyword(user_text: str, keyword: str) -> bool:
+    """True when *user_text* triggers the escalation *keyword*.
+
+    - Single-word keywords match on word boundaries (accent-folded), so
+      "queja" hits "tengo una queja" but not "quejarnos".
+    - Multi-word phrase keywords match when EVERY significant word of the
+      phrase appears as a whole word in the user text, so "hablar con asesor"
+      (significant words: hablar, asesor) matches "quiero hablar un asesor"
+      but NOT "hablar de fútbol".
+    - A keyword made only of function words falls back to a word-boundary
+      match of the full folded phrase.
+    """
+    if not isinstance(keyword, str):
+        return False
+    folded_user = _fold_accents(user_text)
+    kw_words = _significant_words(keyword)
+    if kw_words:
+        return all(
+            re.search(rf"\b{re.escape(w)}\b", folded_user) is not None
+            for w in kw_words
+        )
+    return re.search(
+        rf"\b{re.escape(_fold_accents(keyword).strip())}\b", folded_user
+    ) is not None
 
 
 # ── Types ───────────────────────────────────────────────────────────────────
@@ -485,12 +608,12 @@ async def handle_evolution_incoming(
         parsed["content"]
     ):
         payment_msg = (
-            "¡Claro! Podés pagar tu plan por:\n"
+            "¡Claro! Puedes pagar tu plan por:\n"
             f"• Bre-B: {settings.payment_breb_number}\n"
             f"Titular: {settings.payment_account_holder}\n\n"
-            "También podés ver los QR y gestionar tu pago desde el dashboard:\n"
+            "También puedes ver los QR y gestionar tu pago desde el dashboard:\n"
             f"{settings.payment_dashboard_url}\n\n"
-            "Envíame el comprobante por acá cuando hayas pagado y activo tu plan enseguida."
+            "Envíame el comprobante por aquí cuando hayas pagado y activo tu plan enseguida."
         )
 
         adapter = EvolutionAdapter()
@@ -520,8 +643,9 @@ async def handle_evolution_incoming(
         )
         session.add(outbound_msg)
 
-        # Mark escalation as responded if this message consumed the courtesy credit
-        if conversation.status == "escalated":
+        # Mark escalation as responded ONLY if the courtesy credit was actually
+        # delivered — a failed send must not silence the bot.
+        if conversation.status == "escalated" and outbound_status == "sent":
             extra = dict(conversation.extra_data or {})
             extra["escalation_responded"] = True
             conversation.extra_data = extra
@@ -578,33 +702,20 @@ async def handle_evolution_incoming(
         biz_config = (agent.business_config or {}) if agent else {}
         faq = biz_config.get("faq") or []
         keywords_to_escalate = biz_config.get("keywords_to_escalate") or []
-        user_text = parsed["content"].lower().strip()
+        user_text = parsed["content"]
         matched_answer = None
 
         # 1. Check FAQ: match user message against FAQ questions
+        # Accent-folded + stopword-free scoring — see _faq_answer_for.
         if faq:
-            user_words = set(user_text.split())
-            best_match = None
-            best_score = 0
-            
-            for item in faq:
-                q = (item.get("question") or item.get("q", "")).lower()
-                a = item.get("answer") or item.get("a", "")
-                if not q or not a:
-                    continue
-                q_words = set(q.split())
-                # Score: how many question words appear in user message
-                score = len(user_words & q_words)
-                if score > best_score:
-                    best_score = score
-                    best_match = a
-            
-            if best_score >= 2 and best_match:
-                matched_answer = best_match
-        
+            matched_answer = _faq_answer_for(user_text, faq)
+
         # 2. Check escalate keywords (human handoff)
         if not matched_answer and keywords_to_escalate:
-            if any(kw.lower() in user_text for kw in keywords_to_escalate):
+            if any(
+                _matches_escalation_keyword(user_text, kw)
+                for kw in keywords_to_escalate
+            ):
                 conversation.status = "escalated"
                 matched_answer = (
                     "Un asesor nuestro revisará tu mensaje y te contactará "
@@ -657,8 +768,9 @@ async def handle_evolution_incoming(
         )
         session.add(outbound_msg)
 
-        # Mark escalation as responded if this message consumed the courtesy credit
-        if conversation.status == "escalated":
+        # Mark escalation as responded ONLY if the courtesy credit was actually
+        # delivered — a failed send must not silence the bot.
+        if conversation.status == "escalated" and outbound_status == "sent":
             extra = dict(conversation.extra_data or {})
             extra["escalation_responded"] = True
             conversation.extra_data = extra
@@ -723,7 +835,10 @@ async def handle_evolution_incoming(
             "Un asesor humano te atenderá en breve. "
             "Por favor espera mientras te conectamos."
         )
-        if any(kw.lower() in parsed["content"].lower() for kw in esc_keywords):
+        if any(
+            _matches_escalation_keyword(parsed["content"], kw)
+            for kw in esc_keywords
+        ):
             conversation.status = "escalated"
 
             adapter = EvolutionAdapter()
@@ -753,9 +868,12 @@ async def handle_evolution_incoming(
             )
             session.add(outbound_msg)
 
-            extra = dict(conversation.extra_data or {})
-            extra["escalation_responded"] = True
-            conversation.extra_data = extra
+            # Mark escalation as responded ONLY if the courtesy credit was
+            # actually delivered — a failed send must not silence the bot.
+            if conversation.status == "escalated" and outbound_status == "sent":
+                extra = dict(conversation.extra_data or {})
+                extra["escalation_responded"] = True
+                conversation.extra_data = extra
 
             conversation.last_message_at = datetime.now(UTC)
             await session.commit()
@@ -830,8 +948,9 @@ async def handle_evolution_incoming(
     )
     session.add(outbound_msg)
 
-    # Mark escalation as responded if this message consumed the courtesy credit
-    if conversation.status == "escalated":
+    # Mark escalation as responded ONLY if the courtesy credit was actually
+    # delivered — a failed send must not silence the bot.
+    if conversation.status == "escalated" and outbound_status == "sent":
         extra = dict(conversation.extra_data or {})
         extra["escalation_responded"] = True
         conversation.extra_data = extra
