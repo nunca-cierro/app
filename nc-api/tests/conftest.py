@@ -122,9 +122,15 @@ test_engine = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullP
 test_session_factory = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
 
 
-@pytest_asyncio.fixture(loop_scope="session")
+@pytest_asyncio.fixture(loop_scope="session", scope="session")
 async def setup_database() -> AsyncGenerator[None, None]:
-    """Create the test DB, all tables before tests, drop after."""
+    """Create the test DB, all tables before tests, drop after.
+
+    Caching scope is "session" (not just loop scope) so the DB is created and
+    dropped EXACTLY ONCE per pytest session, instead of per test/loop. The
+    per-test data isolation that the old per-test DB lifecycle provided is
+    restored by ``db_session``'s teardown, which clears all tables.
+    """
     await _ensure_test_database()
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -134,11 +140,26 @@ async def setup_database() -> AsyncGenerator[None, None]:
     await _drop_test_database()
 
 
+async def _clear_tables() -> None:
+    """Delete all rows from every table (children before parents).
+
+    The test DB now lives for the whole pytest session (setup_database is
+    session-cached), so this restores the per-test data isolation the old
+    per-test DB lifecycle provided. Each test still starts from an empty DB.
+    """
+    async with test_session_factory() as session:
+        for table in reversed(Base.metadata.sorted_tables):
+            await session.execute(table.delete())
+        await session.commit()
+
+
 @pytest_asyncio.fixture
 async def db_session(setup_database: Any) -> AsyncGenerator[AsyncSession, None]:
     """Provide a test DB session."""
     async with test_session_factory() as session:
         yield session
+    # Teardown: wipe all tables — the session-scoped DB persists across tests.
+    await _clear_tables()
 
 
 @pytest_asyncio.fixture
