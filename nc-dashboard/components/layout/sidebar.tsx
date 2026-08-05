@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,8 @@ import {
   Loader2 as LoaderIcon,
   X,
   Check,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -178,6 +181,7 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const { user, switchTenant, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
   const effectiveRole = user?.current_role ?? user?.role ?? null;
   const plan = user?.plan ?? null;
   const navSections = getNavSections(effectiveRole, plan);
@@ -286,6 +290,22 @@ export function Sidebar({
             {user?.name ?? user?.email}
           </div>
         </div>
+
+        {/* ── Theme Toggle ── */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          className="mb-1 w-full justify-start gap-3"
+          aria-label={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+        >
+          {theme === "dark" ? (
+            <Sun className="size-4" />
+          ) : (
+            <Moon className="size-4" />
+          )}
+          {theme === "dark" ? "Modo Claro" : "Modo Oscuro"}
+        </Button>
 
         {/* ── Change Password ── */}
         {!showPasswordForm ? (
