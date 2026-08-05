@@ -60,6 +60,7 @@ export function AgentForm({
 
   const selectedTenantId = useWatch({ control, name: "tenant_id" });
   const currentTemperature = useWatch({ control, name: "temperature" });
+  const currentMaxTokens = useWatch({ control, name: "max_tokens" });
 
   /* ── Detect plan ── */
   const plan =
@@ -68,7 +69,6 @@ export function AgentForm({
       ? tenants.find((t) => t.id === selectedTenantId)?.plan ?? null
       : null);
   const isBasicOrTrial = plan === "basic" || plan === "trial";
-  const planMaxTokens = plan === "enterprise" ? 1024 : 512;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -180,7 +180,7 @@ export function AgentForm({
             )}
           </div>
 
-          {/* Max tokens — plan-aware */}
+          {/* Max tokens — stored value */}
           <div className="space-y-2">
             <label htmlFor="max_tokens" className="text-sm font-medium">
               Máx. tokens
@@ -188,18 +188,17 @@ export function AgentForm({
             <Input
               id="max_tokens"
               type="number"
-              value={planMaxTokens}
+              value={currentMaxTokens}
               disabled
               className="bg-muted/50 text-muted-foreground"
             />
             <input
               type="hidden"
               {...register("max_tokens", { valueAsNumber: true })}
-              value={planMaxTokens}
+              value={currentMaxTokens}
             />
             <p className="text-xs text-muted-foreground">
-              Automático según plan: {planMaxTokens} tokens (plan{" "}
-              {plan === "professional" ? "Profesional" : "Empresarial"}).
+              {currentMaxTokens} tokens configurados.
             </p>
           </div>
         </>

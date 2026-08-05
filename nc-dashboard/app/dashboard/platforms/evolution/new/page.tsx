@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePlatformConnections } from "@/hooks/use-platform-connections";
@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { toast } from "sonner";
-import type { PlatformConnection } from "@/lib/types";
 import type { EvolutionFormValues } from "@/lib/schemas/evolution";
 
 type Step = "form" | "connecting" | "qr" | "connected" | "error";
@@ -26,36 +25,42 @@ export default function PlatformsNewEvolutionPage() {
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Poll connection status when in QR state
+  // SSE subscription for real-time connection state updates
   useEffect(() => {
     if (step !== "qr" || !connectionId) return;
 
-    pollRef.current = setInterval(async () => {
+    const token = localStorage.getItem("nc_access_token");
+    if (!token) return;
+
+    const eventSource = new EventSource(
+      `/api/v1/platform-connections/${connectionId}/events?token=${encodeURIComponent(token)}`
+    );
+
+    eventSource.onmessage = (event) => {
       try {
-        const conn = await apiClient<PlatformConnection>(
-          `/api/v1/platform-connections/${connectionId}`,
-        );
-
-        const evoStatus = (conn.extra_data as Record<string, unknown>)
-          ?.connection_status as string | undefined;
-
-        if (evoStatus === "connected") {
+        const data = JSON.parse(event.data);
+        if (data.type === "connection_state_changed" && data.data?.status === "connected") {
           setStep("connected");
           toast.success("WhatsApp conectado exitosamente");
+          eventSource.close();
           // Redirect after a brief pause so user sees the success
           setTimeout(() => {
             router.push(`/dashboard/platforms/evolution/${connectionId}`);
           }, 1500);
         }
       } catch {
-        // Ignore poll errors — connection might not be ready
+        // Ignore parse errors
       }
-    }, 5000);
+    };
+
+    eventSource.onerror = () => {
+      // SSE error — close and let the detail page handle reconnection
+      eventSource.close();
+    };
 
     return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
+      eventSource.close();
     };
   }, [step, connectionId, router]);
 
@@ -110,13 +115,11 @@ export default function PlatformsNewEvolutionPage() {
 
   const goToDetail = useCallback(() => {
     if (connectionId) {
-      if (pollRef.current) clearInterval(pollRef.current);
       router.push(`/dashboard/platforms/evolution/${connectionId}`);
     }
   }, [connectionId, router]);
 
   const goBack = useCallback(() => {
-    if (pollRef.current) clearInterval(pollRef.current);
     setStep("form");
     setQrCode(null);
     setErrorMsg(null);
@@ -146,10 +149,9 @@ export default function PlatformsNewEvolutionPage() {
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-6 pb-8">
             <QrDisplay qrCode={qrCode} isPolling />
-
-            <Button onClick={goToDetail} variant="outline" size="sm">
-              Ya escaneé el código
-            </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              El sistema detectará automáticamente cuando escanees el código
+            </p>
           </CardContent>
         </Card>
       </div>

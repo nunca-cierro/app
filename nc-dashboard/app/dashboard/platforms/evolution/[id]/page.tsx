@@ -551,8 +551,8 @@ export default function PlatformEvolutionDetailPage({
               {evoState === "qr" || evoState === "timeout"
                 ? "Generar nuevo QR"
                 : evoState === "connected"
-                  ? "Generar QR para otro cliente"
-                  : "Generar QR para cliente"}
+                  ? "Cambiar número vinculado"
+                  : "Vincular WhatsApp"}
             </Button>
 
           </CardContent>
