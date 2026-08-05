@@ -40,7 +40,7 @@ export default function AdminUsersPage() {
 
   const handleCreate = async () => {
     if (!newEmail || !newPassword || !newName) {
-      toast.error("Completá todos los campos");
+      toast.error("Completa todos los campos");
       return;
     }
     if (newPassword.length < 6) {
@@ -230,7 +230,7 @@ function UserRow({
 
   const handleSubmit = () => {
     if (!selectedTenantId) {
-      toast.error("Seleccioná un negocio");
+      toast.error("Selecciona un negocio");
       return;
     }
     onAssign(selectedTenantId, selectedRole);

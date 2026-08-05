@@ -63,7 +63,7 @@ PLAN_DISPLAY_NAMES: dict[str, str] = {
 
 ACTIVATION_CONFIRMATION_TEMPLATE: str = (
     "¡Listo {name}! Tu plan {plan} está activo hasta el {expiry}.\n\n"
-    "Ya podés usar todas las funciones. Cualquier duda, escribime."
+    "Ya puedes usar todas las funciones. Cualquier duda, escríbeme."
 )
 
 

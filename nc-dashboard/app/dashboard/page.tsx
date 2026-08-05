@@ -32,6 +32,7 @@ import {
   Bot,
   PlusCircle,
   CalendarDays,
+  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
@@ -238,11 +239,14 @@ function AdminDashboard({ userName }: { userName?: string | null }) {
               <Card key={t.id} className="shrink-0 border-warning/40">
                 <CardContent className="px-4 py-3 text-sm">
                   <div className="flex items-center gap-2 font-medium text-warning-foreground">
-                    <Clock className="size-3.5" />
+                    <Wallet className="size-3.5" />
                     Pago pendiente
                   </div>
                   <p className="mt-0.5 text-muted-foreground">
-                    {t.name} · {PLAN_LABELS[t.plan] ?? t.plan}
+                    {t.name} · Plan {PLAN_LABELS[t.plan] ?? t.plan}
+                  </p>
+                  <p className="mt-0.5 text-xs text-warning-foreground/80">
+                    Esperando confirmación de pago
                   </p>
                 </CardContent>
               </Card>
@@ -604,10 +608,10 @@ function ClientDashboard() {
         <div className="flex flex-col items-center gap-1 rounded-xl border border-warning/40 bg-warning/10 p-5 text-center">
           <Bot className="size-5 text-warning-foreground" />
           <p className="mt-1 text-sm font-medium text-warning-foreground">
-            ¿Querés activar un plan con inteligencia artificial?
+            ¿Quieres activar un plan con inteligencia artificial?
           </p>
           <p className="text-xs text-muted-foreground">
-            Contactá a tu administrador para cambiar a un plan Profesional o Empresarial.
+            Contacta a tu administrador para cambiar a un plan Profesional o Empresarial.
           </p>
         </div>
       )}

@@ -139,7 +139,7 @@ class TestTenantApiWithBusinessProfile:
                     "business_name": "Panadería El Trigal",
                     "business_location": "Calle 10 #5-20, Medellín",
                     "business_schedule": "Lun–Dom 6:00–21:00",
-                    "business_cta": "Pedí por WhatsApp al +57 300 000 0000",
+                    "business_cta": "Pide por WhatsApp al +57 300 000 0000",
                     "business_phone": "+57 300 000 0000",
                 },
             },
@@ -149,7 +149,7 @@ class TestTenantApiWithBusinessProfile:
         assert data["category"] == "panaderia"  # label canonicalized to slug
         assert data["business_profile"]["business_name"] == "Panadería El Trigal"
         assert data["business_profile"]["business_cta"] == (
-            "Pedí por WhatsApp al +57 300 000 0000"
+            "Pide por WhatsApp al +57 300 000 0000"
         )
 
     @pytest.mark.asyncio
@@ -203,11 +203,11 @@ class TestTenantApiWithBusinessProfile:
             json={
                 "business_profile": {
                     "business_name": "Nombre Actualizado",
-                    "business_cta": "Agendá tu cita",
+                    "business_cta": "Agenda tu cita",
                 }
             },
         )
         assert resp.status_code == 200
         profile = resp.json()["business_profile"]
         assert profile["business_name"] == "Nombre Actualizado"
-        assert profile["business_cta"] == "Agendá tu cita"
+        assert profile["business_cta"] == "Agenda tu cita"

@@ -200,7 +200,7 @@ async def update_agent_info(
                 status_code=403,
                 detail=(
                     "Tu plan no incluye editar la información del negocio. "
-                    "Contactá a tu administrador para hacer upgrade."
+                    "Contacta a tu administrador para hacer upgrade."
                 ),
             )
 

@@ -44,7 +44,7 @@ async def main() -> None:
         user.role = UserRole.SUPERADMIN
         await session.commit()
         print(f"✅ {email} ahora es superadmin.")
-        print("   Refrescá la página del dashboard para ver los cambios.")
+        print("   Refresca la página del dashboard para ver los cambios.")
 
 
 if __name__ == "__main__":

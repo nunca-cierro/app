@@ -43,7 +43,7 @@ export function ExpiredTrialOverlay() {
           Tu prueba gratuita de 7 días finalizó
         </h1>
         <p className="text-muted-foreground mx-auto mt-2 max-w-md">
-          Elegí un plan para seguir usando NuncaCierro y no perder ninguna
+          Elige un plan para seguir usando NuncaCierro y no perder ninguna
           conversación ni configuración de tu negocio.
         </p>
       </div>

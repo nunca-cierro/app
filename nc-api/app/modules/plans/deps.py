@@ -69,7 +69,7 @@ class RequireCapability:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=(
                     f"Tu plan actual ({plan or 'sin plan'}) no incluye esta "
-                    "función. Contactá a tu administrador para hacer upgrade."
+                    "función. Contacta a tu administrador para hacer upgrade."
                 ),
             )
 
