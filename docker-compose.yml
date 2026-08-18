@@ -200,9 +200,24 @@ services:
       WEBSOCKET_ENABLED: "false"
       S3_ENABLED: "false"
 
+  # ── n8n (automatizaciones / workflow automation) ─────────────────────
+  # Accesible solo vía Caddy en https://n8n.nuncacierro.com (sin puerto host).
+  # La encryption key se conserva en el volumen n8n_data (/home/node/.n8n/config).
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    volumes:
+      - n8n_data:/home/node/.n8n
+    environment:
+      N8N_EDITOR_BASE_URL: ${N8N_EDITOR_BASE_URL:-https://n8n.nuncacierro.com}
+      N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-https://n8n.nuncacierro.com/}
+      N8N_PROXY_HOPS: "1"
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
+
 volumes:
   pgdata:
   pgdata_evo:
   redis_data:
   caddy_data:
   caddy_config:
+  n8n_data:

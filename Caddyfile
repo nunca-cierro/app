@@ -5,10 +5,12 @@
 # Estructura:
 #   {domain}      → Dashboard (Next.js) — landing y app
 #   api.{domain}  → API (FastAPI)
+#   n8n.{domain}  → n8n (automatizaciones)
 #
 # DNS requerido:
 #   {domain}      → A / AAAA al server
 #   api.{domain}  → A / AAAA al server
+#   n8n.{domain}  → A / AAAA al server
 # ───────────────────────────────────────────────────────────────────────
 
 {$CADDY_DOMAIN:localhost} {
@@ -17,4 +19,10 @@
 
 api.{$CADDY_DOMAIN:localhost} {
     reverse_proxy nc-api:8000
+}
+
+n8n.{$CADDY_DOMAIN:localhost} {
+    reverse_proxy n8n:5678 {
+        flush_interval -1
+    }
 }
