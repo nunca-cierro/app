@@ -211,8 +211,12 @@ services:
     environment:
       N8N_HOST: ${N8N_HOST:-n8n.nuncacierro.com}
       N8N_PROTOCOL: https
-      N8N_EDITOR_BASE_URL: ${N8N_EDITOR_BASE_URL:-https://n8n.nuncacierro.com}
+      # WEBHOOK_URL (legacy, sin prefijo N8N_) reemplaza la URL base de los webhooks,
+      # así Telegram no ve el puerto interno :5678. N8N_WEBHOOK_URL NO aplica en 2.26.8
+      # (ese nombre existe desde versiones posteriores); se deja para forward-compat.
+      WEBHOOK_URL: ${WEBHOOK_URL:-https://n8n.nuncacierro.com}
       N8N_WEBHOOK_URL: ${N8N_WEBHOOK_URL:-https://n8n.nuncacierro.com/}
+      N8N_EDITOR_BASE_URL: ${N8N_EDITOR_BASE_URL:-https://n8n.nuncacierro.com}
       N8N_PROXY_HOPS: "1"
       GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
 
