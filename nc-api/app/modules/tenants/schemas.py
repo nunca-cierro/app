@@ -6,6 +6,8 @@ import uuid
 from datetime import datetime
 from typing import Any
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.modules.auth.models import TenantStatus
@@ -123,3 +125,9 @@ class BillingInfoResponse(BaseModel):
     qr_urls: dict[str, str]
     methods: list[PaymentMethod]
     account_holder: str
+
+
+class PaymentStatusRequest(BaseModel):
+    """Request body for PATCH /api/v1/tenants/{id}/payment-status."""
+
+    payment_status: Literal["active", "inactive"]

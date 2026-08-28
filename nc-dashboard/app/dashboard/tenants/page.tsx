@@ -4,7 +4,7 @@ import { useTenants } from "@/hooks/use-tenants";
 import { TenantList } from "@/app/dashboard/tenants/components/tenant-list";
 
 export default function TenantsPage() {
-  const { tenants, isLoading, error } = useTenants();
+  const { tenants, isLoading, error, refetch } = useTenants();
 
   return (
     <div className="space-y-6">
@@ -15,7 +15,12 @@ export default function TenantsPage() {
         </p>
       </div>
 
-      <TenantList tenants={tenants} isLoading={isLoading} error={error} />
+      <TenantList
+        tenants={tenants}
+        isLoading={isLoading}
+        error={error}
+        onTenantUpdate={refetch}
+      />
     </div>
   );
 }

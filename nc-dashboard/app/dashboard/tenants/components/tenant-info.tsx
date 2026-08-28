@@ -76,14 +76,16 @@ export function TenantInfo({ tenant }: TenantInfoProps) {
           />
           <InfoRow icon={Clock} label="Zona horaria" value={tenant.timezone} />
           <InfoRow icon={Globe} label="Región" value={tenant.locale} />
-          {tenant.plan_activated_at && (
+          {tenant.payment_status === "active" && tenant.plan_activated_at && (
             <InfoRow
               icon={ShieldCheck}
-              label="Plan activado"
-              value={new Date(tenant.plan_activated_at).toLocaleDateString("es-CO", {
+              label="Activo desde"
+              value={new Date(tenant.plan_activated_at).toLocaleString("es-CO", {
                 year: "numeric",
-                month: "long",
-                day: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
               })}
             />
           )}

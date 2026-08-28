@@ -22,11 +22,12 @@ from app.modules.tenants.models import Tenant
 admin_or_super = RoleChecker(allowed_roles=[UserRole.ADMIN, UserRole.SUPERADMIN])
 from app.modules.tenants.schemas import (
     ActivatePlanRequest,
+    PaymentStatusRequest,
     TenantCreate,
     TenantUpdate,
     TenantResponse,
 )
-from app.modules.tenants.service import activate_tenant_plan
+from app.modules.tenants.service import activate_tenant_plan, update_payment_status
 
 router = APIRouter(prefix="/tenants", tags=["tenants"])
 
@@ -207,6 +208,25 @@ async def activate_tenant_plan_endpoint(
     return await activate_tenant_plan(
         tenant_id=tenant_id,
         plan=body.plan,
+        session=session,
+    )
+
+
+@router.patch("/{tenant_id}/payment-status", response_model=TenantResponse)
+async def toggle_payment_status_endpoint(
+    tenant_id: uuid.UUID,
+    body: PaymentStatusRequest,
+    current_user: User = Depends(superadmin_check),
+    session: AsyncSession = Depends(get_session),
+) -> Tenant:
+    """Toggle a tenant's payment status (superadmin only).
+
+    On ``active``: sets ``plan_activated_at`` to current UTC timestamp.
+    On ``inactive``: clears ``plan_activated_at``.
+    """
+    return await update_payment_status(
+        tenant_id=tenant_id,
+        payment_status=body.payment_status,
         session=session,
     )
 
