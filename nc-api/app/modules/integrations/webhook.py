@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.tenancy import resolve_by_phone_number_id
 from app.modules.conversations.models import Conversation, Message
-from app.modules.agents.utils import format_business_config
+from app.modules.agents.utils import format_business_config, universal_format_block
 from app.modules.integrations.llm.provider import CONTEXT_WINDOW_SIZE, groq_client
 from app.modules.integrations.meta.client import send_text_message
 from app.modules.platforms.adapter import WhatsAppAdapter
@@ -238,6 +238,9 @@ async def handle_incoming(
             elif resolution.prompts:
                 # Backward compat: custom prompt when no business_config
                 system_prompt = resolution.prompts[0].content
+
+        # ── Universal formatting fallbacks (business instructions win) ─────
+        system_prompt += f"\n\n{universal_format_block()}"
 
         # ── 6. Generate response via LLM ─────────────────────────────────
         try:

@@ -78,9 +78,7 @@ SEED_TEMPLATES: list[dict[str, Any]] = [
 - Para domicilios, pregunta la dirección y confirma la zona de cobertura.
 - Para reservas, pregunta fecha, hora y número de personas.
 - Si preguntan por métodos de pago, menciona los aceptados.
-- Si no sabes algo, no inventes — di que un asesor humano te ayudará.
-- Sé breve, directo.
-- Haz máximo UNA pregunta por mensaje.""",
+- Si no sabes algo, no inventes — di que un asesor humano te ayudará.""",
             "business_info": {
                 "name": "{{business_name}}",
                 "description": "{{business_description}}",
@@ -125,9 +123,7 @@ SEED_TEMPLATES: list[dict[str, Any]] = [
                 "- Para pedidos por encargo, pregunta tipo, cantidad y fecha de entrega.\n"
                 "- Para pedidos al por mayor, ofrece descuentos por volumen.\n"
                 "- Informa sobre ingredientes y alergenos si preguntan.\n"
-                "- Si no sabes algo, no inventes — di que un asesor humano te ayudará.\n"
-                "- Sé cálido y directo.\n"
-                "- Haz máximo UNA pregunta por mensaje."
+                "- Si no sabes algo, no inventes — di que un asesor humano te ayudará."
             ),
             "business_info": {
                 "name": "{{business_name}}",
@@ -171,9 +167,7 @@ SEED_TEMPLATES: list[dict[str, Any]] = [
                 "- Si preguntan por combos, destaca la relación calidad-precio.\n"
                 "- Si quieren personalizar, menciona los ingredientes disponibles.\n"
                 "- Para domicilios, pregunta la dirección y confirma la zona de cobertura.\n"
-                "- Si no sabes algo, no inventes — di que un asesor humano te ayudará.\n"
-                "- Sé juvenil y directo.\n"
-                "- Haz máximo UNA pregunta por mensaje."
+                "- Si no sabes algo, no inventes — di que un asesor humano te ayudará."
             ),
             "business_info": {
                 "name": "{{business_name}}",
@@ -218,9 +212,7 @@ SEED_TEMPLATES: list[dict[str, Any]] = [
 - Para agendar citas, pregunta fecha, hora y el servicio que desea.
 - Si preguntan si atienden sin cita, confirma que aceptan walk-ins según disponibilidad.
 - Informa sobre promociones o paquetes si los hay.
-- Si no sabes algo, no inventes — di que un asesor humano te ayudará.
-- Sé amable y directo.
-- Haz máximo UNA pregunta por mensaje.""",
+- Si no sabes algo, no inventes — di que un asesor humano te ayudará.""",
             "business_info": {
                 "name": "{{business_name}}",
                 "description": "{{business_description}}",
@@ -268,9 +260,7 @@ SEED_TEMPLATES: list[dict[str, Any]] = [
 - Si preguntan por seguros o EPS, menciona las que aceptan según la información.
 - NO diagnostiques ni recetes medicamentos — eso solo lo hace un médico.
 - En caso de emergencia, indica que llame al número de emergencias.
-- Si no sabes algo, no inventes — di que un asesor humano te ayudará.
-- Sé profesional y empático.
-- Haz máximo UNA pregunta por mensaje.""",
+- Si no sabes algo, no inventes — di que un asesor humano te ayudará.""",
             "business_info": {
                 "name": "{{business_name}}",
                 "description": "{{business_description}}",
