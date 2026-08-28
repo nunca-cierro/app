@@ -128,7 +128,7 @@ services:
 
   # ── Evolution API (WhatsApp gateway) ─────────────────────────────────
   evolution-api:
-    image: evoapicloud/evolution-api:2.3.7
+    image: evoapicloud/evolution-api:v2.3.7
     restart: unless-stopped
     depends_on:
       postgres-evo:
