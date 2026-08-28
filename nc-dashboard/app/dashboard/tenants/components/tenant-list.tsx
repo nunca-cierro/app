@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { TenantStatusBadge } from "@/app/dashboard/tenants/components/tenant-status-badge";
 import { TenantPlanBadge } from "@/app/dashboard/tenants/components/tenant-plan-badge";
 import { PaymentStatusBadge } from "@/app/dashboard/tenants/components/payment-status-badge";
+import { PaymentStatusToggle } from "@/app/dashboard/tenants/components/payment-status-toggle";
 import { Plus, ExternalLink } from "lucide-react";
 import type { Tenant } from "@/lib/types";
 import { useAuth } from "@/hooks/use-auth";
@@ -18,6 +19,7 @@ interface TenantListProps {
   tenants: Tenant[];
   isLoading: boolean;
   error: string | null;
+  onTenantUpdate?: (updated: Tenant) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -101,7 +103,7 @@ function TableHeader({ canCreate = true }: { canCreate?: boolean }) {
 /*  List                                                               */
 /* ------------------------------------------------------------------ */
 
-export function TenantList({ tenants, isLoading, error }: TenantListProps) {
+export function TenantList({ tenants, isLoading, error, onTenantUpdate }: TenantListProps) {
   const { user } = useAuth();
   const role = user?.current_role ?? user?.role;
   const canCreate = role === "superadmin";
@@ -145,6 +147,13 @@ export function TenantList({ tenants, isLoading, error }: TenantListProps) {
                     <TenantStatusBadge status={tenant.status} />
                     <TenantPlanBadge plan={tenant.plan} createdAt={tenant.created_at} />
                     <PaymentStatusBadge status={tenant.payment_status} />
+                    {onTenantUpdate && (
+                      <PaymentStatusToggle
+                        tenantId={tenant.id}
+                        currentStatus={tenant.payment_status ?? "inactive"}
+                        onSuccess={onTenantUpdate}
+                      />
+                    )}
                   </div>
                   <p className="mt-0.5 truncate text-xs text-muted-foreground">
                     {tenant.slug}

@@ -15,6 +15,38 @@ from app.modules.auth.models import PaymentStatus
 from app.modules.tenants.models import Tenant
 
 
+# ── Payment status toggle ─────────────────────────────────────────────────────
+
+
+async def update_payment_status(
+    tenant_id: uuid.UUID,
+    payment_status: str,
+    session: AsyncSession,
+) -> Tenant:
+    """Toggle a tenant's payment status.
+
+    On ``active``: sets ``plan_activated_at`` to the current UTC timestamp.
+    On ``inactive``: clears ``plan_activated_at`` to None.
+    Raises HTTPException 404 if the tenant does not exist.
+    """
+    tenant = await session.get(Tenant, tenant_id)
+    if tenant is None:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    tenant.payment_status = payment_status
+
+    if payment_status == "active":
+        tenant.plan_activated_at = datetime.now(UTC)
+    else:
+        tenant.plan_activated_at = None
+
+    session.add(tenant)
+    await session.commit()
+    await session.refresh(tenant)
+
+    return tenant
+
+
 # ── Plan activation ──────────────────────────────────────────────────────────
 
 

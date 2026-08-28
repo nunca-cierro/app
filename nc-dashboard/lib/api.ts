@@ -7,7 +7,7 @@
 /*  via next.config.ts rewrites.                                       */
 /* ------------------------------------------------------------------ */
 
-import type { AuthUser, LoginResponse } from "@/lib/types";
+import type { AuthUser, LoginResponse, Tenant } from "@/lib/types";
 
 export const TOKEN_KEYS = {
   access: "nc_access_token",
@@ -108,6 +108,20 @@ export async function switchTenant(tenantId: string): Promise<LoginResponse> {
 
 export async function getProfile(): Promise<AuthUser> {
   return apiClient<AuthUser>("/api/v1/auth/me");
+}
+
+/* ------------------------------------------------------------------ */
+/*  Tenant endpoints                                                    */
+/* ------------------------------------------------------------------ */
+
+export async function updatePaymentStatus(
+  tenantId: string,
+  status: "active" | "inactive",
+): Promise<Tenant> {
+  return apiClient<Tenant>(`/api/v1/tenants/${tenantId}/payment-status`, {
+    method: "PATCH",
+    body: JSON.stringify({ payment_status: status }),
+  });
 }
 
 /* ------------------------------------------------------------------ */
