@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.rate_limiter import rate_limiter
 from app.modules.conversations.models import Conversation, Message
-from app.modules.agents.utils import format_business_config
+from app.modules.agents.utils import format_business_config, universal_format_block
 from app.modules.integrations.llm.provider import CONTEXT_WINDOW_SIZE, groq_client
 from app.modules.platform_connections.models import PlatformConnection
 from app.modules.evolution.webhook import (
@@ -842,15 +842,21 @@ async def handle_evolution_incoming(
             # Backward compat: custom prompt when no business_config
             system_prompt = prompts[0].content
 
-    # ── First message welcome hint ─────────────────────────────────
+    # ── First message hint (subordinate to business instructions) ─────
     if is_first_message:
-        welcome_hint = (
+        first_message_hint = (
             "\n\n---\n"
-            "NOTA: Este es el PRIMER mensaje de este usuario en esta conversación. "
-            "Preséntate con calidez, di tu nombre si aplica, da la bienvenida al usuario "
-            "y pregúnta en qué puedes ayudarle."
+            "Si las instrucciones del negocio no indican otra cosa: este es el "
+            "primer mensaje del usuario — saluda breve y cálido, preséntate como "
+            f"asistente de {tenant.name} y haz una sola pregunta abierta. "
+            "Si las instrucciones del negocio dicen algo distinto (por ejemplo, "
+            "no presentarte en conversaciones de outreach), sigue las "
+            "instrucciones del negocio."
         )
-        system_prompt += welcome_hint
+        system_prompt += first_message_hint
+
+    # ── Universal formatting fallbacks (business instructions win) ─────
+    system_prompt += f"\n\n{universal_format_block()}"
 
     # ── 6a. Escalation check — BEFORE AI (Professional+ plans) ─────────────
     # If the incoming message matches escalation keywords, send the

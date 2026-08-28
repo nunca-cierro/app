@@ -5,16 +5,23 @@ from __future__ import annotations
 from typing import Any
 
 
-DEFAULT_INSTRUCTIONS = (
-    "Eres un asistente de atención al cliente entusiasta y eficiente.\n"
-    "- REGLA DE ORO: Responde de forma BREVE y LLAMATIVA. Máximo 2-3 párrafos cortos.\n"
-    "- Usa EMOJIS (iconos) para resaltar puntos clave y hacer la lectura amena (ej: ✅, 📍, 💰, 🚀).\n"
-    "- Responde SOLO con la información del negocio proporcionada.\n"
-    "- Si no sabes algo, no inventes — di amablemente que un asesor humano ayudará.\n"
-    "- Haz máximo UNA pregunta por mensaje para no abrumar al cliente.\n"
-    "- La venta debe sentirse como una sugerencia natural y útil, no como presión.\n"
-    "- Saluda con energía y ofrece ayuda clara."
+UNIVERSAL_FORMAT_RULES = (
+    "Reglas de formato (aplican SOLO si las instrucciones del negocio no indican "
+    "lo contrario): escribe como una persona real en WhatsApp; párrafos cortos de "
+    "1-3 líneas; nada de markdown (sin **negritas**, sin títulos, sin listas "
+    "numeradas ni viñetas); usa saltos de línea simples; responde en el mismo "
+    "idioma y registro del usuario; máximo una pregunta por mensaje; sin firmas "
+    "formales ni despedidas largas."
 )
+
+
+def universal_format_block() -> str:
+    """Return the universal WhatsApp formatting rules as a subordinate prompt block.
+
+    Must be appended at the END of the AI system prompt so per-business
+    instructions (business_config) always take precedence over these defaults.
+    """
+    return UNIVERSAL_FORMAT_RULES
 
 
 def format_business_config(config: dict[str, Any] | None) -> str:
