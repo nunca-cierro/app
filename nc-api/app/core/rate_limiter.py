@@ -32,6 +32,15 @@ class MemoryRateLimiter:
         """
         now = time.time()
         with self._lock:
+            # Periodic cleanup: evict entries with no active timestamps
+            # to prevent memory growth from high-cardinality keys.
+            if len(self._entries) > 10_000:
+                cutoff = now - self.window_seconds
+                self._entries = {
+                    k: v for k, v in self._entries.items()
+                    if v.timestamps and v.timestamps[-1] > cutoff
+                }
+
             entry = self._entries[key]
             # Remove old timestamps outside the window
             cutoff = now - self.window_seconds

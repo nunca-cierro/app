@@ -140,8 +140,16 @@ class TestEvolutionHandlerAgentResolution:
         result_dup = MagicMock()
         result_dup.scalar_one_or_none.return_value = None
 
+        # Advisory lock (text query) — no result needed, just executes
+        result_lock = MagicMock()
+
+        # Early conversation lookup for cooldown check
+        result_early_conv = MagicMock()
+        result_early_conv.scalar_one_or_none.return_value = None  # no existing conv → cooldown passes
+
         session.execute.side_effect = [
-            result_dup, result_conv, result_history, result_agent, result_prompts
+            result_dup, result_lock, result_early_conv,
+            result_history, result_agent, result_prompts
         ]
 
         with patch("app.modules.evolution.handler.groq_client") as mock_groq, \
@@ -153,8 +161,8 @@ class TestEvolutionHandlerAgentResolution:
             await handle_evolution_incoming(event, connection, session)
 
             # Verify that the agent query used agent_id
-            # Agent query is the 4th one (after dedup, conv and history)
-            agent_query = session.execute.call_args_list[3][0][0]
+            # Call order: dedup(0), lock(1), early_conv(2), history(3), agent(4), prompts(5)
+            agent_query = session.execute.call_args_list[4][0][0]
             # Verify agent_id was used in bind params
             params = agent_query.compile().params
             assert params["id_1"] == connection.agent_id
@@ -318,9 +326,17 @@ class TestPlatformConnectionServiceValidation:
         result_dup = MagicMock()
         result_dup.scalar_one_or_none.return_value = None
 
+        # Advisory lock (text query)
+        result_lock = MagicMock()
+
+        # Early conversation lookup for cooldown check
+        result_early_conv = MagicMock()
+        result_early_conv.scalar_one_or_none.return_value = None
+
         session.execute.side_effect = [
             result_dup,
-            result_conv, 
+            result_lock,
+            result_early_conv,
             result_history, 
             result_linked_agent, # query with agent_id
             result_default_agent, # fallback query
@@ -335,12 +351,12 @@ class TestPlatformConnectionServiceValidation:
 
             await handle_evolution_incoming(event, connection, session)
 
-            # 4th call: query with agent_id (after dedup, conv and history)
-            agent_query_1 = session.execute.call_args_list[3][0][0]
+            # Call order: dedup(0), lock(1), early_conv(2), history(3), linked_agent(4), default_agent(5), prompts(6)
+            agent_query_1 = session.execute.call_args_list[4][0][0]
             assert agent_query_1.compile().params["id_1"] == connection.agent_id
             
-            # 5th call: fallback query without agent_id
-            agent_query_2 = session.execute.call_args_list[4][0][0]
+            # 6th call: fallback query without agent_id
+            agent_query_2 = session.execute.call_args_list[5][0][0]
             assert "id_1" not in agent_query_2.compile().params
             
             # Verify groq was called with default agent's model

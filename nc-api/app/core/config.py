@@ -79,7 +79,7 @@ class Settings(BaseSettings):
     # ── Groq / LLM ───────────────────────────────────────────────────────
     groq_api_key: str = ""
     groq_model: str = DEFAULT_GROQ_MODEL
-    groq_max_tokens: int = 512
+    groq_max_tokens: int = 1024
     groq_temperature: float = 0.7
     groq_rate_limit_rpm: int = 30
 

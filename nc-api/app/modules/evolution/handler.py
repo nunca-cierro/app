@@ -15,7 +15,7 @@ import typing as t
 from datetime import UTC, datetime, timedelta
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -253,15 +253,16 @@ async def handle_evolution_incoming(
 ) -> None:
     """Process a raw Evolution API webhook event.
 
-    1. Detect event type — route ``connection.update`` to separate handler
-    2. Extract the text message (include both customer and admin messages)
-    3. Resolve tenant from *connection*
-    4. Find or create conversation
-    5. **Admin messages** (``from_me``) → save silently, mark 72h cooldown
-    6. **Admin cooldown** → if admin wrote <72h ago, silent save and stop
-    7. **Escalation gate** → if escalated+responded, silent save and stop
+    Pipeline (race-condition-safe order):
+    1. Route ``connection.update`` events to separate handler
+    2. Extract message, dedup guard
+    3. PostgreSQL advisory lock — serialize concurrent webhooks per chat
+    4. Admin message (``from_me``) → save, mark 72h cooldown, return
+    5. **Admin cooldown check** (BEFORE conversation creation) → silent save
+    6. Find or create conversation
+    7. Escalation gate → if escalated+responded, silent save and stop
     8. Anti-spam, rate limiting, save inbound
-    9. **Escalation check** → if keyword matched, send fallback and stop
+    9. Escalation check → if keyword matched, send fallback and stop
     10. Build system prompt, generate via LLM, send, save outbound
     """
     # ── 0. Route connection.update events ───────────────────────────────
@@ -282,12 +283,6 @@ async def handle_evolution_incoming(
         return
 
     # ── 1b. Dedup guard ───────────────────────────────────────────────
-    # Evolution retries webhooks (exponential backoff) and echoes bot
-    # messages back — both resend the same external_message_id. Skip rows
-    # that already exist instead of processing (and re-inserting) the same
-    # message twice. Backed by the unique constraint
-    # `uq_messages_conn_external_msg` (platform_connection_id +
-    # external_message_id) as a safety net.
     if parsed.get("external_message_id"):
         dup_check = await session.execute(
             select(Message).where(
@@ -302,8 +297,16 @@ async def handle_evolution_incoming(
             )
             return
 
-    # ── 2. Resolve tenant ───────────────────────────────────────────────
+    # ── 1c. Advisory lock — serialize concurrent webhooks per chat ─────
+    # Prevents the race condition where client webhook creates a conversation
+    # BEFORE the admin webhook sets admin_last_active_at. The lock key is
+    # derived from (connection_id, external_user_id) so concurrent webhooks
+    # for the SAME chat are processed sequentially.
     tenant_id = connection.tenant_id
+    lock_key = hash((str(connection.id), parsed["external_user_id"])) & 0x7FFFFFFF
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(:key)"), {"key": lock_key}
+    )
 
     logger.info(
         "Processing Evolution message | conn={conn} | from={user} | text={text}",
@@ -312,28 +315,7 @@ async def handle_evolution_incoming(
         text=parsed["content"][:80],
     )
 
-    # ── 3. Find or create conversation ──────────────────────────────────
-    # Include "escalated" so the escalation silence gate can find it
-    conv_result = await session.execute(
-        select(Conversation).where(
-            Conversation.tenant_id == tenant_id,
-            Conversation.platform_connection_id == connection.id,
-            Conversation.external_user_id == parsed["external_user_id"],
-            Conversation.status.in_(["open", "escalated"]),
-        )
-    )
-    conversation = conv_result.scalar_one_or_none()
-    if conversation is None:
-        conversation = Conversation(
-            tenant_id=tenant_id,
-            platform_connection_id=connection.id,
-            external_user_id=parsed["external_user_id"],
-            status="open",
-        )
-        session.add(conversation)
-        await session.flush()
-
-    # ── Admin message handler (from_me) ──────────────────────────────────
+    # ── 2. Admin message handler (from_me) ──────────────────────────────
     # Messages sent FROM the business number. Need to differentiate:
     #   - Bot messages → Evolution fires a webhook for messages the bot
     #     itself sent via the API. These already have a matching Message
@@ -354,6 +336,26 @@ async def handle_evolution_incoming(
                 mid=parsed["external_message_id"],
             )
             return
+
+        # Look up existing conversation (or create one)
+        conv_result = await session.execute(
+            select(Conversation).where(
+                Conversation.tenant_id == tenant_id,
+                Conversation.platform_connection_id == connection.id,
+                Conversation.external_user_id == parsed["external_user_id"],
+                Conversation.status.in_(["open", "escalated"]),
+            )
+        )
+        conversation = conv_result.scalar_one_or_none()
+        if conversation is None:
+            conversation = Conversation(
+                tenant_id=tenant_id,
+                platform_connection_id=connection.id,
+                external_user_id=parsed["external_user_id"],
+                status="open",
+            )
+            session.add(conversation)
+            await session.flush()
 
         # It's the admin — save and mark cooldown
         admin_msg = Message(
@@ -383,9 +385,67 @@ async def handle_evolution_incoming(
         )
         return
 
-    # ── 1.5. Escalation silence gate ──────────────────────────────────────
-    # If conversation is escalated and bot already sent its courtesy
-    # response, save the inbound message silently and return.
+    # ── 3. Admin cooldown check (BEFORE conversation creation) ──────────
+    # This MUST run before find-or-create to prevent the race condition
+    # where client webhook creates a new conversation and the bot responds
+    # before the admin webhook arrives to set the cooldown.
+    conv_result = await session.execute(
+        select(Conversation).where(
+            Conversation.tenant_id == tenant_id,
+            Conversation.platform_connection_id == connection.id,
+            Conversation.external_user_id == parsed["external_user_id"],
+            Conversation.status.in_(["open", "escalated"]),
+        )
+    )
+    conversation = conv_result.scalar_one_or_none()
+
+    if conversation is not None:
+        conv_extra = conversation.extra_data or {}
+        admin_last_active = conv_extra.get("admin_last_active_at")
+        if admin_last_active:
+            try:
+                admin_time = datetime.fromisoformat(admin_last_active)
+                elapsed = datetime.now(UTC) - admin_time
+                if elapsed < timedelta(hours=ADMIN_COOLDOWN_HOURS):
+                    remaining_h = int(
+                        (timedelta(hours=ADMIN_COOLDOWN_HOURS) - elapsed).total_seconds() / 3600
+                    )
+                    silent_inbound = Message(
+                        tenant_id=tenant_id,
+                        conversation_id=conversation.id,
+                        platform_connection_id=connection.id,
+                        direction="in",
+                        external_user_id=parsed["external_user_id"],
+                        external_message_id=parsed["external_message_id"],
+                        platform="evolution",
+                        message_type="text",
+                        content=parsed["content"],
+                        status="received",
+                    )
+                    session.add(silent_inbound)
+                    conversation.last_message_at = datetime.now(UTC)
+                    await session.commit()
+                    logger.info(
+                        "Admin cooldown — silent save ({h}h remaining) | conv={cid}",
+                        h=remaining_h,
+                        cid=conversation.id,
+                    )
+                    return
+            except (ValueError, TypeError):
+                pass
+
+    # ── 4. Find or create conversation ──────────────────────────────────
+    if conversation is None:
+        conversation = Conversation(
+            tenant_id=tenant_id,
+            platform_connection_id=connection.id,
+            external_user_id=parsed["external_user_id"],
+            status="open",
+        )
+        session.add(conversation)
+        await session.flush()
+
+    # ── 5. Escalation silence gate ──────────────────────────────────────
     if conversation.status == "escalated":
         extra = conversation.extra_data or {}
         if extra.get("escalation_responded"):
@@ -409,41 +469,6 @@ async def handle_evolution_incoming(
                 cid=conversation.id,
             )
             return
-
-    # ── 1.5b. Admin cooldown check ─────────────────────────────────────────
-    # If the admin wrote less than 72h ago, the bot stays silent and
-    # lets the human handle the conversation.
-    conv_extra = conversation.extra_data or {}
-    admin_last_active = conv_extra.get("admin_last_active_at")
-    if admin_last_active:
-        try:
-            admin_time = datetime.fromisoformat(admin_last_active)
-            elapsed = datetime.now(UTC) - admin_time
-            if elapsed < timedelta(hours=ADMIN_COOLDOWN_HOURS):
-                remaining_h = int((timedelta(hours=ADMIN_COOLDOWN_HOURS) - elapsed).total_seconds() / 3600)
-                silent_inbound = Message(
-                    tenant_id=tenant_id,
-                    conversation_id=conversation.id,
-                    platform_connection_id=connection.id,
-                    direction="in",
-                    external_user_id=parsed["external_user_id"],
-                    external_message_id=parsed["external_message_id"],
-                    platform="evolution",
-                    message_type="text",
-                    content=parsed["content"],
-                    status="received",
-                )
-                session.add(silent_inbound)
-                conversation.last_message_at = datetime.now(UTC)
-                await session.commit()
-                logger.info(
-                    "Admin cooldown — silent save ({h}h remaining) | conv={cid}",
-                    h=remaining_h,
-                    cid=conversation.id,
-                )
-                return
-        except (ValueError, TypeError):
-            pass
 
     # ── 2. Anti-spam check (auto-reply + flood) ─────────────────────────
     spam_payload: dict | None = None
@@ -489,9 +514,6 @@ async def handle_evolution_incoming(
         )
 
     # ── Rate limiting check ─────────────────────────────────────────────
-    rate_limiter.max_requests = settings.rate_limit_max_requests
-    rate_limiter.window_seconds = settings.rate_limit_window_seconds
-
     rl_key = f"{parsed['external_user_id']}:{connection.id}"
     if not rate_limiter.is_allowed(rl_key):
         logger.warning(
@@ -530,12 +552,16 @@ async def handle_evolution_incoming(
         .limit(CONTEXT_WINDOW_SIZE)
     )
     past_messages = list(reversed(history_result.scalars().all()))
+    # Filter out admin-sent messages from LLM context — the LLM should not
+    # see manually-written admin messages as "assistant" responses, since it
+    # never generated them and would hallucinate context.
     conversation_history = [
         {
             "role": "user" if m.direction == "in" else "assistant",
             "content": m.content or "",
         }
         for m in past_messages
+        if not (m.direction == "out" and (m.payload or {}).get("source") == "admin")
     ]
 
     # ── First message detection ────────────────────────────────────

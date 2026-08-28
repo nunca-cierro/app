@@ -55,6 +55,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as exc:
         logger.warning("Database not available yet: {exc}", exc=_safe_exc(exc))
 
+    # Configure rate limiter once at startup (not per-request)
+    from app.core.rate_limiter import rate_limiter as _rl
+    _rl.max_requests = settings.rate_limit_max_requests
+    _rl.window_seconds = settings.rate_limit_window_seconds
+    logger.info(
+        "Rate limiter configured | max={max} | window={win}s",
+        max=_rl.max_requests,
+        win=_rl.window_seconds,
+    )
+
     yield
 
     # Shutdown

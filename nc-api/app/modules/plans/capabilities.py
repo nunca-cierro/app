@@ -68,7 +68,7 @@ PLAN_LIMITS: Final[dict[str, dict[str, int | None]]] = {
     "trial": {
         "max_agents": 1,
         "max_products": 10,
-        "max_conversations_per_month": None,
+        "max_conversations_per_month": 100,
         "max_businesses": 1,
     },
     "basic": {
