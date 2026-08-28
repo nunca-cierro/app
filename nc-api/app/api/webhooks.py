@@ -87,9 +87,7 @@ async def webhook_post(
         await handle_incoming(payload, session)
     except Exception:
         logger.exception("Unhandled error processing webhook payload")
-        # Always return 200 — Evolution/WhatsApp retry on non-200, causing
-        # infinite loops, duplicate messages, and AI quota waste.
-        return {"status": "error", "detail": "Internal processing error"}
+        raise HTTPException(status_code=500, detail="Internal processing error")
 
     return {"status": "ok"}
 
@@ -163,7 +161,7 @@ async def webhook_platform_post(
             await handle_incoming(payload, session)
         except Exception:
             logger.exception("Unhandled error in WhatsApp handler")
-            return {"status": "error", "detail": "Internal processing error"}
+            raise HTTPException(status_code=500, detail="Internal processing error")
 
     elif platform == "telegram":
         adapter = TelegramAdapter()
@@ -183,7 +181,7 @@ async def webhook_platform_post(
             await handle_telegram_incoming(payload, connection, session)
         except Exception:
             logger.exception("Unhandled error in Telegram handler")
-            return {"status": "error", "detail": "Internal processing error"}
+            raise HTTPException(status_code=500, detail="Internal processing error")
 
     elif platform == "evolution":
         adapter = EvolutionAdapter()
