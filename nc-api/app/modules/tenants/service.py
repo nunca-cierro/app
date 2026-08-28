@@ -36,7 +36,8 @@ async def update_payment_status(
     tenant.payment_status = payment_status
 
     if payment_status == "active":
-        tenant.plan_activated_at = datetime.now(UTC)
+        if tenant.plan_activated_at is None:
+            tenant.plan_activated_at = datetime.now(UTC)
     else:
         tenant.plan_activated_at = None
 

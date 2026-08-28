@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import get_session
-from app.modules.auth.models import User
+from app.modules.auth.models import User, UserRole
 
 security = HTTPBearer(auto_error=False)
 
@@ -61,10 +61,7 @@ async def get_current_user(
             detail="User not found",
         )
 
-    # Attach context from token
-    # If role or tenant_id are missing in token, we might need to resolve them from DB
-    # but for now we trust the token or allow them to be None.
-    setattr(user, "current_role", role)
+    setattr(user, "current_role", user.role)
     setattr(
         user,
         "current_tenant_id",

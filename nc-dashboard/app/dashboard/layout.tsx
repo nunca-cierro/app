@@ -20,11 +20,13 @@ export default function DashboardLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [previousPath, setPreviousPath] = useState(pathname);
 
-  /* ── Close the mobile drawer on navigation (adjust state during render) ── */
-  if (pathname !== previousPath) {
-    setPreviousPath(pathname);
-    setMobileOpen(false);
-  }
+  /* ── Close the mobile drawer on navigation ── */
+  useEffect(() => {
+    if (pathname !== previousPath) {
+      setPreviousPath(pathname);
+      setMobileOpen(false);
+    }
+  }, [pathname, previousPath]);
 
   /* ── Lock body scroll while the mobile drawer is open ── */
   useEffect(() => {
