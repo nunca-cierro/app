@@ -92,6 +92,24 @@ def extract_evolution_message(event: EvolutionEvent) -> ParsedMessage:
     message_type: str = data.get("messageType", "") or ""
 
     if message_type not in TEXT_MESSAGE_TYPES:
+        # Admin media messages (fromMe) still set the cooldown — return a
+        # minimal parsed message so the handler can track admin activity.
+        if from_me:
+            logger.info(
+                "Admin non-text message type={mtype} | jid={jid} "
+                "| saving for cooldown tracking",
+                mtype=message_type,
+                jid=remote_jid,
+            )
+            return {
+                "external_user_id": (remote_jid.split("@")[0]),
+                "external_message_id": message_id,
+                "content": f"[{message_type}]",
+                "remote_jid": remote_jid,
+                "instance_name": instance_name,
+                "push_name": data.get("pushName", "") or "",
+                "from_me": True,
+            }
         logger.debug(
             "Ignoring non-text message type={mtype} | jid={jid}",
             mtype=message_type,

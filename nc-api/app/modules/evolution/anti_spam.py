@@ -243,6 +243,11 @@ class SpamDetector:
         if not resolved.get("enabled", True):
             return SpamResult()
 
+        # Update flood limiter config dynamically so per-connection
+        # changes take effect without restarting the process.
+        self._flood_limiter.max_requests = resolved["flood_threshold"]
+        self._flood_limiter.window_seconds = resolved["flood_window_seconds"]
+
         mode = resolved.get("mode", "log")
 
         # Layer 1: Auto-reply

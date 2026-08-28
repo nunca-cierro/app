@@ -34,7 +34,7 @@ El mensaje del usuario está delimitado por etiquetas <user_query>. Siempre sigu
 # Number of previous messages to include as conversation history for context.
 # 6 messages = ~3 full exchanges (user → assistant pairs). Adjust based on
 # token budget and desired continuity.
-CONTEXT_WINDOW_SIZE: int = 6
+CONTEXT_WINDOW_SIZE: int = 10
 
 
 class GroqClient:

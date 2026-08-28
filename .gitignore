@@ -33,21 +33,14 @@ Thumbs.db
 # Logs
 *.log
 
-# Railway / Vercel
+# Vercel
 .vercel/
+
+# Local tools
+.atl/
+.openspec/
+.sdd/
 .cache/
 
-# .atl
-.atl
-
-# openspec
-openspec
-
-# docs
+# Documentation (business-sensitive, never commit)
 docs/
-
-# Docs operativas versionadas
-docs/*
-
-# sdd
-.sdd

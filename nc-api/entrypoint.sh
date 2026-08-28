@@ -37,6 +37,6 @@ alembic upgrade head
 echo "Running seed..."
 python -m app.seed
 
-# Start server
-echo "Starting uvicorn..."
-exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}" --log-level "${LOG_LEVEL:-info}"
+# Start server (2 workers for production — handles concurrent webhooks)
+echo "Starting uvicorn (2 workers)..."
+exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}" --workers 2 --log-level "${LOG_LEVEL:-info}"
