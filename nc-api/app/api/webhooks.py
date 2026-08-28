@@ -203,6 +203,9 @@ async def webhook_platform_post(
             await handle_evolution_incoming(payload, connection, session)
         except Exception:
             logger.exception("Unhandled error in Evolution handler")
-            return {"status": "error", "detail": "Internal processing error"}
+            raise HTTPException(
+                status_code=500,
+                detail="Evolution webhook processing failed",
+            )
 
     return {"status": "ok"}

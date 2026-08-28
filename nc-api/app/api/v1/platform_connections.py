@@ -124,6 +124,7 @@ class TelegramTokenValidationResponse(BaseModel):
 async def evolution_fetch_instances(
     base_url: str,
     api_key: str | None = None,
+    user: User = Depends(get_current_user),
 ) -> list[dict[str, t.Any]]:
     """Fetch all instances from a given Evolution API server.
 

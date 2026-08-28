@@ -55,11 +55,11 @@ async def test_get_current_user_resolves_context():
     credentials.credentials = token
     
     session = AsyncMock(spec=AsyncSession)
-    user = User(id=user_id, email=email, name="Test")
+    user = User(id=user_id, email=email, name="Test", role=UserRole.AGENT)
     session.get.return_value = user
     
     resolved_user = await get_current_user(credentials=credentials, session=session)
     
     assert resolved_user.id == user_id
-    assert resolved_user.current_role == role
+    assert resolved_user.current_role == UserRole.AGENT
     assert str(resolved_user.current_tenant_id) == tenant_id
