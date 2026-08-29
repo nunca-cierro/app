@@ -7,6 +7,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr
 
+from app.modules.auth.models import UserRole
+
 
 class RegisterRequest(BaseModel):
     email: str
@@ -69,6 +71,13 @@ class CreateUserRequest(BaseModel):
     password: str
     name: str
     role: str = "client"
+
+
+class UpdateUserRoleRequest(BaseModel):
+    """Body for PATCH /admin/users/{user_id} — pydantic enum coercion
+    rejects unknown roles with 422 before the handler runs."""
+
+    role: UserRole
 
 
 class AssignTenantRequest(BaseModel):
