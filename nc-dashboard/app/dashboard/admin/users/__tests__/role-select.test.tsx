@@ -3,6 +3,7 @@ import * as React from "react";
 import { PassThrough } from "node:stream";
 import { renderToPipeableStream } from "react-dom/server";
 import { ApiError } from "@/lib/api";
+import type { AuthUser } from "@/lib/types";
 
 /**
  * The vitest environment is node (no jsdom), so components are rendered with
@@ -102,12 +103,20 @@ function selectTags(html: string): string[] {
 
 describe("canEditUserRole (pure gate)", () => {
   it("allows a superadmin editing another user's role", () => {
-    const viewer = { id: "sa-1", current_role: "superadmin", role: "admin" };
+    const viewer = {
+      id: "sa-1",
+      current_role: "superadmin",
+      role: "admin",
+    } satisfies Pick<AuthUser, "id" | "role" | "current_role">;
     expect(canEditUserRole(viewer, "u-2")).toBe(true);
   });
 
   it("blocks a superadmin from editing their own row", () => {
-    const viewer = { id: "sa-1", current_role: "superadmin", role: "superadmin" };
+    const viewer = {
+      id: "sa-1",
+      current_role: "superadmin",
+      role: "superadmin",
+    } satisfies Pick<AuthUser, "id" | "role" | "current_role">;
     expect(canEditUserRole(viewer, "sa-1")).toBe(false);
   });
 
