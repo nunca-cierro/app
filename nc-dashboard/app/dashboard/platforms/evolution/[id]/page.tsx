@@ -4,6 +4,7 @@ import { useState, use, useEffect, useRef, useReducer } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePlatformConnection, type EvolutionConnectionState } from "@/hooks/use-platform-connections";
+import { isAntiSpamMode, resolveAntiSpamConfig } from "@/lib/schemas/evolution";
 import { TOKEN_KEYS } from "@/lib/api";
 import { isConnectionStateChanged, parseSseMessage } from "@/lib/sse";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -234,14 +235,48 @@ export default function PlatformEvolutionDetailPage({
     error: string | null;
   }>({ checking: false, result: null, error: null });
 
-  /* ── Anti-spam state ── */
-  const antiSpamConfig = extraData?.anti_spam as Record<string, unknown> | undefined;
-  const [antiSpamEnabled, setAntiSpamEnabled] = useState(
-    antiSpamConfig?.enabled !== false,
-  );
-  const [antiSpamMode, setAntiSpamMode] = useState(
-    (antiSpamConfig?.mode as string) || "log",
-  );
+  /* ── Anti-spam state ──
+   *
+   * The SAVED connection payload (`extra_data.anti_spam`) is the source of
+   * truth for what is active server-side; the switch and select below are a
+   * draft that only becomes visible state once the user edits it. Both are
+   * derived at render time (no useEffect) so the UI always reflects the
+   * saved mode after a refresh — the previous implementation initialized
+   * useState from async data and silently stayed on the "log" default
+   * forever, letting a "Guardar" click overwrite the real saved mode.
+   */
+  const savedAntiSpam = resolveAntiSpamConfig(extraData?.anti_spam);
+  const savedAntiSpamKey = `${savedAntiSpam.enabled}:${savedAntiSpam.mode ?? "unconfigured"}`;
+
+  const [antiSpamDraft, setAntiSpamDraft] = useState<{
+    source: string;
+    enabled: boolean;
+    mode: string;
+  } | null>(null);
+
+  // Draft is only honored while the saved values have not changed underneath
+  const antiSpamEnabled =
+    antiSpamDraft && antiSpamDraft.source === savedAntiSpamKey
+      ? antiSpamDraft.enabled
+      : savedAntiSpam.enabled;
+  const antiSpamMode =
+    antiSpamDraft && antiSpamDraft.source === savedAntiSpamKey
+      ? antiSpamDraft.mode
+      : (savedAntiSpam.mode ?? "");
+
+  const setAntiSpamEnabled = (enabled: boolean) =>
+    setAntiSpamDraft({
+      source: savedAntiSpamKey,
+      enabled,
+      mode: antiSpamMode,
+    });
+  const setAntiSpamMode = (mode: string) =>
+    setAntiSpamDraft({
+      source: savedAntiSpamKey,
+      enabled: antiSpamEnabled,
+      mode,
+    });
+
   const [isSavingAntiSpam, setIsSavingAntiSpam] = useState(false);
 
   if (isLoading) {
@@ -282,10 +317,11 @@ export default function PlatformEvolutionDetailPage({
     setIsSavingAntiSpam(true);
     try {
       const currentExtra = { ...(connection?.extra_data || {}) };
-      currentExtra.anti_spam = {
-        enabled: antiSpamEnabled,
-        mode: antiSpamMode,
-      };
+      // Omit `mode` when the user has not chosen one yet: the backend
+      // resolver (`_resolve_anti_spam_config`) then applies its own default.
+      currentExtra.anti_spam = isAntiSpamMode(antiSpamMode)
+        ? { enabled: antiSpamEnabled, mode: antiSpamMode }
+        : { enabled: antiSpamEnabled };
       await updateConnection({ extra_data: currentExtra });
       toast.success("Configuración anti-spam guardada");
     } catch (err) {
@@ -561,13 +597,27 @@ export default function PlatformEvolutionDetailPage({
         {/* ── Anti-Spam Config ── */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-2">
-              {antiSpamEnabled ? (
-                <ShieldIcon className="size-5 text-green-600" />
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                {savedAntiSpam.enabled ? (
+                  <ShieldIcon className="size-5 text-green-600" />
+                ) : (
+                  <ShieldOffIcon className="size-5 text-muted-foreground" />
+                )}
+                <CardTitle>Anti-Spam</CardTitle>
+              </div>
+              {/* Active-mode indicator — always reflects the SAVED config, never the draft */}
+              {!savedAntiSpam.enabled ? (
+                <Badge variant="outline">Desactivado</Badge>
+              ) : savedAntiSpam.mode === "block" ? (
+                <Badge variant="destructive">Modo activo: Bloquear</Badge>
+              ) : savedAntiSpam.mode === "log" ? (
+                <Badge variant="secondary" className="text-amber-600">
+                  Modo activo: Registro
+                </Badge>
               ) : (
-                <ShieldOffIcon className="size-5 text-muted-foreground" />
+                <Badge variant="outline">Sin configurar</Badge>
               )}
-              <CardTitle>Anti-Spam</CardTitle>
             </div>
             <CardDescription>
               Filtra mensajes automáticos, repetitivos o flooding de clientes.
@@ -608,6 +658,11 @@ export default function PlatformEvolutionDetailPage({
                 disabled={!antiSpamEnabled}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
+                {antiSpamMode === "" && (
+                  <option value="" disabled>
+                    Sin configurar
+                  </option>
+                )}
                 <option value="log">Solo registrar (log)</option>
                 <option value="block">Bloquear</option>
               </select>
@@ -615,6 +670,12 @@ export default function PlatformEvolutionDetailPage({
                 <strong>Log:</strong> detecta y registra, pero el bot sigue respondiendo.
                 {" "}<strong>Bloquear:</strong> ignora el mensaje sin responder.
               </p>
+              {antiSpamMode === "" && (
+                <p className="text-xs text-amber-600">
+                  Esta conexión no tiene un modo guardado. El sistema usa su valor
+                  por defecto (registro) hasta que elijas uno y guardes.
+                </p>
+              )}
             </div>
 
             {/* ── Save button ── */}
