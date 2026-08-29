@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   agentFormSchema,
   agentEditFormSchema,
+  defaultAgentValues,
   type AgentFormValues,
 } from "@/lib/schemas/agent";
 import { Input } from "@/components/ui/input";
@@ -48,12 +49,10 @@ export function AgentForm({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(mode === "edit" ? agentEditFormSchema : agentFormSchema) as any,
     defaultValues: {
-      tenant_id: "",
-      name: "",
-      provider: "groq",
-      model: "openai/gpt-oss-120b",
+      ...defaultAgentValues,
+      // The form intentionally preselects a warmer temperature than the
+      // storage default (0) — agents created from the UI start at 0.7.
       temperature: 0.7,
-      max_tokens: 512,
       ...defaultValues,
     },
   });

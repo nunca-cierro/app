@@ -55,7 +55,7 @@ export const defaultAgentValues: AgentFormValues = {
   provider: "groq",
   model: "openai/gpt-oss-120b",
   temperature: 0,
-  max_tokens: 512,
+  max_tokens: 1024,
 };
 
 /** Models disponibles por proveedor — solo modelos vigentes (Groq deprecó
