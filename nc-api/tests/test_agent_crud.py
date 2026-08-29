@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.main import app
 from app.modules.agents.models import AiAgent
+from app.modules.agents.template_models import AgentTemplate
 from app.modules.auth.deps import get_current_user
 from app.modules.auth.models import User, UserRole
 from app.modules.tenants.models import Tenant
@@ -293,3 +294,117 @@ class TestUpdateAgentBusinessConfigCapabilityGate:
         data = response.json()
         assert data["business_config"]["instructions"] == "updated"
         assert data["business_config"]["new_field"] == "value"
+
+
+# ── PATCH validation (R5) + merge semantics (R6) + canonical defaults (R7) ───
+
+
+class TestPatchValidation:
+    """PATCH /api/v1/agents/{id} — schema validators reject invalid values."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("payload", "expected_current"),
+        [
+            ({"max_tokens": 0}, {"max_tokens": 512}),
+            ({"temperature": 2.5}, {"temperature": 0}),
+            ({"provider": "made-up"}, {"provider": "groq"}),
+        ],
+    )
+    async def test_invalid_patch_values_rejected_422(
+        self,
+        superadmin_client: AsyncClient,
+        db_session: AsyncSession,
+        payload: dict,
+        expected_current: dict,
+    ):
+        """Invalid max_tokens/temperature/provider → 422 and the agent is unchanged."""
+        tenant = _create_tenant(db_session, "Validation Tenant", "validation-tenant")
+        await db_session.flush()
+        agent = _create_agent(db_session, tenant.id)
+        await db_session.commit()
+
+        response = await superadmin_client.patch(
+            f"/api/v1/agents/{agent.id}", json=payload
+        )
+
+        assert response.status_code == 422
+        await db_session.refresh(agent)
+        for field, value in expected_current.items():
+            assert getattr(agent, field) == value
+
+
+class TestBusinessConfigMerge:
+    """PATCH business_config — shallow top-level merge semantics (R6)."""
+
+    @pytest.mark.asyncio
+    async def test_merge_preserves_omitted_keys(
+        self, superadmin_client: AsyncClient, db_session: AsyncSession
+    ):
+        """Provided keys replace their value; omitted keys are preserved."""
+        tenant = _create_tenant(db_session, "Merge Tenant", "merge-tenant")
+        await db_session.flush()
+        agent = AiAgent(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            name="Merge Agent",
+            business_config={"instructions": "keep-me", "faq": "old-faq"},
+            provider="groq",
+            model="openai/gpt-oss-120b",
+            temperature=0,
+            max_tokens=512,
+        )
+        db_session.add(agent)
+        await db_session.commit()
+
+        response = await superadmin_client.patch(
+            f"/api/v1/agents/{agent.id}",
+            json={"business_config": {"faq": "new-faq"}},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["business_config"]["faq"] == "new-faq"
+        assert data["business_config"]["instructions"] == "keep-me"
+
+
+class TestCanonicalMaxTokens:
+    """Agent creation defaults max_tokens=1024 across all paths (R7)."""
+
+    @pytest.mark.asyncio
+    async def test_create_agent_defaults_max_tokens_1024(
+        self, superadmin_client: AsyncClient, db_session: AsyncSession
+    ):
+        tenant = _create_tenant(db_session, "Default Tenant", "default-tenant")
+        await db_session.commit()
+
+        response = await superadmin_client.post(
+            "/api/v1/agents",
+            json={"tenant_id": str(tenant.id), "name": "Default Agent"},
+        )
+
+        assert response.status_code == 201
+        assert response.json()["max_tokens"] == 1024
+
+    @pytest.mark.asyncio
+    async def test_create_agent_from_template_defaults_max_tokens_1024(
+        self, superadmin_client: AsyncClient, db_session: AsyncSession
+    ):
+        tenant = _create_tenant(db_session, "Template Tenant", "template-tenant")
+        await db_session.flush()
+        template = AgentTemplate(
+            id=uuid.uuid4(),
+            category="support",
+            name="Support Template",
+            content={"instructions": "be nice"},
+        )
+        db_session.add(template)
+        await db_session.commit()
+
+        response = await superadmin_client.post(
+            "/api/v1/agents/from-template",
+            json={"tenant_id": str(tenant.id), "template_id": str(template.id)},
+        )
+
+        assert response.status_code == 201
+        assert response.json()["max_tokens"] == 1024

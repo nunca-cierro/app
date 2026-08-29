@@ -86,7 +86,7 @@ async def create_agent_from_template(
         provider="groq",
         model=DEFAULT_GROQ_MODEL,
         temperature=0,
-        max_tokens=512,
+        max_tokens=1024,
     )
     session.add(agent)
     await session.commit()
@@ -203,6 +203,18 @@ async def update_agent_info(
                     "Contacta a tu administrador para hacer upgrade."
                 ),
             )
+
+    # business_config uses a shallow top-level merge: provided keys replace
+    # their value, omitted keys are preserved — wholesale replacement is
+    # prohibited. Built as a NEW dict because in-place JSONB mutation is not
+    # reliably detected by SQLAlchemy change tracking. An explicit null
+    # clears the config (deliberate act).
+    if "business_config" in update_data:
+        config_patch = update_data.pop("business_config")
+        if config_patch is None:
+            agent.business_config = None
+        else:
+            agent.business_config = {**(agent.business_config or {}), **config_patch}
 
     for key, value in update_data.items():
         setattr(agent, key, value)
