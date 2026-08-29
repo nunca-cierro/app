@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { apiClient, ApiError } from "@/lib/api";
-import type { AdminUser } from "@/lib/types";
+import type { AdminUser, UpdateUserRoleRequest, UserRole } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -15,6 +15,7 @@ export interface UseUsersReturn {
   refetch: () => void;
   createUser: (email: string, password: string, name: string, role?: string) => Promise<void>;
   assignTenant: (userId: string, tenantId: string, role: string) => Promise<void>;
+  updateUserRole: (userId: string, role: UserRole) => Promise<void>;
   deleteUser: (userId: string) => Promise<void>;
 }
 
@@ -78,6 +79,18 @@ export function useUsers(): UseUsersReturn {
     [],
   );
 
+  const updateUserRole = useCallback(
+    async (userId: string, role: UserRole) => {
+      const payload: UpdateUserRoleRequest = { role };
+      await apiClient(`/api/v1/admin/users/${userId}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+      setRefetchCount((c) => c + 1);
+    },
+    [],
+  );
+
   const deleteUser = useCallback(
     async (userId: string) => {
       await apiClient(`/api/v1/admin/users/${userId}`, {
@@ -94,5 +107,5 @@ export function useUsers(): UseUsersReturn {
     setRefetchCount((c) => c + 1);
   }, []);
 
-  return { users, isLoading, error, refetch, createUser, assignTenant, deleteUser };
+  return { users, isLoading, error, refetch, createUser, assignTenant, updateUserRole, deleteUser };
 }
