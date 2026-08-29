@@ -21,6 +21,11 @@ from pydantic import field_validator, model_validator
 # Rollback: set GROQ_MODEL=llama-3.3-70b-versatile before 08/16/2026.
 DEFAULT_GROQ_MODEL: str = "openai/gpt-oss-120b"
 
+# Canonical per-agent completion budget (R7). Single source of truth for the
+# ORM column default, the create schema and the dashboard form seed. The LLM
+# fallback (no agent context) stays settings.groq_max_tokens below.
+DEFAULT_MAX_TOKENS: int = 1024
+
 # Model ids already retired by Groq (verified on console.groq.com/docs/
 # deprecations): agents still storing any of these values are routed to
 # DEFAULT_GROQ_MODEL at runtime (defense-in-depth, see provider.py) and
@@ -81,7 +86,7 @@ class Settings(BaseSettings):
     # ── Groq / LLM ───────────────────────────────────────────────────────
     groq_api_key: str = ""
     groq_model: str = DEFAULT_GROQ_MODEL
-    groq_max_tokens: int = 1024
+    groq_max_tokens: int = DEFAULT_MAX_TOKENS
     groq_temperature: float = 0.7
     groq_rate_limit_rpm: int = 30
 

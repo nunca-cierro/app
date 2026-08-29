@@ -30,7 +30,7 @@ from app.modules.agents.schemas import (
 )
 from app.modules.agents.template_models import AgentTemplate
 from app.modules.agents.templates import PlaceholderResolver
-from app.core.config import DEFAULT_GROQ_MODEL
+from app.core.config import DEFAULT_GROQ_MODEL, DEFAULT_MAX_TOKENS
 from app.modules.tenants.models import Tenant
 
 router = APIRouter(prefix="/agents", tags=["agents"])
@@ -86,7 +86,7 @@ async def create_agent_from_template(
         provider="groq",
         model=DEFAULT_GROQ_MODEL,
         temperature=0,
-        max_tokens=1024,
+        max_tokens=DEFAULT_MAX_TOKENS,
     )
     session.add(agent)
     await session.commit()
