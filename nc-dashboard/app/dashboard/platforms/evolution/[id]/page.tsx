@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePlatformConnection, type EvolutionConnectionState } from "@/hooks/use-platform-connections";
 import { isAntiSpamMode, resolveAntiSpamConfig } from "@/lib/schemas/evolution";
 import { TOKEN_KEYS } from "@/lib/api";
-import { isConnectionStateChanged, parseSseMessage } from "@/lib/sse";
+import { isConnectionStateChanged, openSseStream } from "@/lib/sse";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -99,9 +99,11 @@ export default function PlatformEvolutionDetailPage({
    * connection (QR scanned → open, phone lost network → close). The
    * browser refetches the connection immediately on each event.
    *
-   * EventSource auto-reconnects on transient drops (onopen resets the
-   * error counter). Only when the stream is definitively dead (repeated
-   * errors with no successful open) do we fall back to polling.
+   * The stream is opened via fetch (token travels in the Authorization
+   * header, never the URL). Transient drops reconnect after a short
+   * delay (onopen resets the error counter). Only when the stream is
+   * definitively dead (3 consecutive errors with no successful open)
+   * do we fall back to polling.
    */
   useEffect(() => {
     if (!params.id) return;
@@ -110,34 +112,45 @@ export default function PlatformEvolutionDetailPage({
     if (!accessToken) return; // sseFailed already true → polling fallback
 
     let errorCount = 0;
-    const es = new EventSource(
-      `/api/v1/platform-connections/${params.id}/events?token=${encodeURIComponent(accessToken)}`,
-    );
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let disposed = false;
+    let closeStream: (() => void) | null = null;
 
-    es.onopen = () => {
-      errorCount = 0;
-      setSseFailed(false);
+    const connect = () => {
+      closeStream = openSseStream(
+        `/api/v1/platform-connections/${params.id}/events`,
+        {
+          token: accessToken,
+          onOpen: () => {
+            errorCount = 0;
+            setSseFailed(false);
+          },
+          onMessage: (msg) => {
+            if (isConnectionStateChanged(msg)) {
+              dispatchTimedOut(false);
+              setSseTick((t) => t + 1);
+              refetchConnection();
+            }
+          },
+          onError: () => {
+            if (disposed) return;
+            errorCount += 1;
+            if (errorCount >= 3) {
+              setSseFailed(true); // polling fallback takes over
+            } else {
+              reconnectTimer = setTimeout(connect, 1000);
+            }
+          },
+        },
+      );
     };
 
-    es.onmessage = (event) => {
-      const msg = parseSseMessage(event.data);
-      if (isConnectionStateChanged(msg)) {
-        dispatchTimedOut(false);
-        setSseTick((t) => t + 1);
-        refetchConnection();
-      }
-    };
-
-    es.onerror = () => {
-      errorCount += 1;
-      if (errorCount >= 3) {
-        setSseFailed(true);
-        es.close();
-      }
-    };
+    connect();
 
     return () => {
-      es.close();
+      disposed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      closeStream?.();
     };
   }, [params.id, refetchConnection]);
 
