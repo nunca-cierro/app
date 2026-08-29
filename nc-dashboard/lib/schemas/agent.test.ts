@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   agentFormSchema,
   agentEditFormSchema,
+  defaultAgentValues,
   type AgentFormValues,
   type AgentEditFormValues,
 } from "@/lib/schemas/agent";
@@ -47,6 +48,18 @@ describe("agentFormSchema", () => {
   it("rejects max_tokens below 64", () => {
     const result = agentFormSchema.safeParse({ ...validCreate, max_tokens: 32 });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("defaultAgentValues", () => {
+  it("seeds the canonical 1024 max_tokens (parity with backend R7)", () => {
+    // The agent form seeds from these values — a stale default here means
+    // every UI-created agent ships with the wrong max_tokens.
+    expect(defaultAgentValues.max_tokens).toBe(1024);
+    // The seeded value must clear the schema's own floor (64).
+    expect(agentFormSchema.shape.max_tokens.safeParse(defaultAgentValues.max_tokens).success).toBe(
+      true,
+    );
   });
 });
 
