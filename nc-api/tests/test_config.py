@@ -50,7 +50,7 @@ def test_empty_url_stays_empty() -> None:
 
 def test_internal_tenant_slug_default() -> None:
     s = _settings()
-    assert s.internal_tenant_slug == "nuncacierro"
+    assert s.internal_tenant_slug == "nunca-cierro"
 
 
 def test_internal_tenant_slug_override() -> None:

@@ -54,7 +54,8 @@ class Settings(BaseSettings):
     # (auth/tenants responses + Evolution payment pre-processing). Change
     # this when adapting the product to another business — never hardcode a
     # slug in modules. Empty = no tenant is exempt (safe fallback).
-    internal_tenant_slug: str = "nuncacierro"
+    # NOTE: must match the production internal tenant slug exactly.
+    internal_tenant_slug: str = "nunca-cierro"
 
     # ── Database ─────────────────────────────────────────────────────────
     database_url: str = "postgresql+asyncpg://postgres:1234@localhost:5432/nuncacierro"
