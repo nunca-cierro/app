@@ -57,7 +57,8 @@ describe("use-auth", () => {
     const mod = await import("@/hooks/use-auth");
     expect(mod.AuthProvider).toBeDefined();
     expect(mod.useAuth).toBeDefined();
-    expect(mod.AuthContextType).toBeUndefined(); // interface, not runtime
+    // AuthContextType is an interface — type-only, never a runtime export
+    expect("AuthContextType" in mod).toBe(false);
   });
 
   it("exports switchTenant on context type", async () => {

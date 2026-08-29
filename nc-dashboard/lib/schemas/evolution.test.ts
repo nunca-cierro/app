@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   evolutionFormSchema,
   type EvolutionFormValues,
+  isAntiSpamMode,
+  resolveAntiSpamConfig,
 } from "@/lib/schemas/evolution";
 
 describe("evolution connection schema", () => {
@@ -34,5 +36,90 @@ describe("evolution connection schema", () => {
       console.log(JSON.stringify(result.error.issues, null, 2));
     }
     expect(result.success).toBe(true);
+  });
+});
+
+describe("isAntiSpamMode", () => {
+  it("accepts the backend vocabulary (log, block)", () => {
+    expect(isAntiSpamMode("log")).toBe(true);
+    expect(isAntiSpamMode("block")).toBe(true);
+  });
+
+  it("rejects missing, empty and unknown values", () => {
+    expect(isAntiSpamMode(undefined)).toBe(false);
+    expect(isAntiSpamMode(null)).toBe(false);
+    expect(isAntiSpamMode("")).toBe(false);
+    expect(isAntiSpamMode("aggressive")).toBe(false);
+    expect(isAntiSpamMode(42)).toBe(false);
+  });
+});
+
+describe("resolveAntiSpamConfig", () => {
+  it("returns unconfigured state when extra_data.anti_spam is missing", () => {
+    expect(resolveAntiSpamConfig(undefined)).toEqual({
+      configured: false,
+      enabled: true,
+      mode: null,
+    });
+    expect(resolveAntiSpamConfig(null)).toEqual({
+      configured: false,
+      enabled: true,
+      mode: null,
+    });
+    expect(resolveAntiSpamConfig("garbage")).toEqual({
+      configured: false,
+      enabled: true,
+      mode: null,
+    });
+  });
+
+  it("resolves a saved block mode", () => {
+    expect(resolveAntiSpamConfig({ enabled: true, mode: "block" })).toEqual({
+      configured: true,
+      enabled: true,
+      mode: "block",
+    });
+  });
+
+  it("resolves a saved log mode", () => {
+    expect(resolveAntiSpamConfig({ enabled: true, mode: "log" })).toEqual({
+      configured: true,
+      enabled: true,
+      mode: "log",
+    });
+  });
+
+  it("never falls back to a mode silently when it is missing or unknown", () => {
+    expect(resolveAntiSpamConfig({ enabled: true })).toEqual({
+      configured: true,
+      enabled: true,
+      mode: null,
+    });
+    expect(resolveAntiSpamConfig({ enabled: true, mode: "aggressive" })).toEqual({
+      configured: true,
+      enabled: true,
+      mode: null,
+    });
+    expect(resolveAntiSpamConfig({})).toEqual({
+      configured: true,
+      enabled: true,
+      mode: null,
+    });
+  });
+
+  it("reflects the saved enabled=false flag", () => {
+    expect(resolveAntiSpamConfig({ enabled: false, mode: "block" })).toEqual({
+      configured: true,
+      enabled: false,
+      mode: "block",
+    });
+  });
+
+  it("defaults enabled to true (backend default) when missing", () => {
+    expect(resolveAntiSpamConfig({ mode: "log" })).toEqual({
+      configured: true,
+      enabled: true,
+      mode: "log",
+    });
   });
 });

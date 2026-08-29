@@ -520,6 +520,7 @@ function TenantSwitcher({
   const [tenants, setTenants] = useState<TenantEntry[]>([]);
   const [open, setOpen] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
+  const { logout } = useAuth();
 
   /* ── Fetch user's tenants on mount ── */
   useEffect(() => {
@@ -528,8 +529,11 @@ function TenantSwitcher({
       .then((data) => {
         if (!cancelled) setTenants(data);
       })
-      .catch(() => {
-        // Silently fail — tenant switcher simply won't show
+      .catch((err) => {
+        // A dead session must not silently hide the switcher — force re-login.
+        if (err instanceof ApiError && err.status === 401 && !cancelled) {
+          logout();
+        }
       });
     return () => {
       cancelled = true;
