@@ -6,9 +6,18 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.core.config import DEFAULT_GROQ_MODEL
+
+
+# Providers the platform can actually route to today. Kept as a frozenset
+# (single source of truth for PATCH validation) until a multi-provider
+# enum is warranted.
+SUPPORTED_PROVIDERS: frozenset[str] = frozenset({"groq"})
+
+MIN_TEMPERATURE = 0.0
+MAX_TEMPERATURE = 2.0
 
 
 # ── AiAgent from template ────────────────────────────────────────────────
@@ -33,7 +42,7 @@ class AiAgentCreate(BaseModel):
     provider: str = "groq"
     model: str = DEFAULT_GROQ_MODEL
     temperature: float = 0
-    max_tokens: int = 512
+    max_tokens: int = 1024
     enabled: bool = True
     business_config: dict[str, Any] | None = None
 
@@ -47,6 +56,31 @@ class AiAgentUpdate(BaseModel):
     max_tokens: int | None = None
     enabled: bool | None = None
     business_config: dict[str, Any] | None = None
+
+    @field_validator("max_tokens")
+    @classmethod
+    def validate_max_tokens(cls, v: int | None) -> int | None:
+        if v is not None and v < 1:
+            raise ValueError("max_tokens must be a positive integer")
+        return v
+
+    @field_validator("temperature")
+    @classmethod
+    def validate_temperature(cls, v: float | None) -> float | None:
+        if v is not None and not (MIN_TEMPERATURE <= v <= MAX_TEMPERATURE):
+            raise ValueError(
+                f"temperature must be between {MIN_TEMPERATURE} and {MAX_TEMPERATURE}"
+            )
+        return v
+
+    @field_validator("provider")
+    @classmethod
+    def validate_provider(cls, v: str | None) -> str | None:
+        if v is not None and v not in SUPPORTED_PROVIDERS:
+            raise ValueError(
+                f"provider must be one of: {', '.join(sorted(SUPPORTED_PROVIDERS))}"
+            )
+        return v
 
 
 class AiAgentResponse(BaseModel):
@@ -75,12 +109,6 @@ class PromptCreate(BaseModel):
     type: str = "system"
     content: str
     active: bool = True
-
-
-class PromptUpdate(BaseModel):
-    content: str | None = None
-    type: str | None = None
-    active: bool | None = None
 
 
 class PromptResponse(BaseModel):

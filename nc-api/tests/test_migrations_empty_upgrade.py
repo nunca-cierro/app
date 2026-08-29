@@ -29,7 +29,7 @@ from app.core.config import settings
 
 ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
 # Single head — keep in sync with `alembic heads` output.
-HEAD_REVISION = "b1c2d3e4f5a6"
+HEAD_REVISION = "c2d3e4f5a6b7"
 
 
 def _migration_db_url() -> str:

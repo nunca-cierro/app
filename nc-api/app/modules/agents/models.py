@@ -31,7 +31,7 @@ class AiAgent(Base):
         String(100), nullable=False, default=DEFAULT_GROQ_MODEL
     )
     temperature: Mapped[float] = mapped_column(Float, default=0)
-    max_tokens: Mapped[int] = mapped_column(Integer, default=512)
+    max_tokens: Mapped[int] = mapped_column(Integer, default=1024)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     business_config: Mapped[dict | None] = mapped_column(
         "business_config", JSONB, nullable=True, default=None
