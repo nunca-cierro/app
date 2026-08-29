@@ -39,19 +39,26 @@ class TelegramClient:
         return await self._request(url)
 
     async def setWebhook(
-        self, bot_token: str, url: str
+        self, bot_token: str, url: str, secret_token: str | None = None
     ) -> dict[str, t.Any]:
         """Set the webhook URL for a bot.
 
         Args:
             bot_token: The Telegram Bot API token.
             url: The public HTTPS URL where Telegram sends updates.
+            secret_token: Optional secret (1-256 chars, A-Z a-z 0-9 _ -).
+                Telegram echoes it back in the
+                ``X-Telegram-Bot-Api-Secret-Token`` header on every update,
+                enabling request authentication.
 
         Returns:
             The JSON response from the Bot API.
         """
         api_url = f"{API_BASE}{bot_token}/setWebhook"
-        return await self._request(api_url, json={"url": url})
+        payload: dict[str, t.Any] = {"url": url}
+        if secret_token:
+            payload["secret_token"] = secret_token
+        return await self._request(api_url, json=payload)
 
     async def send_message(
         self,

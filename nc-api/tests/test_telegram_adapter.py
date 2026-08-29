@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -50,8 +51,6 @@ class TestTelegramAdapterResolveCredentials:
 
     def test_resolve_credentials_empty_dict(self) -> None:
         """resolve_credentials handles empty credentials gracefully."""
-        import uuid
-
         from app.core.encryption import encrypt
         from app.modules.platform_connections.models import PlatformConnection
 
@@ -73,11 +72,18 @@ class TestTelegramAdapterValidateWebhook:
 
     @pytest.mark.asyncio
     async def test_validate_webhook_active_connection(self) -> None:
-        """validate_webhook returns True when connection is active."""
+        """validate_webhook returns True when connection is active and secret matches."""
+        from app.modules.telegram.security import HEADER_NAME, telegram_webhook_secret
+
+        conn_id = uuid.uuid4()
+        conn = MagicMock(id=conn_id)
+        secret = telegram_webhook_secret(conn_id)
+
         adapter = TelegramAdapter()
         result = await adapter.validate_webhook(
             payload={},
-            headers={},
+            headers={HEADER_NAME: secret},
+            connection=conn,
             connection_status="active",
         )
         assert result is True

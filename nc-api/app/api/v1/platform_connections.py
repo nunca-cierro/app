@@ -519,9 +519,16 @@ async def register_telegram_webhook(
         f"/webhook/telegram/{connection_id}"
     )
 
+    # Per-connection request authentication: Telegram echoes this secret in
+    # the X-Telegram-Bot-Api-Secret-Token header on every update; the
+    # webhook endpoint verifies it (deterministic — derived, not stored).
+    from app.modules.telegram.security import telegram_webhook_secret
+
     client = TelegramClient()
     try:
-        response = await client.setWebhook(bot_token, webhook_url)
+        response = await client.setWebhook(
+            bot_token, webhook_url, secret_token=telegram_webhook_secret(connection_id)
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=502,

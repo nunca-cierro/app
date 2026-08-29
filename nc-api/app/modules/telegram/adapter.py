@@ -77,23 +77,56 @@ class TelegramAdapter(PlatformAdapter):
     ) -> bool:
         """Validate an incoming Telegram webhook request.
 
-        Telegram does not sign its webhook payloads, so validation
-        is a simple check that the referenced connection is active.
+        Two checks (fail-closed):
+
+        1. **Secret token** — Telegram echoes the ``secret_token`` configured
+           via ``setWebhook`` in the ``X-Telegram-Bot-Api-Secret-Token``
+           header. We compare it (constant-time) against the deterministic
+           per-connection secret derived from ``JWT_SECRET``. A missing or
+           wrong header means the request was not sent by Telegram.
+        2. **Connection status** — the referenced connection must be active.
 
         Args:
-            payload: The parsed JSON body (unused for Telegram).
-            headers: The request headers (unused for Telegram).
-            **kwargs: Must include ``connection_status``.
+            payload: The parsed JSON body (unused for validation).
+            headers: The request headers (must contain the secret header).
+            **kwargs: Must include ``connection`` (the PlatformConnection).
 
         Returns:
-            ``True`` if the connection is active, ``False`` otherwise.
+            ``True`` only when both checks pass.
         """
-        status = kwargs.get("connection_status", "")
-        if status == "active":
-            return True
+        import hmac as hmac_mod
 
-        logger.warning(
-            "Telegram webhook validation failed: connection_status={status}",
-            status=status,
+        from app.modules.telegram.security import (
+            HEADER_NAME,
+            telegram_webhook_secret,
         )
-        return False
+
+        connection = kwargs.get("connection")
+        if connection is None or getattr(connection, "id", None) is None:
+            logger.warning("Telegram webhook validation failed: no connection")
+            return False
+
+        expected_secret = telegram_webhook_secret(connection.id)
+
+        # Case-insensitive header lookup — transports may vary casing
+        received = (
+            headers.get(HEADER_NAME)
+            or headers.get(HEADER_NAME.lower())
+            or ""
+        )
+        if not received or not hmac_mod.compare_digest(received, expected_secret):
+            logger.warning(
+                "Telegram webhook rejected: secret token mismatch | conn={cid}",
+                cid=connection.id,
+            )
+            return False
+
+        status = kwargs.get("connection_status", "")
+        if status != "active":
+            logger.warning(
+                "Telegram webhook validation failed: connection_status={status}",
+                status=status,
+            )
+            return False
+
+        return True
