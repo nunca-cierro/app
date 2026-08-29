@@ -47,3 +47,99 @@ export function isConnectionStateChanged(
 ): message is SseMessage {
   return message !== null && message.type === "connection_state_changed";
 }
+
+export interface OpenSseStreamOptions {
+  /** Access token sent as ``Authorization: Bearer`` — never in the URL. */
+  token?: string;
+  /** Called once the fetch response arrives (headers/status available). */
+  onOpen?: (res: Response) => void;
+  /** Called for every successfully parsed SSE message. */
+  onMessage: (msg: SseMessage) => void;
+  /** Called on fetch failure, non-ok response, or when the stream ends. */
+  onError?: (err: unknown) => void;
+}
+
+/**
+ * Open an SSE stream via ``fetch`` and deliver parsed messages to
+ * ``onMessage`` — the browser EventSource equivalent, but authenticating
+ * through the ``Authorization`` header instead of a ``?token=`` query
+ * parameter (which leaks the JWT into server/proxy logs).
+ *
+ * Frame handling follows the SSE spec: chunks are buffered and split on
+ * blank lines, ``:``-prefixed comment lines (e.g. keepalives) are ignored,
+ * and multi-line ``data:`` fields are joined with newlines. Each frame is
+ * parsed with {@link parseSseMessage}; unparseable frames are dropped.
+ *
+ * The returned close function aborts the stream via an ``AbortController``
+ * and is idempotent. Aborting is silent — ``onError`` never fires for an
+ * explicit close.
+ */
+export function openSseStream(
+  url: string,
+  opts: OpenSseStreamOptions,
+): () => void {
+  const { token, onOpen, onMessage, onError } = opts;
+  const controller = new AbortController();
+  let closed = false;
+
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    controller.abort();
+  };
+
+  const processFrame = (frame: string) => {
+    const dataLines = frame
+      .split("\n")
+      .filter((line) => !line.startsWith(":")) // comments / keepalives
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice("data:".length).replace(/^ /, ""));
+    if (dataLines.length === 0) return;
+    const msg = parseSseMessage(dataLines.join("\n"));
+    if (msg) onMessage(msg);
+  };
+
+  void (async () => {
+    try {
+      const res = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        signal: controller.signal,
+      });
+      if (closed) return;
+      if (!res.ok || !res.body) {
+        throw new Error(`SSE request failed with status ${res.status}`);
+      }
+      onOpen?.(res);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (closed) return;
+        if (done) break;
+        // Normalize CRLF line endings (chunk boundaries may split \r\n,
+        // so re-normalize the whole buffer before scanning for frames).
+        buffer = (buffer + decoder.decode(value, { stream: true })).replace(
+          /\r\n/g,
+          "\n",
+        );
+        let idx: number;
+        while ((idx = buffer.indexOf("\n\n")) !== -1) {
+          const frame = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 2);
+          processFrame(frame);
+          if (closed) return;
+        }
+      }
+      // Flush a final frame not terminated by a blank line.
+      if (buffer.trim()) processFrame(buffer);
+      if (!closed) onError?.(new Error("SSE stream ended"));
+    } catch (err) {
+      if (!closed) onError?.(err);
+    }
+  })();
+
+  return close;
+}
