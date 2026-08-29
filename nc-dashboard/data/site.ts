@@ -365,7 +365,6 @@ export const sitePlans = {
       clientAccessType: "read",
       supportLevel: "whatsapp_email",
       model: "openai/gpt-oss-120b",
-      maxTokens: 512,
     },
     enterprise: {
       name: "Empresarial",
@@ -380,7 +379,6 @@ export const sitePlans = {
       clientAccessType: "full",
       supportLevel: "priority_24_7",
       model: "openai/gpt-oss-120b",
-      maxTokens: 1024,
     },
   },
   trialInfo: {
