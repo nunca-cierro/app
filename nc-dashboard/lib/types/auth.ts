@@ -50,11 +50,6 @@ export interface AdminUser {
   tenants: TenantAssociation[];
 }
 
-/** Body for PATCH /api/v1/admin/users/{user_id} (superadmin-only role edit). */
-export interface UpdateUserRoleRequest {
-  role: UserRole;
-}
-
 /** Minimal tenant info returned by GET /api/v1/tenants (list). */
 export interface TenantEntry {
   id: string;
