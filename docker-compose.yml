@@ -50,6 +50,12 @@ services:
       GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
       LOG_LEVEL: ${LOG_LEVEL:-info}
 
+      # ── Runtime config (CORS + datos de pago mostrados al tenant) ───
+      CORS_ORIGINS: ${CORS_ORIGINS:?Debe definir CORS_ORIGINS}
+      PAYMENT_BREB_NUMBER: ${PAYMENT_BREB_NUMBER:?Debe definir PAYMENT_BREB_NUMBER}
+      PAYMENT_ACCOUNT_HOLDER: ${PAYMENT_ACCOUNT_HOLDER:?Debe definir PAYMENT_ACCOUNT_HOLDER}
+      PAYMENT_DASHBOARD_URL: ${PAYMENT_DASHBOARD_URL:?Debe definir PAYMENT_DASHBOARD_URL}
+
       # ── Evolution API (WhatsApp Gateway - red Docker interna) ────────
       EVO_API_KEY: ${EVO_API_KEY:?Debe definir EVO_API_KEY}
       EVO_API_BASE_URL: "http://evolution-api:8080"
