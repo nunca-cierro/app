@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { ApiError } from "@/lib/api";
 import type { AdminUser, AuthUser, UserRole } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
@@ -37,11 +36,6 @@ export function canEditUserRole(
 ): boolean {
   const effectiveRole = viewer?.current_role ?? viewer?.role;
   return effectiveRole === "superadmin" && viewer?.id !== targetUserId;
-}
-
-/** Error toast message for a role change: surface the backend ApiError detail (e.g. last-superadmin 400). */
-export function roleChangeErrorToastMessage(err: unknown): string {
-  return err instanceof ApiError ? err.message : "Error al actualizar el rol";
 }
 
 /* ------------------------------------------------------------------ */
