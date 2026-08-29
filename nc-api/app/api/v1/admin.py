@@ -14,11 +14,10 @@ from uuid import UUID
 from fastapi import Response
 
 from app.db.session import get_session
-from app.modules.auth.deps import RoleChecker, get_current_user
+from app.modules.auth.deps import RoleChecker
 from app.modules.auth.models import User, UserRole
 from app.modules.auth.service import hash_password
 
-admin_or_super = RoleChecker(allowed_roles=[UserRole.ADMIN, UserRole.SUPERADMIN])
 from app.modules.auth.schemas import (
     AdminUserOut,
     AssignTenantRequest,
@@ -31,16 +30,16 @@ from app.modules.tenants.models import Tenant
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
+admin_or_super = RoleChecker(allowed_roles=[UserRole.ADMIN, UserRole.SUPERADMIN])
+superadmin_only = RoleChecker(allowed_roles=[UserRole.SUPERADMIN])
+
 
 @router.get("/users", response_model=list[AdminUserOut])
 async def list_users(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(superadmin_only),
     session: AsyncSession = Depends(get_session),
 ) -> t.Any:
     """List all registered users with their tenant assignments. Superadmin only."""
-    if getattr(current_user, "current_role", current_user.role) != UserRole.SUPERADMIN:
-        raise HTTPException(status_code=403, detail="Only superadmins can list users")
-
     result = await session.execute(
         select(User)
         .options(selectinload(User.tenant_associations))
@@ -88,13 +87,10 @@ async def list_users(
 @router.post("/users", response_model=AdminUserOut, status_code=201)
 async def create_user(
     body: CreateUserRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(superadmin_only),
     session: AsyncSession = Depends(get_session),
 ) -> t.Any:
     """Create a new user. Superadmin only."""
-    if getattr(current_user, "current_role", current_user.role) != UserRole.SUPERADMIN:
-        raise HTTPException(status_code=403, detail="Only superadmins can create users")
-
     if len(body.password) < 6:
         raise HTTPException(
             status_code=422, detail="Password must be at least 6 characters"
@@ -137,15 +133,10 @@ async def create_user(
 async def update_user_role(
     user_id: UUID,
     body: UpdateUserRoleRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(superadmin_only),
     session: AsyncSession = Depends(get_session),
 ) -> t.Any:
     """Update a user's global role. Superadmin only. Cannot change your own role."""
-    if getattr(current_user, "current_role", current_user.role) != UserRole.SUPERADMIN:
-        raise HTTPException(
-            status_code=403, detail="Only superadmins can update user roles"
-        )
-
     if user_id == current_user.id:
         raise HTTPException(status_code=403, detail="Cannot change your own role")
 
@@ -187,13 +178,10 @@ async def update_user_role(
 @router.delete("/users/{user_id}", status_code=204, response_model=None)
 async def delete_user(
     user_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(superadmin_only),
     session: AsyncSession = Depends(get_session),
 ) -> None:
     """Delete a user. Superadmin only. Cannot delete yourself."""
-    if getattr(current_user, "current_role", current_user.role) != UserRole.SUPERADMIN:
-        raise HTTPException(status_code=403, detail="Only superadmins can delete users")
-
     if user_id == current_user.id:
         raise HTTPException(status_code=403, detail="Cannot delete yourself")
 

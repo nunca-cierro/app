@@ -221,7 +221,6 @@ async def test_agent_cannot_access_admin_panel(client: AsyncClient, db_session: 
 
     app.dependency_overrides[get_current_user] = mock_get_current_user
     try:
-        # list_users still uses manual superadmin check, not RoleChecker
         response = await client.get("/api/v1/admin/users")
         assert response.status_code == 403
     finally:
