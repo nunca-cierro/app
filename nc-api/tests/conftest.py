@@ -16,6 +16,7 @@ os.environ.setdefault("PAYMENT_BREB_NUMBER", "3007654321")
 os.environ.setdefault("PAYMENT_ACCOUNT_HOLDER", "NuncaCierro SAS")
 
 import asyncpg
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import NullPool
@@ -27,6 +28,18 @@ from app.db.session import get_session
 from app.main import app
 from app.modules.auth.models import User, UserRole
 from app.modules.auth.deps import get_current_user
+
+
+@pytest.fixture(autouse=True)
+def _clear_dependency_overrides():
+    """Wipe app.dependency_overrides after every test.
+
+    Tests (and the ``client`` fixture) register auth/session overrides on the
+    global app object; this guarantees none of them leak into the next test,
+    so individual tests don't need try/finally cleanup.
+    """
+    yield
+    app.dependency_overrides.clear()
 
 # ── Test database ─────────────────────────────────────────────────────────
 # Uses a SEPARATE database (nuncacierro_test) to avoid dropping dev data.

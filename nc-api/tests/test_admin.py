@@ -30,31 +30,28 @@ async def test_assign_tenant_as_superadmin(client: AsyncClient, db_session: Asyn
         return superadmin
     app.dependency_overrides[get_current_user] = mock_get_current_user
 
-    try:
-        payload = {
-            "user_id": str(user_to_assign.id),
-            "tenant_id": str(tenant.id),
-            "role": "agent"
-        }
-        response = await client.post("/api/v1/admin/assign-tenant", json=payload)
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "ok"
+    payload = {
+        "user_id": str(user_to_assign.id),
+        "tenant_id": str(tenant.id),
+        "role": "agent"
+    }
+    response = await client.post("/api/v1/admin/assign-tenant", json=payload)
 
-        # Verify in DB
-        result = await db_session.execute(
-            select(UserTenant).where(
-                UserTenant.user_id == user_to_assign.id,
-                UserTenant.tenant_id == tenant.id
-            )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok"
+
+    # Verify in DB
+    result = await db_session.execute(
+        select(UserTenant).where(
+            UserTenant.user_id == user_to_assign.id,
+            UserTenant.tenant_id == tenant.id
         )
-        assoc = result.scalar_one_or_none()
-        assert assoc is not None
-        assert assoc.role == "agent"
-        assert assoc.is_primary is True
-    finally:
-        app.dependency_overrides.clear()
+    )
+    assoc = result.scalar_one_or_none()
+    assert assoc is not None
+    assert assoc.role == "agent"
+    assert assoc.is_primary is True
 
 
 def override_current_user(mock_user: User) -> None:
@@ -81,18 +78,15 @@ async def test_update_user_role_as_superadmin(client: AsyncClient, db_session: A
     setattr(superadmin, "current_role", UserRole.SUPERADMIN)
     override_current_user(superadmin)
 
-    try:
-        response = await client.patch(
-            f"/api/v1/admin/users/{target.id}", json={"role": "client"}
-        )
+    response = await client.patch(
+        f"/api/v1/admin/users/{target.id}", json={"role": "client"}
+    )
 
-        assert response.status_code == 200
-        assert response.json()["role"] == "client"
+    assert response.status_code == 200
+    assert response.json()["role"] == "client"
 
-        await db_session.refresh(target)
-        assert target.role == "client"
-    finally:
-        app.dependency_overrides.clear()
+    await db_session.refresh(target)
+    assert target.role == "client"
 
 
 @pytest.mark.asyncio
@@ -105,17 +99,14 @@ async def test_update_user_role_forbidden_for_non_superadmin(client: AsyncClient
     setattr(admin, "current_role", UserRole.ADMIN)
     override_current_user(admin)
 
-    try:
-        response = await client.patch(
-            f"/api/v1/admin/users/{target.id}", json={"role": "agent"}
-        )
+    response = await client.patch(
+        f"/api/v1/admin/users/{target.id}", json={"role": "agent"}
+    )
 
-        assert response.status_code == 403
+    assert response.status_code == 403
 
-        await db_session.refresh(target)
-        assert target.role == "client"
-    finally:
-        app.dependency_overrides.clear()
+    await db_session.refresh(target)
+    assert target.role == "client"
 
 
 @pytest.mark.asyncio
@@ -127,17 +118,14 @@ async def test_update_user_role_self_edit_blocked(client: AsyncClient, db_sessio
     setattr(superadmin, "current_role", UserRole.SUPERADMIN)
     override_current_user(superadmin)
 
-    try:
-        response = await client.patch(
-            f"/api/v1/admin/users/{superadmin.id}", json={"role": "client"}
-        )
+    response = await client.patch(
+        f"/api/v1/admin/users/{superadmin.id}", json={"role": "client"}
+    )
 
-        assert response.status_code == 403
+    assert response.status_code == 403
 
-        await db_session.refresh(superadmin)
-        assert superadmin.role == "superadmin"
-    finally:
-        app.dependency_overrides.clear()
+    await db_session.refresh(superadmin)
+    assert superadmin.role == "superadmin"
 
 
 @pytest.mark.asyncio
@@ -153,18 +141,15 @@ async def test_update_user_role_last_superadmin_protected(client: AsyncClient, d
     setattr(caller, "current_role", UserRole.SUPERADMIN)
     override_current_user(caller)
 
-    try:
-        response = await client.patch(
-            f"/api/v1/admin/users/{target.id}", json={"role": "client"}
-        )
+    response = await client.patch(
+        f"/api/v1/admin/users/{target.id}", json={"role": "client"}
+    )
 
-        assert response.status_code == 400
-        assert "last superadmin" in response.json()["detail"].lower()
+    assert response.status_code == 400
+    assert "last superadmin" in response.json()["detail"].lower()
 
-        await db_session.refresh(target)
-        assert target.role == "superadmin"
-    finally:
-        app.dependency_overrides.clear()
+    await db_session.refresh(target)
+    assert target.role == "superadmin"
 
 
 @pytest.mark.asyncio
@@ -173,14 +158,11 @@ async def test_update_user_role_unknown_user(client: AsyncClient, db_session: As
     setattr(superadmin, "current_role", UserRole.SUPERADMIN)
     override_current_user(superadmin)
 
-    try:
-        response = await client.patch(
-            f"/api/v1/admin/users/{uuid.uuid4()}", json={"role": "client"}
-        )
+    response = await client.patch(
+        f"/api/v1/admin/users/{uuid.uuid4()}", json={"role": "client"}
+    )
 
-        assert response.status_code == 404
-    finally:
-        app.dependency_overrides.clear()
+    assert response.status_code == 404
 
 
 @pytest.mark.asyncio
@@ -193,17 +175,14 @@ async def test_update_user_role_invalid_role_rejected(client: AsyncClient, db_se
     setattr(superadmin, "current_role", UserRole.SUPERADMIN)
     override_current_user(superadmin)
 
-    try:
-        response = await client.patch(
-            f"/api/v1/admin/users/{target.id}", json={"role": "made-up"}
-        )
+    response = await client.patch(
+        f"/api/v1/admin/users/{target.id}", json={"role": "made-up"}
+    )
 
-        assert response.status_code == 422
+    assert response.status_code == 422
 
-        await db_session.refresh(target)
-        assert target.role == "client"
-    finally:
-        app.dependency_overrides.clear()
+    await db_session.refresh(target)
+    assert target.role == "client"
 
 
 # ── POST /admin/users — superadmin-grant policy (R2) ──────────────────────
@@ -215,25 +194,23 @@ async def test_non_superadmin_cannot_create_superadmin(client: AsyncClient, db_s
     setattr(admin, "current_role", UserRole.ADMIN)
     override_current_user(admin)
 
-    try:
-        response = await client.post(
-            "/api/v1/admin/users",
-            json={
-                "email": "escalated@test.com",
-                "password": "secret123",
-                "name": "Escalated",
-                "role": "superadmin",
-            },
-        )
+    response = await client.post(
+        "/api/v1/admin/users",
+        json={
+            "email": "escalated@test.com",
+            "password": "secret123",
+            "name": "Escalated",
+            "role": "superadmin",
+        },
+    )
 
-        assert response.status_code == 403
+    assert response.status_code == 403
 
-        result = await db_session.execute(
-            select(User).where(User.role == UserRole.SUPERADMIN.value)
-        )
-        assert result.scalars().first() is None
-    finally:
-        app.dependency_overrides.clear()
+    result = await db_session.execute(
+        select(User).where(User.role == UserRole.SUPERADMIN.value)
+    )
+    assert result.scalars().first() is None
+
 
 @pytest.mark.asyncio
 async def test_assign_tenant_unauthorized_agent(client: AsyncClient, db_session: AsyncSession):
@@ -251,14 +228,11 @@ async def test_assign_tenant_unauthorized_agent(client: AsyncClient, db_session:
         return agent_user
     app.dependency_overrides[get_current_user] = mock_get_current_user
 
-    try:
-        payload = {
-            "user_id": str(user_to_assign.id),
-            "tenant_id": str(tenant.id),
-            "role": "agent"
-        }
-        response = await client.post("/api/v1/admin/assign-tenant", json=payload)
-        
-        assert response.status_code == 403
-    finally:
-        app.dependency_overrides.clear()
+    payload = {
+        "user_id": str(user_to_assign.id),
+        "tenant_id": str(tenant.id),
+        "role": "agent"
+    }
+    response = await client.post("/api/v1/admin/assign-tenant", json=payload)
+
+    assert response.status_code == 403
