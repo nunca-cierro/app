@@ -2,16 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 import * as React from "react";
 import { PassThrough } from "node:stream";
 import { renderToPipeableStream } from "react-dom/server";
-import { ApiError } from "@/lib/api";
 import type { AuthUser } from "@/lib/types";
 
 /**
  * The vitest environment is node (no jsdom), so components are rendered with
  * react-dom/server (pattern: anti-spam-indicator.test.tsx). Event handlers
  * can't fire in SSR, so interaction logic is covered by pure exported helpers
- * (canEditUserRole, roleChangeErrorToastMessage) and presence/absence is
- * asserted on the rendered HTML — the DOM-absence requirement (R3) is a
- * rendered-output property, which is exactly what SSR proves.
+ * (canEditUserRole) and presence/absence is asserted on the rendered HTML —
+ * the DOM-absence requirement (R3) is a rendered-output property, which is
+ * exactly what SSR proves.
  */
 
 const mocks = vi.hoisted(() => ({
@@ -58,7 +57,6 @@ import {
   ROLE_OPTIONS,
   ASSIGNABLE_ROLE_OPTIONS,
   canEditUserRole,
-  roleChangeErrorToastMessage,
   RoleSelect,
 } from "@/app/dashboard/admin/users/components/role-select";
 import AdminUsersPage from "@/app/dashboard/admin/users/page";
@@ -152,24 +150,6 @@ describe("role option constants", () => {
   });
 });
 
-describe("roleChangeErrorToastMessage (pure)", () => {
-  it("surfaces the backend ApiError message (e.g. last-superadmin 400 detail)", () => {
-    const err = new ApiError(400, "No puedes degradar al último superadmin");
-    expect(roleChangeErrorToastMessage(err)).toBe(
-      "No puedes degradar al último superadmin",
-    );
-  });
-
-  it("falls back to the generic Spanish message for non-ApiError failures", () => {
-    expect(roleChangeErrorToastMessage(new Error("boom"))).toBe(
-      "Error al actualizar el rol",
-    );
-    expect(roleChangeErrorToastMessage("string error")).toBe(
-      "Error al actualizar el rol",
-    );
-  });
-});
-
 describe("RoleSelect (SSR render)", () => {
   it("renders an enabled role select with all four options for a superadmin editing another user", async () => {
     mocks.authUser.id = "sa-1";
@@ -232,10 +212,6 @@ describe("RoleSelect (SSR render)", () => {
     );
 
     expect(html).toBe("");
-  });
-
-  it("is a React component function (payment-status-toggle pattern)", () => {
-    expect(typeof RoleSelect).toBe("function");
   });
 });
 

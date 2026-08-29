@@ -5,6 +5,7 @@ import { useUsers } from "@/hooks/use-users";
 import { useTenants } from "@/hooks/use-tenants";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+import { ApiError } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +26,6 @@ import {
   ROLE_OPTIONS,
   ASSIGNABLE_ROLE_OPTIONS,
   canEditUserRole,
-  roleChangeErrorToastMessage,
 } from "./components/role-select";
 
 /* ------------------------------------------------------------------ */
@@ -95,7 +95,9 @@ export default function AdminUsersPage() {
       await updateUserRole(userId, role);
       toast.success("Rol actualizado");
     } catch (err) {
-      toast.error(roleChangeErrorToastMessage(err));
+      toast.error(
+        err instanceof ApiError ? err.message : "Error al actualizar el rol",
+      );
     }
   };
 
