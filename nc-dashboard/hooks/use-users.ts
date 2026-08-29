@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { apiClient, ApiError } from "@/lib/api";
-import type { AdminUser, UpdateUserRoleRequest, UserRole } from "@/lib/types";
+import type { AdminUser, UserRole } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -81,10 +81,9 @@ export function useUsers(): UseUsersReturn {
 
   const updateUserRole = useCallback(
     async (userId: string, role: UserRole) => {
-      const payload: UpdateUserRoleRequest = { role };
       await apiClient(`/api/v1/admin/users/${userId}`, {
         method: "PATCH",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ role }),
       });
       setRefetchCount((c) => c + 1);
     },
