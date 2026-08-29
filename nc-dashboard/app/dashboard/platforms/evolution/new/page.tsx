@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
+import { openSseStream } from "@/lib/sse";
 import { toast } from "sonner";
 import type { EvolutionFormValues } from "@/lib/schemas/evolution";
 
@@ -33,34 +34,34 @@ export default function PlatformsNewEvolutionPage() {
     const token = localStorage.getItem("nc_access_token");
     if (!token) return;
 
-    const eventSource = new EventSource(
-      `/api/v1/platform-connections/${connectionId}/events?token=${encodeURIComponent(token)}`
+    // Token travels in the Authorization header — never in the URL.
+    const closeStream = openSseStream(
+      `/api/v1/platform-connections/${connectionId}/events`,
+      {
+        token,
+        onMessage: (msg) => {
+          if (
+            msg.type === "connection_state_changed" &&
+            msg.data?.status === "connected"
+          ) {
+            setStep("connected");
+            toast.success("WhatsApp conectado exitosamente");
+            closeStream();
+            // Redirect after a brief pause so user sees the success
+            setTimeout(() => {
+              router.push(`/dashboard/platforms/evolution/${connectionId}`);
+            }, 1500);
+          }
+        },
+        onError: () => {
+          // Stream ended or failed — stop listening; the detail page
+          // handles reconnection.
+        },
+      },
     );
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "connection_state_changed" && data.data?.status === "connected") {
-          setStep("connected");
-          toast.success("WhatsApp conectado exitosamente");
-          eventSource.close();
-          // Redirect after a brief pause so user sees the success
-          setTimeout(() => {
-            router.push(`/dashboard/platforms/evolution/${connectionId}`);
-          }, 1500);
-        }
-      } catch {
-        // Ignore parse errors
-      }
-    };
-
-    eventSource.onerror = () => {
-      // SSE error — close and let the detail page handle reconnection
-      eventSource.close();
-    };
-
     return () => {
-      eventSource.close();
+      closeStream();
     };
   }, [step, connectionId, router]);
 
