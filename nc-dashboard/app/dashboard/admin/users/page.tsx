@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useUsers } from "@/hooks/use-users";
 import { useTenants } from "@/hooks/use-tenants";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,14 +19,21 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { UserCheck, X, Trash2, UserPlus } from "lucide-react";
-import type { AdminUser, Tenant } from "@/lib/types";
+import type { AdminUser, Tenant, UserRole } from "@/lib/types";
+import {
+  RoleSelect,
+  ROLE_OPTIONS,
+  ASSIGNABLE_ROLE_OPTIONS,
+  canEditUserRole,
+  roleChangeErrorToastMessage,
+} from "./components/role-select";
 
 /* ------------------------------------------------------------------ */
 /*  Page                                                              */
 /* ------------------------------------------------------------------ */
 
 export default function AdminUsersPage() {
-  const { users, isLoading, error, createUser, assignTenant, deleteUser } =
+  const { users, isLoading, error, createUser, assignTenant, updateUserRole, deleteUser } =
     useUsers();
   const { tenants } = useTenants();
   const [assigningUserId, setAssigningUserId] = useState<string | null>(null);
@@ -79,6 +87,15 @@ export default function AdminUsersPage() {
       setAssigningUserId(null);
     } catch {
       toast.error("Error al asignar el usuario");
+    }
+  };
+
+  const handleRoleChange = async (userId: string, role: UserRole) => {
+    try {
+      await updateUserRole(userId, role);
+      toast.success("Rol actualizado");
+    } catch (err) {
+      toast.error(roleChangeErrorToastMessage(err));
     }
   };
 
@@ -140,10 +157,11 @@ export default function AdminUsersPage() {
                   onChange={(e) => setNewRole(e.target.value)}
                   className="h-9 w-full rounded-md border bg-background px-3 text-sm"
                 >
-                  <option value="client">Cliente</option>
-                  <option value="agent">Agente</option>
-                  <option value="admin">Admin</option>
-                  <option value="superadmin">Superadmin</option>
+                  {ROLE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -190,6 +208,7 @@ export default function AdminUsersPage() {
                   onAssign={(tenantId, role) =>
                     handleAssign(user.id, tenantId, role)
                   }
+                  onRoleChange={(role) => handleRoleChange(user.id, role)}
                   onDelete={() => handleDelete(user.id)}
                 />
               ))}
@@ -212,6 +231,7 @@ interface UserRowProps {
   onStartAssign: () => void;
   onCancelAssign: () => void;
   onAssign: (tenantId: string, role: string) => void;
+  onRoleChange: (role: UserRole) => Promise<void>;
   onDelete: () => void;
 }
 
@@ -222,11 +242,15 @@ function UserRow({
   onStartAssign,
   onCancelAssign,
   onAssign,
+  onRoleChange,
   onDelete,
 }: UserRowProps) {
+  const { user: authUser } = useAuth();
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [selectedRole, setSelectedRole] = useState("client");
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const canEditRole = canEditUserRole(authUser, user.id);
 
   const handleSubmit = () => {
     if (!selectedTenantId) {
@@ -249,7 +273,11 @@ function UserRow({
         <td className="px-4 py-3 font-medium">{user.email}</td>
         <td className="px-4 py-3 text-muted-foreground">{user.name}</td>
         <td className="px-4 py-3">
-          <Badge variant={roleBadgeVariant}>{user.role}</Badge>
+          {canEditRole ? (
+            <RoleSelect user={user} onRoleChange={onRoleChange} />
+          ) : (
+            <Badge variant={roleBadgeVariant}>{user.role}</Badge>
+          )}
         </td>
         <td className="px-4 py-3">
           {user.tenants.length > 0 ? (
@@ -356,10 +384,11 @@ function UserRow({
                   onChange={(e) => setSelectedRole(e.target.value)}
                   className="h-9 rounded-md border bg-background px-3 text-sm"
                 >
-                  <option value="client">Cliente</option>
-                  <option value="agent">Agente</option>
-                  <option value="admin">Admin</option>
-                  <option value="superadmin">Superadmin</option>
+                  {ASSIGNABLE_ROLE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="flex gap-2">
