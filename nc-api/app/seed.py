@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
+import uuid
 
 from sqlalchemy import delete, select
 
@@ -29,6 +30,7 @@ async def seed(reset: bool = False) -> None:
             print("✓ System templates deleted — re-seeding from scratch")
         await _seed_templates(session)
         await _prune_system_templates(session)
+        await bootstrap_platform_integrity(session)
 
 
 async def _seed_templates(session) -> None:
@@ -119,6 +121,75 @@ async def _prune_system_templates(session) -> None:
 
     if stale:
         await session.commit()
+
+
+async def bootstrap_platform_integrity(session) -> tuple[int, int]:
+    """Self-heal role / primary-association corruption (idempotent).
+
+    Repairs the fallout of a prod incident where tenant creation downgraded a
+    global superadmin's ``users.role`` and could leave duplicate primary
+    associations (which made login fail with MultipleResultsFound → 500):
+
+    1. Platform operator restore: any user holding an admin/superadmin
+       membership on the internal tenant must have ``users.role=superadmin``.
+    2. Single-primary invariant: each user keeps at most ONE
+       ``is_primary=True`` UserTenant — duplicates beyond the oldest are
+       demoted to False.
+
+    Safe to run repeatedly: a second run changes nothing and returns zeros.
+    Returns ``(users_elevated, primaries_demoted)``.
+    """
+    from loguru import logger
+
+    from app.core.config import settings
+    from app.modules.auth.models import User, UserRole
+    from app.modules.auth.user_tenant import UserTenant
+    from app.modules.tenants.models import Tenant
+
+    # ── 1. Restore the platform operator from internal-tenant memberships ──
+    elevated = 0
+    if settings.internal_tenant_slug:
+        result = await session.execute(
+            select(UserTenant, User)
+            .join(Tenant, UserTenant.tenant_id == Tenant.id)
+            .join(User, UserTenant.user_id == User.id)
+            .where(
+                Tenant.slug == settings.internal_tenant_slug,
+                UserTenant.role.in_(
+                    [UserRole.ADMIN.value, UserRole.SUPERADMIN.value]
+                ),
+            )
+        )
+        for _, user in result.all():
+            if user.role != UserRole.SUPERADMIN.value:
+                user.role = UserRole.SUPERADMIN
+                elevated += 1
+
+    # ── 2. Demote duplicate primaries globally — keep the oldest per user ──
+    demoted = 0
+    result = await session.execute(
+        select(UserTenant)
+        .where(UserTenant.is_primary.is_(True))
+        .order_by(UserTenant.user_id, UserTenant.created_at, UserTenant.tenant_id)
+    )
+    primaries_by_user: dict[uuid.UUID, list] = {}
+    for ut in result.scalars().all():
+        primaries_by_user.setdefault(ut.user_id, []).append(ut)
+    for rows in primaries_by_user.values():
+        for stale in rows[1:]:
+            stale.is_primary = False
+            demoted += 1
+
+    if elevated or demoted:
+        await session.commit()
+
+    logger.info(
+        "Seed bootstrap: elevated {elevated} internal-tenant operator(s) to "
+        "superadmin, demoted {demoted} duplicate primary association(s)",
+        elevated=elevated,
+        demoted=demoted,
+    )
+    return elevated, demoted
 
 
 if __name__ == "__main__":

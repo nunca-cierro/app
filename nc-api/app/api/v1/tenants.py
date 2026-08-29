@@ -7,7 +7,7 @@ import typing as t
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -76,6 +76,18 @@ async def create_new_tenant(
                     await session.commit()
                     raise HTTPException(status_code=403, detail="Forbidden")
 
+            # Enforce the single-primary invariant in the same transaction:
+            # demote every other primary association before flagging the new
+            # membership as primary. Duplicate primaries break login (the
+            # primary lookup becomes ambiguous).
+            await session.execute(
+                update(UserTenant)
+                .where(
+                    UserTenant.user_id == current_user.id,
+                    UserTenant.is_primary.is_(True),
+                )
+                .values(is_primary=False)
+            )
             ut = UserTenant(
                 user_id=current_user.id,
                 tenant_id=tenant.id,
@@ -83,7 +95,6 @@ async def create_new_tenant(
                 is_primary=True,
             )
             session.add(ut)
-            current_user.role = UserRole.ADMIN
 
         await session.commit()
         await session.refresh(tenant)

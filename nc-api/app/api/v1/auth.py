@@ -131,10 +131,18 @@ async def switch_tenant(
             detail="Tenant is not active",
         )
 
+    # Preserve the global superadmin: users.role is the source of truth for
+    # platform operators. A per-tenant ADMIN membership must never downgrade
+    # the role inside the token. users.role is a String column and UserRole
+    # is a str-enum, so compare against the raw value.
+    effective_role: str = ut.role
+    if current_user.role == UserRole.SUPERADMIN.value:
+        effective_role = UserRole.SUPERADMIN.value
+
     token = create_access_token(
         str(current_user.id),
         current_user.email,
-        role=ut.role,
+        role=effective_role,
         tenant_id=str(tenant.id),
     )
 
@@ -143,11 +151,11 @@ async def switch_tenant(
         user_id=str(current_user.id),
         email=current_user.email,
         name=current_user.name,
-        role=ut.role,
+        role=effective_role,
         tenant_id=str(tenant.id),
         tenant_plan=tenant.plan,
         payment_status=PaymentStatus.ACTIVE if is_internal_tenant(tenant.slug, settings.internal_tenant_slug) else tenant.payment_status,
-        capabilities=sorted(effective_capabilities(ut.role, tenant.plan)),
+        capabilities=sorted(effective_capabilities(effective_role, tenant.plan)),
     )
 
 
@@ -176,13 +184,31 @@ async def login(
     plan_activated_at = None
 
     if role != UserRole.SUPERADMIN:
-        # Fetch primary tenant
+        # Fetch ALL primary associations. Historical bug: duplicate
+        # is_primary=True rows made scalar_one_or_none() raise
+        # MultipleResultsFound → HTTP 500 on login. Pick deterministically:
+        # prefer the internal tenant, else the first ordered by tenant_id.
         assoc_result = await session.execute(
-            select(UserTenant).where(
+            select(UserTenant)
+            .where(
                 UserTenant.user_id == user.id, UserTenant.is_primary == True
             )
+            .order_by(UserTenant.tenant_id)
         )
-        ut = assoc_result.scalar_one_or_none()
+        primaries = list(assoc_result.scalars().all())
+        ut = primaries[0] if primaries else None
+        if len(primaries) > 1:
+            tenants_result = await session.execute(
+                select(Tenant).where(Tenant.id.in_([p.tenant_id for p in primaries]))
+            )
+            slug_by_tenant = {tn.id: tn.slug for tn in tenants_result.scalars().all()}
+            for candidate in primaries:
+                if is_internal_tenant(
+                    slug_by_tenant.get(candidate.tenant_id),
+                    settings.internal_tenant_slug,
+                ):
+                    ut = candidate
+                    break
         if ut:
             role = ut.role
             tenant_id = str(ut.tenant_id)
