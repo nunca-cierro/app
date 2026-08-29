@@ -178,13 +178,28 @@ async def _build_resolution(
     # Lazy imports to avoid circular dependencies
     from app.modules.agents.models import AiAgent, Prompt
 
+    # Fallback agent resolution must be DETERMINISTIC: scalar_one_or_none()
+    # raises MultipleResultsFound when a tenant has 2+ enabled agents, which
+    # would 500 every webhook. Prefer the oldest agent (created_at, id).
     agent_result = await session.execute(
-        select(AiAgent).where(
+        select(AiAgent)
+        .where(
             AiAgent.tenant_id == tenant.id,
             AiAgent.enabled == True,
         )
+        .order_by(AiAgent.created_at, AiAgent.id)
+        .limit(2)
     )
-    agent = agent_result.scalar_one_or_none()
+    candidates = list(agent_result.scalars().all())
+    if len(candidates) > 1:
+        logger.warning(
+            "Tenant {tid} has {n} enabled agents — no connection link, using "
+            "oldest (created_at, id). Link the connection to an agent for "
+            "deterministic routing.",
+            tid=tenant.id,
+            n=len(candidates),
+        )
+    agent = candidates[0] if candidates else None
 
     prompts_result = await session.execute(
         select(Prompt).where(

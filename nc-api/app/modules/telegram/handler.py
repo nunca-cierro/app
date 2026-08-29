@@ -161,13 +161,27 @@ async def handle_telegram_incoming(
         agent = agent_result.scalar_one_or_none()
 
     if agent is None:
+        # Fallback must be DETERMINISTIC: scalar_one_or_none() raises
+        # MultipleResultsFound with 2+ enabled agents (every webhook 500s).
         agent_result = await session.execute(
-            select(AiAgent).where(
+            select(AiAgent)
+            .where(
                 AiAgent.tenant_id == tenant.id,
                 AiAgent.enabled == True,
             )
+            .order_by(AiAgent.created_at, AiAgent.id)
+            .limit(2)
         )
-        agent = agent_result.scalar_one_or_none()
+        candidates = list(agent_result.scalars().all())
+        if len(candidates) > 1:
+            logger.warning(
+                "Tenant {tid} has {n} enabled agents — no connection link, "
+                "using oldest (created_at, id). Link the connection to an "
+                "agent for deterministic routing.",
+                tid=tenant.id,
+                n=len(candidates),
+            )
+        agent = candidates[0] if candidates else None
 
     # ── 5b. Trial expiration check ──────────────────────────────────────
     TRIAL_DAYS = 7

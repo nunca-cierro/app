@@ -145,6 +145,9 @@ class WhatsAppAdapter(PlatformAdapter):
         """Verify the ``X-Hub-Signature-256`` header.
 
         Requires ``app_secret`` in *kwargs* (or falls back to settings).
+        When ``raw_body`` (bytes) is provided, the HMAC is computed over
+        the RAW request bytes — Meta signs the exact body it sends, and
+        re-serialized JSON may differ (key order, spacing, escaping).
         """
         # Case-insensitive lookup — HTTP transports may normalise header names
         signature = (
@@ -158,14 +161,27 @@ class WhatsAppAdapter(PlatformAdapter):
 
         # Resolve the app secret
         app_secret: str = kwargs.get("app_secret", "") or self._get_app_secret()
+        if not app_secret:
+            logger.warning(
+                "WhatsApp webhook rejected: no app secret configured "
+                "(set WHATSAPP_APP_SECRET)"
+            )
+            return False
 
-        # Recompute the signature from the payload body
-        import json
+        # HMAC must cover the RAW request bytes — never a re-serialization
+        raw_body = kwargs.get("raw_body")
+        if raw_body is not None:
+            body: bytes = raw_body
+        else:
+            import json
 
-        body = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
+            body = json.dumps(
+                payload, separators=(",", ":"), ensure_ascii=False
+            ).encode("utf-8")
+
         expected = hmac.new(
             app_secret.encode("utf-8"),
-            body.encode("utf-8"),
+            body,
             hashlib.sha256,
         ).hexdigest()
 
@@ -179,4 +195,4 @@ class WhatsAppAdapter(PlatformAdapter):
         """Retrieve the WhatsApp app secret from settings."""
         from app.core.config import settings  # pylint: disable=import-outside-toplevel
 
-        return settings.whatsapp_token or ""
+        return settings.whatsapp_app_secret or ""

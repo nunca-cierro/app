@@ -16,6 +16,7 @@ os.environ.setdefault("ENCRYPTION_KEY", "dGhpcyBpcyBhIDE2LWJ5dGUgZXhhbXBsZSBrZXk
 from app.core.encryption import encrypt
 from app.modules.platform_connections.models import PlatformConnection
 from app.modules.tenants.models import Tenant
+from app.modules.telegram.security import telegram_webhook_secret
 
 
 async def _create_tenant(db_session) -> Tenant:
@@ -57,11 +58,17 @@ async def _create_connection(
 
 
 class TestTelegramWebhookEndpoint:
-    """POST /webhook/telegram/{connection_id}."""
+    """POST /webhook/telegram/{connection_id}.
+
+    Telegram authenticates deliveries with the secret configured via
+    ``setWebhook`` echoed in ``X-Telegram-Bot-Api-Secret-Token``. The
+    expected value is DERIVED (HMAC of JWT_SECRET + connection id) — see
+    ``app.modules.telegram.security``.
+    """
 
     @pytest.mark.asyncio
     async def test_telegram_active_connection(self, client, db_session) -> None:
-        """Active Telegram connection → 200, message processed."""
+        """Active connection + correct secret header → 200, message processed."""
         tenant = await _create_tenant(db_session)
         conn = await _create_connection(db_session, tenant.id, "telegram", "active")
 
@@ -81,6 +88,9 @@ class TestTelegramWebhookEndpoint:
                         "text": "Hello!",
                     },
                 },
+                headers={
+                    "X-Telegram-Bot-Api-Secret-Token": telegram_webhook_secret(conn.id)
+                },
             )
 
         assert response.status_code == 200
@@ -88,10 +98,10 @@ class TestTelegramWebhookEndpoint:
         assert data["status"] == "ok"
 
     @pytest.mark.asyncio
-    async def test_telegram_inactive_connection(self, client, db_session) -> None:
-        """Inactive Telegram connection → 403."""
+    async def test_telegram_missing_secret_rejected(self, client, db_session) -> None:
+        """Missing X-Telegram-Bot-Api-Secret-Token → 403 (not sent by Telegram)."""
         tenant = await _create_tenant(db_session)
-        conn = await _create_connection(db_session, tenant.id, "telegram", "inactive")
+        conn = await _create_connection(db_session, tenant.id, "telegram", "active")
 
         response = await client.post(
             f"/webhook/telegram/{conn.id}",
@@ -99,8 +109,38 @@ class TestTelegramWebhookEndpoint:
         )
 
         assert response.status_code == 403
-        data = response.json()
-        assert "inactive" in data["detail"].lower() or "inactive" in str(data)
+        assert "validation" in response.json()["detail"].lower()
+
+    @pytest.mark.asyncio
+    async def test_telegram_wrong_secret_rejected(self, client, db_session) -> None:
+        """Forged secret token → 403."""
+        tenant = await _create_tenant(db_session)
+        conn = await _create_connection(db_session, tenant.id, "telegram", "active")
+
+        response = await client.post(
+            f"/webhook/telegram/{conn.id}",
+            json={"update_id": 100, "message": {"text": "Hi"}},
+            headers={"X-Telegram-Bot-Api-Secret-Token": "forged-secret"},
+        )
+
+        assert response.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_telegram_inactive_connection(self, client, db_session) -> None:
+        """Correct secret but inactive connection → 403."""
+        tenant = await _create_tenant(db_session)
+        conn = await _create_connection(db_session, tenant.id, "telegram", "inactive")
+
+        response = await client.post(
+            f"/webhook/telegram/{conn.id}",
+            json={"update_id": 100, "message": {"text": "Hi"}},
+            headers={
+                "X-Telegram-Bot-Api-Secret-Token": telegram_webhook_secret(conn.id)
+            },
+        )
+
+        assert response.status_code == 403
+        assert "validation" in response.json()["detail"].lower()
 
     @pytest.mark.asyncio
     async def test_telegram_connection_not_found(self, client) -> None:
@@ -150,7 +190,7 @@ class TestWhatsAppWebhookEndpoint:
 
         with (
             patch(
-                "app.core.config.settings.whatsapp_token",
+                "app.core.config.settings.whatsapp_app_secret",
                 "test-secret",
             ),
             patch(
@@ -160,8 +200,8 @@ class TestWhatsAppWebhookEndpoint:
         ):
             response = await client.post(
                 f"/webhook/whatsapp/{conn.id}",
-                json=payload,
-                headers={"X-Hub-Signature-256": expected_sig},
+                content=body,
+                headers={"Content-Type": "application/json", "X-Hub-Signature-256": expected_sig},
             )
 
         assert response.status_code == 200
@@ -175,16 +215,24 @@ class TestWhatsAppWebhookEndpoint:
         conn = await _create_connection(db_session, tenant.id, "whatsapp", "active")
 
         payload = {"object": "whatsapp_business_account", "entry": []}
+        body = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
 
-        response = await client.post(
-            f"/webhook/whatsapp/{conn.id}",
-            json=payload,
-            headers={"X-Hub-Signature-256": "sha256=0000000000000000000000000000000000000000000000000000000000000000"},
-        )
+        with patch(
+            "app.core.config.settings.whatsapp_app_secret",
+            "test-secret",
+        ):
+            response = await client.post(
+                f"/webhook/whatsapp/{conn.id}",
+                content=body,
+                headers={
+                    "Content-Type": "application/json",
+                    "X-Hub-Signature-256": "sha256=0000000000000000000000000000000000000000000000000000000000000000",
+                },
+            )
 
         assert response.status_code == 401
         data = response.json()
-        assert "signature" in data["detail"].lower() or "signature" in str(data).lower()
+        assert "signature" in data["detail"].lower() or "webhook" in data["detail"].lower()
 
     @pytest.mark.asyncio
     async def test_whatsapp_inactive_connection(self, client, db_session) -> None:
@@ -199,13 +247,13 @@ class TestWhatsAppWebhookEndpoint:
         ).hexdigest()
 
         with patch(
-            "app.core.config.settings.whatsapp_token",
+            "app.core.config.settings.whatsapp_app_secret",
             "test-secret",
         ):
             response = await client.post(
                 f"/webhook/whatsapp/{conn.id}",
-                json=payload,
-                headers={"X-Hub-Signature-256": expected_sig},
+                content=body,
+                headers={"Content-Type": "application/json", "X-Hub-Signature-256": expected_sig},
             )
 
         assert response.status_code == 403
@@ -231,11 +279,11 @@ class TestUnknownPlatform:
 
 
 class TestOldWebhookBackwardCompat:
-    """POST /webhook still works for WhatsApp only."""
+    """Legacy POST /webhook (no path params) was removed — WhatsApp uses /webhook/whatsapp/{id}."""
 
     @pytest.mark.asyncio
     async def test_old_webhook_still_works(self, client, db_session) -> None:
-        """Old POST /webhook endpoint remains functional."""
+        """Old POST /webhook endpoint returns 405 — route removed."""
         payload = {
             "object": "whatsapp_business_account",
             "entry": [{
@@ -254,8 +302,5 @@ class TestOldWebhookBackwardCompat:
             }],
         }
 
-        with patch("app.modules.integrations.webhook.logger") as mock_logger:
-            response = await client.post("/webhook", json=payload)
-
-        assert response.status_code == 200
-        mock_logger.warning.assert_called_once()
+        response = await client.post("/webhook", json=payload)
+        assert response.status_code == 405

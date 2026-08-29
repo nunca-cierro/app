@@ -136,19 +136,29 @@ class TestEvolutionHandlerAgentResolution:
         result_prompts = MagicMock()
         result_prompts.scalars.return_value.all.return_value = []
 
-        # First call is the dedup guard (handler skips re-delivered events)
-        result_dup = MagicMock()
-        result_dup.scalar_one_or_none.return_value = None
-
-        # Advisory lock (text query) — no result needed, just executes
+        # Call order in the C2 handler (customer-message path):
+        # 0: advisory lock (pg_advisory_xact_lock hashtext)
+        # 1: conversation find-or-create SELECT
+        # 2: write-time dedup INSERT (ON CONFLICT DO NOTHING — returns message id or None)
+        # 3: history SELECT
+        # 4: linked-agent SELECT (by connection.agent_id)
+        # 5: prompts SELECT
         result_lock = MagicMock()
 
-        # Early conversation lookup for cooldown check
-        result_early_conv = MagicMock()
-        result_early_conv.scalar_one_or_none.return_value = None  # no existing conv → cooldown passes
+        result_conv = MagicMock()
+        result_conv.scalar_one_or_none.return_value = mock_conversation
+
+        result_insert = MagicMock()
+        result_insert.scalar_one_or_none.return_value = uuid.uuid4()  # non-None → not a replay
+
+        result_history = MagicMock()
+        result_history.scalars.return_value.all.return_value = []
+
+        result_prompts = MagicMock()
+        result_prompts.scalars.return_value.all.return_value = []
 
         session.execute.side_effect = [
-            result_dup, result_lock, result_early_conv,
+            result_lock, result_conv, result_insert,
             result_history, result_agent, result_prompts
         ]
 
@@ -160,8 +170,7 @@ class TestEvolutionHandlerAgentResolution:
 
             await handle_evolution_incoming(event, connection, session)
 
-            # Verify that the agent query used agent_id
-            # Call order: dedup(0), lock(1), early_conv(2), history(3), agent(4), prompts(5)
+            # Call order: lock(0), conv(1), dedup-insert(2), history(3), agent(4), prompts(5)
             agent_query = session.execute.call_args_list[4][0][0]
             # Verify agent_id was used in bind params
             params = agent_query.compile().params
@@ -313,34 +322,30 @@ class TestPlatformConnectionServiceValidation:
         result_history.scalars.return_value.all.return_value = []
 
         result_linked_agent = MagicMock()
-        result_linked_agent.scalar_one_or_none.return_value = None
+        result_linked_agent.scalar_one_or_none.return_value = None  # linked disabled
 
-        # Second call for agent: returns default_agent
+        # Fallback uses scalars().all() (not scalar_one_or_none)
         result_default_agent = MagicMock()
-        result_default_agent.scalar_one_or_none.return_value = default_agent
+        result_default_agent.scalars.return_value.all.return_value = [default_agent]
 
         result_prompts = MagicMock()
         result_prompts.scalars.return_value.all.return_value = []
 
-        # First call is the dedup guard (handler skips re-delivered events)
-        result_dup = MagicMock()
-        result_dup.scalar_one_or_none.return_value = None
-
-        # Advisory lock (text query)
+        # C2 call order: lock(0), conv(1), dedup-insert(2), history(3),
+        # linked_agent(4), default_agent(5), prompts(6)
         result_lock = MagicMock()
 
-        # Early conversation lookup for cooldown check
-        result_early_conv = MagicMock()
-        result_early_conv.scalar_one_or_none.return_value = None
+        result_insert = MagicMock()
+        result_insert.scalar_one_or_none.return_value = uuid.uuid4()  # non-None → not a replay
 
         session.execute.side_effect = [
-            result_dup,
             result_lock,
-            result_early_conv,
-            result_history, 
-            result_linked_agent, # query with agent_id
-            result_default_agent, # fallback query
-            result_prompts
+            result_conv,
+            result_insert,
+            result_history,
+            result_linked_agent,
+            result_default_agent,
+            result_prompts,
         ]
 
         with patch("app.modules.evolution.handler.groq_client") as mock_groq, \
@@ -351,11 +356,11 @@ class TestPlatformConnectionServiceValidation:
 
             await handle_evolution_incoming(event, connection, session)
 
-            # Call order: dedup(0), lock(1), early_conv(2), history(3), linked_agent(4), default_agent(5), prompts(6)
+            # Call order: lock(0), conv(1), dedup-insert(2), history(3), linked_agent(4), default_agent(5), prompts(6)
             agent_query_1 = session.execute.call_args_list[4][0][0]
             assert agent_query_1.compile().params["id_1"] == connection.agent_id
             
-            # 6th call: fallback query without agent_id
+            # 6th call (index 5): fallback query without agent_id
             agent_query_2 = session.execute.call_args_list[5][0][0]
             assert "id_1" not in agent_query_2.compile().params
             

@@ -12,10 +12,11 @@ from __future__ import annotations
 
 import re
 import typing as t
+import uuid as uuid_pkg
 from datetime import UTC, datetime, timedelta
 
 from loguru import logger
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -53,6 +54,32 @@ def _has_payment_keyword(text: str) -> bool:
     """Check if *text* contains any payment-related keyword (case-insensitive)."""
     lower = text.lower().strip()
     return any(kw in lower for kw in PAYMENT_KEYWORDS)
+
+
+async def _insert_message_dedup(
+    session: AsyncSession, **values: t.Any
+) -> uuid_pkg.UUID | None:
+    """Insert a Message row honoring ``uq_messages_conn_external_msg``.
+
+    Write-time dedup: ``INSERT ... ON CONFLICT DO NOTHING`` is atomic, so
+    concurrent deliveries of the same external message (webhook retries,
+    two uvicorn workers) cannot both persist it — the old SELECT-then-INSERT
+    guard raced under concurrency.
+
+    Returns the new ``Message.id``, or ``None`` when a message with the same
+    ``(platform_connection_id, external_message_id)`` already exists —
+    callers must treat ``None`` as a REPLAY and exit without replying.
+    """
+    from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+    stmt = (
+        pg_insert(Message)
+        .values(**values)
+        .on_conflict_do_nothing(constraint="uq_messages_conn_external_msg")
+        .returning(Message.id)
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
 
 
 # ── Text-matching helpers (programmed responses) ──────────────────────────────
@@ -255,15 +282,18 @@ async def handle_evolution_incoming(
 
     Pipeline (race-condition-safe order):
     1. Route ``connection.update`` events to separate handler
-    2. Extract message, dedup guard
+    2. Extract message
     3. PostgreSQL advisory lock — serialize concurrent webhooks per chat
+       (deterministic ``hashtext`` key shared by ALL workers)
     4. Admin message (``from_me``) → save, mark 72h cooldown, return
     5. **Admin cooldown check** (BEFORE conversation creation) → silent save
     6. Find or create conversation
     7. Escalation gate → if escalated+responded, silent save and stop
-    8. Anti-spam, rate limiting, save inbound
-    9. Escalation check → if keyword matched, send fallback and stop
-    10. Build system prompt, generate via LLM, send, save outbound
+    8. Anti-spam, rate limiting
+    9. Inbound insert — write-time dedup (conflict → replay, exit early)
+       then EARLY COMMIT before any external I/O
+    10. Escalation check → if keyword matched, send fallback and stop
+    11. Build system prompt, generate via LLM, send, save outbound
     """
     # ── 0. Route connection.update events ───────────────────────────────
     if event.get("event") == "connection.update":
@@ -282,30 +312,16 @@ async def handle_evolution_incoming(
         )
         return
 
-    # ── 1b. Dedup guard ───────────────────────────────────────────────
-    if parsed.get("external_message_id"):
-        dup_check = await session.execute(
-            select(Message).where(
-                Message.platform_connection_id == connection.id,
-                Message.external_message_id == parsed["external_message_id"],
-            )
-        )
-        if dup_check.scalar_one_or_none():
-            logger.debug(
-                "Skipping duplicate Evolution message | id={mid}",
-                mid=parsed["external_message_id"],
-            )
-            return
-
-    # ── 1c. Advisory lock — serialize concurrent webhooks per chat ─────
+    # ── 1b. Advisory lock — serialize concurrent webhooks per chat ─────
     # Prevents the race condition where client webhook creates a conversation
-    # BEFORE the admin webhook sets admin_last_active_at. The lock key is
-    # derived from (connection_id, external_user_id) so concurrent webhooks
-    # for the SAME chat are processed sequentially.
+    # BEFORE the admin webhook sets admin_last_active_at. The key is hashed
+    # SQL-side (``hashtext``) so both uvicorn workers derive the SAME lock
+    # for a chat — a Python ``hash()`` is per-process randomized and would
+    # let the two workers process the same chat concurrently.
     tenant_id = connection.tenant_id
-    lock_key = hash((str(connection.id), parsed["external_user_id"])) & 0x7FFFFFFF
+    lock_key = f"{connection.id}:{parsed['external_user_id']}"
     await session.execute(
-        text("SELECT pg_advisory_xact_lock(:key)"), {"key": lock_key}
+        text("SELECT pg_advisory_xact_lock(hashtext(:key))"), {"key": lock_key}
     )
 
     logger.info(
@@ -323,20 +339,6 @@ async def handle_evolution_incoming(
     #   - Admin messages → manually written from the WhatsApp app → no
     #     matching row → save and mark 72h cooldown.
     if parsed.get("from_me"):
-        # Dedup: if this message_id already exists, it's the bot echoing
-        existing_msg = await session.execute(
-            select(Message).where(
-                Message.platform_connection_id == connection.id,
-                Message.external_message_id == parsed["external_message_id"],
-            )
-        )
-        if existing_msg.scalar_one_or_none():
-            logger.debug(
-                "Skipping bot's own fromMe message | id={mid}",
-                mid=parsed["external_message_id"],
-            )
-            return
-
         # Look up existing conversation (or create one)
         conv_result = await session.execute(
             select(Conversation).where(
@@ -357,8 +359,12 @@ async def handle_evolution_incoming(
             session.add(conversation)
             await session.flush()
 
-        # It's the admin — save and mark cooldown
-        admin_msg = Message(
+        # Write-time dedup: if this message_id already exists, the row is
+        # the bot echoing its own API send (or a concurrent duplicate
+        # delivery) — the INSERT conflicts and we skip without double-
+        # marking the admin cooldown.
+        admin_msg_id = await _insert_message_dedup(
+            session,
             tenant_id=tenant_id,
             conversation_id=conversation.id,
             platform_connection_id=connection.id,
@@ -371,7 +377,12 @@ async def handle_evolution_incoming(
             status="sent",
             payload={"source": "admin"},
         )
-        session.add(admin_msg)
+        if admin_msg_id is None:
+            logger.debug(
+                "Skipping bot's own fromMe message | id={mid}",
+                mid=parsed["external_message_id"],
+            )
+            return
 
         extra = dict(conversation.extra_data or {})
         extra["admin_last_active_at"] = datetime.now(UTC).isoformat()
@@ -410,7 +421,8 @@ async def handle_evolution_incoming(
                     remaining_h = int(
                         (timedelta(hours=ADMIN_COOLDOWN_HOURS) - elapsed).total_seconds() / 3600
                     )
-                    silent_inbound = Message(
+                    silent_inbound_id = await _insert_message_dedup(
+                        session,
                         tenant_id=tenant_id,
                         conversation_id=conversation.id,
                         platform_connection_id=connection.id,
@@ -422,7 +434,9 @@ async def handle_evolution_incoming(
                         content=parsed["content"],
                         status="received",
                     )
-                    session.add(silent_inbound)
+                    if silent_inbound_id is None:
+                        # Replay of an already-stored message — nothing to do
+                        return
                     conversation.last_message_at = datetime.now(UTC)
                     await session.commit()
                     logger.info(
@@ -449,7 +463,8 @@ async def handle_evolution_incoming(
     if conversation.status == "escalated":
         extra = conversation.extra_data or {}
         if extra.get("escalation_responded"):
-            silent_inbound = Message(
+            silent_inbound_id = await _insert_message_dedup(
+                session,
                 tenant_id=tenant_id,
                 conversation_id=conversation.id,
                 platform_connection_id=connection.id,
@@ -461,7 +476,9 @@ async def handle_evolution_incoming(
                 content=parsed["content"],
                 status="received",
             )
-            session.add(silent_inbound)
+            if silent_inbound_id is None:
+                # Replay of an already-stored message — nothing to do
+                return
             conversation.last_message_at = datetime.now(UTC)
             await session.commit()
             logger.info(
@@ -482,7 +499,8 @@ async def handle_evolution_incoming(
     )
 
     if spam_result.is_spam and spam_result.action == "block":
-        inbound_msg = Message(
+        blocked_inbound_id = await _insert_message_dedup(
+            session,
             tenant_id=tenant_id,
             conversation_id=conversation.id,
             platform_connection_id=connection.id,
@@ -495,7 +513,9 @@ async def handle_evolution_incoming(
             status="received",
             payload=spam_result.to_dict(),
         )
-        session.add(inbound_msg)
+        if blocked_inbound_id is None:
+            # Replay of an already-stored (blocked) message — nothing to do
+            return
         conversation.last_message_at = datetime.now(UTC)
         await session.commit()
         logger.info(
@@ -524,8 +544,13 @@ async def handle_evolution_incoming(
         await session.commit()
         return
 
-    # ── 4. Save inbound message ─────────────────────────────────────────
-    inbound_msg = Message(
+    # ── 4. Save inbound message (write-time dedup) ──────────────────────
+    # The INSERT ... ON CONFLICT DO NOTHING against
+    # ``uq_messages_conn_external_msg`` is the authoritative dedup: a
+    # conflict means this message was already processed — REPLAY: exit
+    # early with success (no Groq call, no send).
+    inbound_msg_id = await _insert_message_dedup(
+        session,
         tenant_id=tenant_id,
         conversation_id=conversation.id,
         platform_connection_id=connection.id,
@@ -538,15 +563,28 @@ async def handle_evolution_incoming(
         status="received",
         payload=spam_payload,
     )
-    session.add(inbound_msg)
-    await session.flush()  # ensure inbound_msg.id is populated
+    if inbound_msg_id is None:
+        logger.info(
+            "Replay — message already processed, skipping | id={mid}",
+            mid=parsed["external_message_id"],
+        )
+        return
+
+    # ── 4a. Commit EARLY — before Groq and Evolution send ───────────────
+    # External I/O must not run inside the transaction holding the
+    # advisory lock: this commit persists the inbound message and releases
+    # the lock, so concurrent webhooks for the same chat are not blocked
+    # for the whole duration of the LLM call + platform send. It also
+    # makes the stored message immediately visible to the other worker,
+    # so webhook retries hit the replay exit above.
+    await session.commit()
 
     # ── 4b. Load conversation history ──────────────────────────────────
     history_result = await session.execute(
         select(Message)
         .where(
             Message.conversation_id == conversation.id,
-            Message.id != inbound_msg.id,
+            Message.id != inbound_msg_id,
         )
         .order_by(Message.created_at.desc())
         .limit(CONTEXT_WINDOW_SIZE)
@@ -573,13 +611,19 @@ async def handle_evolution_incoming(
         history=[m.content or "" for m in past_messages],
     )
     if rep_result.is_spam:
-        # Ensure payload dict exists
-        if inbound_msg.payload is None:
-            inbound_msg.payload = {}
-        inbound_msg.payload.update(rep_result.to_dict())
+        # The inbound row is already committed — merge the repetitive
+        # detection into its payload via UPDATE (the dedup insert is a
+        # Core INSERT, so there is no ORM instance to mutate).
+        merged_payload = dict(spam_payload) if spam_payload else {}
+        merged_payload.update(rep_result.to_dict())
         # Merge detection layers (deduplicate)
-        all_layers = inbound_msg.payload.get("detection_layers", [])
-        inbound_msg.payload["detection_layers"] = list(dict.fromkeys(all_layers))
+        all_layers = merged_payload.get("detection_layers", [])
+        merged_payload["detection_layers"] = list(dict.fromkeys(all_layers))
+        await session.execute(
+            update(Message)
+            .where(Message.id == inbound_msg_id)
+            .values(payload=merged_payload)
+        )
 
         # Resolve mode for this connection
         rep_mode_config = _resolve_anti_spam_config(conn_spam_config)
@@ -701,13 +745,27 @@ async def handle_evolution_incoming(
         agent = agent_result.scalar_one_or_none()
 
     if agent is None:
+        # Fallback must be DETERMINISTIC: scalar_one_or_none() raises
+        # MultipleResultsFound with 2+ enabled agents (every webhook 500s).
         agent_result = await session.execute(
-            select(AiAgent).where(
+            select(AiAgent)
+            .where(
                 AiAgent.tenant_id == tenant.id,
                 AiAgent.enabled == True,
             )
+            .order_by(AiAgent.created_at, AiAgent.id)
+            .limit(2)
         )
-        agent = agent_result.scalar_one_or_none()
+        candidates = list(agent_result.scalars().all())
+        if len(candidates) > 1:
+            logger.warning(
+                "Tenant {tid} has {n} enabled agents — no connection link, "
+                "using oldest (created_at, id). Link the connection to an "
+                "agent for deterministic routing.",
+                tid=tenant.id,
+                n=len(candidates),
+            )
+        agent = candidates[0] if candidates else None
 
     # ── 5b. Trial expiration check ──────────────────────────────────────
     from app.modules.plans.capabilities import CAP_AI, TRIAL_DAYS, plan_has_capability
