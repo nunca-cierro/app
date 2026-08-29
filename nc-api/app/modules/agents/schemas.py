@@ -8,16 +8,18 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from app.core.config import DEFAULT_GROQ_MODEL
+from app.core.config import DEFAULT_GROQ_MODEL, DEFAULT_MAX_TOKENS
 
 
 # Providers the platform can actually route to today. Kept as a frozenset
-# (single source of truth for PATCH validation) until a multi-provider
-# enum is warranted.
+# (single source of truth for create + PATCH validation) until a
+# multi-provider enum is warranted.
 SUPPORTED_PROVIDERS: frozenset[str] = frozenset({"groq"})
 
 MIN_TEMPERATURE = 0.0
 MAX_TEMPERATURE = 2.0
+# Shared with the frontend zod floor (nc-dashboard/lib/schemas/agent.ts).
+MIN_MAX_TOKENS = 64
 
 
 # ── AiAgent from template ────────────────────────────────────────────────
@@ -35,33 +37,24 @@ class AiAgentFromTemplate(BaseModel):
 # ── AiAgent ─────────────────────────────────────────────────────────────
 
 
-class AiAgentCreate(BaseModel):
-    tenant_id: uuid.UUID
-    name: str
-    description: str | None = None
+class _AgentParams(BaseModel):
+    """Agent knobs shared by create and update payloads.
+
+    One base class keeps AiAgentCreate and AiAgentUpdate symmetric: both
+    reject unsupported providers, out-of-range temperature and sub-floor
+    max_tokens (validation symmetry — the create endpoint used to accept
+    values PATCH rejected).
+    """
+
     provider: str = "groq"
-    model: str = DEFAULT_GROQ_MODEL
     temperature: float = 0
-    max_tokens: int = 1024
-    enabled: bool = True
-    business_config: dict[str, Any] | None = None
-
-
-class AiAgentUpdate(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    provider: str | None = None
-    model: str | None = None
-    temperature: float | None = None
-    max_tokens: int | None = None
-    enabled: bool | None = None
-    business_config: dict[str, Any] | None = None
+    max_tokens: int = DEFAULT_MAX_TOKENS
 
     @field_validator("max_tokens")
     @classmethod
     def validate_max_tokens(cls, v: int | None) -> int | None:
-        if v is not None and v < 1:
-            raise ValueError("max_tokens must be a positive integer")
+        if v is not None and v < MIN_MAX_TOKENS:
+            raise ValueError(f"max_tokens must be at least {MIN_MAX_TOKENS}")
         return v
 
     @field_validator("temperature")
@@ -81,6 +74,26 @@ class AiAgentUpdate(BaseModel):
                 f"provider must be one of: {', '.join(sorted(SUPPORTED_PROVIDERS))}"
             )
         return v
+
+
+class AiAgentCreate(_AgentParams):
+    tenant_id: uuid.UUID
+    name: str
+    description: str | None = None
+    model: str = DEFAULT_GROQ_MODEL
+    enabled: bool = True
+    business_config: dict[str, Any] | None = None
+
+
+class AiAgentUpdate(_AgentParams):
+    name: str | None = None
+    description: str | None = None
+    model: str | None = None
+    provider: str | None = None
+    temperature: float | None = None
+    max_tokens: int | None = None
+    enabled: bool | None = None
+    business_config: dict[str, Any] | None = None
 
 
 class AiAgentResponse(BaseModel):

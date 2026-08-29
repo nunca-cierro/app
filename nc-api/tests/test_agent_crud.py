@@ -307,6 +307,7 @@ class TestPatchValidation:
         ("payload", "expected_current"),
         [
             ({"max_tokens": 0}, {"max_tokens": 512}),
+            ({"max_tokens": 32}, {"max_tokens": 512}),  # below the shared floor (64)
             ({"temperature": 2.5}, {"temperature": 0}),
             ({"provider": "made-up"}, {"provider": "groq"}),
         ],
@@ -332,6 +333,56 @@ class TestPatchValidation:
         await db_session.refresh(agent)
         for field, value in expected_current.items():
             assert getattr(agent, field) == value
+
+
+class TestCreateValidation:
+    """POST /api/v1/agents — create enforces the SAME param rules as PATCH.
+
+    Validation symmetry: provider/temperature/max_tokens are rejected on
+    create too (previously only PATCH validated them), with the shared
+    max_tokens floor of 64 matching the frontend zod schema.
+    """
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            {"max_tokens": 32},  # below the shared floor (frontend zod min = 64)
+            {"temperature": 2.5},
+            {"provider": "made-up"},
+        ],
+    )
+    async def test_invalid_create_values_rejected_422(
+        self,
+        superadmin_client: AsyncClient,
+        db_session: AsyncSession,
+        payload: dict,
+    ):
+        tenant = _create_tenant(db_session, "Create Validation Tenant", "create-validation")
+        await db_session.commit()
+
+        response = await superadmin_client.post(
+            "/api/v1/agents",
+            json={"tenant_id": str(tenant.id), "name": "Validation Agent", **payload},
+        )
+
+        assert response.status_code == 422
+
+    @pytest.mark.asyncio
+    async def test_create_accepts_floor_max_tokens_64(
+        self, superadmin_client: AsyncClient, db_session: AsyncSession
+    ):
+        """Boundary: the shared floor itself is a valid create value."""
+        tenant = _create_tenant(db_session, "Floor Tenant", "floor-tenant")
+        await db_session.commit()
+
+        response = await superadmin_client.post(
+            "/api/v1/agents",
+            json={"tenant_id": str(tenant.id), "name": "Floor Agent", "max_tokens": 64},
+        )
+
+        assert response.status_code == 201
+        assert response.json()["max_tokens"] == 64
 
 
 class TestBusinessConfigMerge:
