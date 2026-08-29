@@ -43,7 +43,11 @@ class TestIsInternalTenant:
 
 @pytest_asyncio.fixture
 async def internal_tenant(db_session: AsyncSession) -> Tenant:
-    tenant = Tenant(name="NuncaCierro", slug="nuncacierro", payment_status="pending")
+    tenant = Tenant(
+        name="NuncaCierro",
+        slug=settings.internal_tenant_slug,
+        payment_status="pending",
+    )
     db_session.add(tenant)
     await db_session.commit()
     await db_session.refresh(tenant)
@@ -70,7 +74,7 @@ class TestDefaultInternalSlug:
         resp = await client.get("/api/v1/tenants")
         assert resp.status_code == 200
         by_slug = {t["slug"]: t["payment_status"] for t in resp.json()}
-        assert by_slug["nuncacierro"] == "active"
+        assert by_slug[settings.internal_tenant_slug] == "active"
         assert by_slug["cliente-acme"] == "pending"
 
     @pytest.mark.asyncio
@@ -109,7 +113,8 @@ class TestConfigurableInternalSlug:
         assert resp.status_code == 200
         by_slug = {t["slug"]: t["payment_status"] for t in resp.json()}
         assert by_slug["cliente-acme"] == "active"
-        assert by_slug["nuncacierro"] == "pending"
+        # The former internal tenant (fixture slug) loses the exemption.
+        assert by_slug[internal_tenant.slug] == "pending"
 
     @pytest.mark.asyncio
     async def test_empty_slug_exempts_nobody(
@@ -123,5 +128,5 @@ class TestConfigurableInternalSlug:
         resp = await client.get("/api/v1/tenants")
         assert resp.status_code == 200
         by_slug = {t["slug"]: t["payment_status"] for t in resp.json()}
-        assert by_slug["nuncacierro"] == "pending"
+        assert by_slug["nunca-cierro"] == "pending"
         assert by_slug["cliente-acme"] == "pending"

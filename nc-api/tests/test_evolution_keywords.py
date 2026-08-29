@@ -9,6 +9,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.main import app
 from app.modules.evolution.handler import _has_payment_keyword
 
@@ -71,7 +72,7 @@ class TestHandlerPaymentKeywords:
         Only the internal tenant slug "nuncacierro" receives the payment info.
         """
         tenant, connection = await _create_test_evolution_connection(
-            db_session, slug="nuncacierro"
+            db_session, slug=settings.internal_tenant_slug
         )
 
         # Mock the EvolutionAdapter.send_message to avoid real API calls
@@ -148,7 +149,7 @@ class TestHandlerPaymentKeywords:
     ):
         """Payment keyword response saves the outbound message in the DB."""
         tenant, connection = await _create_test_evolution_connection(
-            db_session, slug="nuncacierro"
+            db_session, slug=settings.internal_tenant_slug
         )
 
         with patch(
@@ -186,7 +187,7 @@ class TestHandlerPaymentKeywords:
     ):
         """Just 'bre-b' as the message also triggers payment response."""
         tenant, connection = await _create_test_evolution_connection(
-            db_session, slug="nuncacierro"
+            db_session, slug=settings.internal_tenant_slug
         )
 
         with patch(
