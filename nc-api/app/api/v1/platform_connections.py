@@ -120,20 +120,95 @@ class TelegramTokenValidationResponse(BaseModel):
     valid: bool
 
 
+def _ssrf_validate_evolution_base_url(base_url: str) -> str:
+    """Validate a caller-supplied Evolution base_url against SSRF (sync part).
+
+    Returns the hostname when the URL parses and its scheme is http(s);
+    raises HTTPException(422) otherwise. Address-range checks continue in
+    :func:`_ssrf_assert_public_host` (async, needs DNS resolution).
+    """
+    from urllib.parse import urlparse
+
+    parsed = urlparse(base_url)
+    host = parsed.hostname or ""
+    if parsed.scheme not in ("http", "https") or not host:
+        raise HTTPException(
+            status_code=422,
+            detail="base_url must be a valid http(s) URL with a hostname",
+        )
+    return host
+
+
+async def _ssrf_assert_public_host(host: str) -> None:
+    """Reject hosts that resolve to private/reserved infrastructure (SSRF).
+
+    The configured Evolution API host (settings.evo_api_base_url) is always
+    allowed — that is where production traffic goes anyway, and it may
+    intentionally live on the internal Docker network.
+    """
+    import asyncio
+    import ipaddress
+    from urllib.parse import urlparse
+
+    evo_host = urlparse(settings.evo_api_base_url).hostname or ""
+    if host.lower() == evo_host.lower():
+        return
+
+    # Literal IPs are validated directly; hostnames are resolved via DNS.
+    addresses: list[str] = []
+    try:
+        ipaddress.ip_address(host)
+        addresses = [host]
+    except ValueError:
+        try:
+            loop = asyncio.get_running_loop()
+            infos = await loop.getaddrinfo(host, None)
+        except OSError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail=f"base_url host could not be resolved: {exc}",
+            ) from exc
+        addresses = [info[4][0] for info in infos]
+
+    for address in addresses:
+        ip = ipaddress.ip_address(address)
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or ip.is_unspecified
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "base_url host resolves to a private, loopback or "
+                    "reserved address and is not allowed"
+                ),
+            )
+
+
 @router.get("/evolution-fetch-instances")
 async def evolution_fetch_instances(
     base_url: str,
     api_key: str | None = None,
-    user: User = Depends(get_current_user),
+    user: User = Depends(connections_manage),
 ) -> list[dict[str, t.Any]]:
     """Fetch all instances from a given Evolution API server.
 
     Useful for the dashboard to show a dropdown instead of manual entry.
+
+    Restricted to operator roles (same gate as connection mutations) and
+    validated against SSRF: the server fetches the URL and reflects the
+    body, so arbitrary or internal targets are rejected.
     """
     import httpx
     from loguru import logger
 
     base_url = base_url.rstrip("/")
+    host = _ssrf_validate_evolution_base_url(base_url)
+    await _ssrf_assert_public_host(host)
     headers = {}
     if api_key:
         headers["apikey"] = api_key
@@ -389,8 +464,14 @@ async def delete_platform_connection(
 @router.post("/validate-telegram-token", response_model=TelegramTokenValidationResponse)
 async def validate_telegram_token(
     body: TelegramTokenValidationRequest,
+    current_user: User = Depends(connections_manage),
 ) -> TelegramTokenValidationResponse:
-    """Validate a Telegram bot token by calling getMe."""
+    """Validate a Telegram bot token by calling getMe.
+
+    Gated behind the same operator-role/capability dependency as the other
+    connection-mutation endpoints: unauthenticated server-side requests to
+    third-party APIs must not be reachable by client-role users.
+    """
     client = TelegramClient()
     try:
         response = await client.getMe(body.bot_token)

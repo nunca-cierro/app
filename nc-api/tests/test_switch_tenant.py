@@ -229,3 +229,57 @@ async def test_switch_tenant_request_validation(client: AsyncClient, db_session:
         json={"tenant_id": "not-a-uuid"},
     )
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_switch_tenant_preserves_global_superadmin(
+    client: AsyncClient, db_session: AsyncSession,
+):
+    """A global superadmin switching to a tenant where their membership is
+    admin keeps role=superadmin in both the token and the response.
+
+    Regression: the endpoint used to issue the JWT with ut.role, silently
+    downgrading the platform operator inside the token."""
+    user = User(
+        id=uuid.uuid4(),
+        email="global-sa@test.com",
+        name="Global Superadmin",
+        password_hash="hash",
+        role=UserRole.SUPERADMIN,
+    )
+    db_session.add(user)
+
+    t1 = _create_tenant(db_session, "SA Home", "sa-home")
+    t2 = _create_tenant(db_session, "SA Target", "sa-target")
+    await db_session.flush()
+
+    db_session.add(UserTenant(user_id=user.id, tenant_id=t1.id, role=UserRole.SUPERADMIN, is_primary=True))
+    db_session.add(UserTenant(user_id=user.id, tenant_id=t2.id, role=UserRole.ADMIN, is_primary=False))
+    await db_session.commit()
+
+    setattr(user, "current_role", UserRole.SUPERADMIN)
+    setattr(user, "current_tenant_id", t1.id)
+
+    async def mock_get_current_user():
+        return user
+
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+
+    try:
+        response = await client.post(
+            "/api/v1/auth/switch-tenant",
+            json={"tenant_id": str(t2.id)},
+        )
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["role"] == UserRole.SUPERADMIN.value
+
+        # Verify JWT keeps the global role scoped to the target tenant
+        from jose import jwt
+        from app.core.config import settings
+
+        decoded = jwt.decode(data["access_token"], settings.jwt_secret, algorithms=["HS256"])
+        assert decoded["role"] == UserRole.SUPERADMIN.value
+        assert decoded["tenant_id"] == str(t2.id)
+    finally:
+        app.dependency_overrides.clear()

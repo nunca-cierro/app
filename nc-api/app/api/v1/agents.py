@@ -294,11 +294,18 @@ async def create_agent_prompt(
     )
     current_version = version_result.scalar() or 0
     
+    # PromptCreate also carries tenant_id/agent_id; drop them from the dump
+    # so they don't collide with the explicit kwargs (tenant_id always comes
+    # from the verified agent, never from the request body).
+    prompt_data = body.model_dump()
+    prompt_data.pop("tenant_id", None)
+    prompt_data.pop("agent_id", None)
+
     prompt = Prompt(
-        agent_id=agent_id,
+        agent_id=agent.id,
         tenant_id=agent.tenant_id,
         version=current_version + 1,
-        **body.model_dump()
+        **prompt_data,
     )
     session.add(prompt)
     await session.commit()
