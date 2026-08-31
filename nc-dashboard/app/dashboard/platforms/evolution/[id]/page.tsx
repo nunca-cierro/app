@@ -7,7 +7,6 @@ import { usePlatformConnection, type EvolutionConnectionState } from "@/hooks/us
 import { useAuth } from "@/hooks/use-auth";
 import { canManagePlatforms } from "@/lib/rbac";
 import { isAntiSpamMode, resolveAntiSpamConfig } from "@/lib/schemas/evolution";
-import { TOKEN_KEYS } from "@/lib/api";
 import { isConnectionStateChanged, openSseStream } from "@/lib/sse";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -92,10 +91,9 @@ export default function PlatformEvolutionDetailPage({
   const TIMEOUT_THRESHOLD = 12; // Show timeout UI after 60s (12 × 5s)
   const MAX_POLLS = 60; // Stop completely after 5 minutes
   // SSE is the primary channel; polling is the fallback when the stream
-  // is unavailable (no session token) or has failed.
-  const [sseFailed, setSseFailed] = useState(
-    () => typeof window !== "undefined" && !localStorage.getItem(TOKEN_KEYS.access),
-  );
+  // is unavailable or has failed. The session cookie authenticates the
+  // stream (credentials:"include" — Slice B), so it starts live.
+  const [sseFailed, setSseFailed] = useState(false);
   const [sseTick, setSseTick] = useState(0);
 
   /* ── SSE subscription — real-time connection state updates ──
@@ -105,17 +103,14 @@ export default function PlatformEvolutionDetailPage({
    * connection (QR scanned → open, phone lost network → close). The
    * browser refetches the connection immediately on each event.
    *
-   * The stream is opened via fetch (token travels in the Authorization
-   * header, never the URL). Transient drops reconnect after a short
-   * delay (onopen resets the error counter). Only when the stream is
-   * definitively dead (3 consecutive errors with no successful open)
-   * do we fall back to polling.
+   * The stream is opened via fetch with credentials:"include" — the
+   * httpOnly session cookie authenticates it (Slice B). Transient drops
+   * reconnect after a short delay (onopen resets the error counter). Only
+   * when the stream is definitively dead (3 consecutive errors with no
+   * successful open) do we fall back to polling.
    */
   useEffect(() => {
     if (!params.id) return;
-
-    const accessToken = localStorage.getItem(TOKEN_KEYS.access);
-    if (!accessToken) return; // sseFailed already true → polling fallback
 
     let errorCount = 0;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -126,7 +121,6 @@ export default function PlatformEvolutionDetailPage({
       closeStream = openSseStream(
         `/api/v1/platform-connections/${params.id}/events`,
         {
-          token: accessToken,
           onOpen: () => {
             errorCount = 0;
             setSseFailed(false);

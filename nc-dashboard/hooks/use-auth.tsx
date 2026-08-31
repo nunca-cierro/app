@@ -12,7 +12,7 @@ import {
   register as apiRegister,
   switchTenant as apiSwitchTenant,
   getProfile as apiGetProfile,
-  TOKEN_KEYS,
+  logout as apiLogout,
 } from "@/lib/api";
 import {
   clearSignedInCookie,
@@ -31,11 +31,11 @@ export interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string, role?: string) => Promise<void>;
   switchTenant: (tenantId: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 /* ------------------------------------------------------------------ */
-/*  Pure: silent profile restore mapping (testable without rendering)  */
+/*  Pure helpers (testable without rendering/browser)                 */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -43,13 +43,32 @@ export interface AuthContextType {
  *
  * `/auth/me` returns the tenant plan as `current_plan`; the rest of the app
  * reads `user.plan` — map it so the dashboard/capabilities work after a
- * silent profile restore (e.g. page reload with a stored token).
+ * silent profile restore (e.g. page reload with a valid session cookie).
  */
 export function restoreUserFromProfile(profile: AuthUser): AuthUser {
   return {
     ...profile,
     plan: profile.current_plan ?? profile.plan ?? null,
   };
+}
+
+/**
+ * Pure logout flow (Slice B, AS-8/AS-9): call the logout API, clear the
+ * proxy guard's signed-in marker, then redirect — even when the API call
+ * fails (the session may already be dead, the redirect must still happen).
+ */
+export async function runLogoutFlow(
+  apiLogout: () => Promise<unknown>,
+  clearMarker: () => void,
+  navigate: (url: string) => void,
+): Promise<void> {
+  try {
+    await apiLogout();
+  } catch {
+    // Dead session — fall through to the redirect.
+  }
+  clearMarker();
+  navigate("/auth/login");
 }
 
 /* ------------------------------------------------------------------ */
@@ -64,22 +83,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(() => {
-    if (typeof window === "undefined") return true;
-    return !!localStorage.getItem(TOKEN_KEYS.access);
-  });
+  // Silent restore ALWAYS probes /auth/me with credentials (Slice B): the
+  // httpOnly session cookie decides whether a session exists — there is no
+  // client-readable token to check anymore.
+  const [isLoading, setIsLoading] = useState(true);
 
-  /* ── Mount: try silent auth from stored token ── */
+  /* ── Mount: try silent session restore via the cookie ── */
   useEffect(() => {
     let cancelled = false;
-    const accessToken = localStorage.getItem(TOKEN_KEYS.access);
-    if (!accessToken) {
-      return () => {
-        cancelled = true;
-      };
-    }
 
-    // Verify token is still valid by fetching profile
     apiGetProfile()
       .then((profile) => {
         if (cancelled) return;
@@ -88,15 +100,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // fallback) reads the plan after silent profile restore.
         const restored = restoreUserFromProfile(profile);
         setUser(restored);
-        localStorage.setItem(TOKEN_KEYS.user, JSON.stringify(restored));
         // Re-arm the proxy guard's signed-in marker after a page reload.
         setSignedInCookie();
       })
       .catch(() => {
         if (cancelled) return;
-        // Token invalid — clear everything
-        localStorage.removeItem(TOKEN_KEYS.access);
-        localStorage.removeItem(TOKEN_KEYS.user);
+        // No session — drop the marker (the proxy redirects the next
+        // /dashboard navigation server-side) and stay logged out. No
+        // localStorage cleanup (AS-9).
         clearSignedInCookie();
         setUser(null);
       })
@@ -154,15 +165,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  /* ── Logout ── */
-  const logout = () => {
-    localStorage.removeItem(TOKEN_KEYS.access);
-    localStorage.removeItem(TOKEN_KEYS.user);
-    clearSignedInCookie();
+  /* ── Logout (async: clears the server session first, then redirects) ── */
+  const logout = async () => {
     setUser(null);
-    if (typeof window !== "undefined") {
-      window.location.href = "/auth/login";
-    }
+    await runLogoutFlow(apiLogout, clearSignedInCookie, (url) => {
+      if (typeof window !== "undefined") {
+        window.location.href = url;
+      }
+    });
   };
 
   return (

@@ -21,7 +21,10 @@ export interface AuthUser {
 }
 
 export interface LoginResponse {
-  access_token: string;
+  /** No longer returned by the backend — the JWT lives in the httpOnly
+   *  `nc_access_token` cookie (Slice B, AS-1). Kept optional for legacy
+   *  consumers; the app never reads it. */
+  access_token?: string;
   token_type: string;
   user_id: string;
   email: string;

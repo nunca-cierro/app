@@ -49,8 +49,6 @@ export function isConnectionStateChanged(
 }
 
 export interface OpenSseStreamOptions {
-  /** Access token sent as ``Authorization: Bearer`` — never in the URL. */
-  token?: string;
   /** Called once the fetch response arrives (headers/status available). */
   onOpen?: (res: Response) => void;
   /** Called for every successfully parsed SSE message. */
@@ -61,9 +59,12 @@ export interface OpenSseStreamOptions {
 
 /**
  * Open an SSE stream via ``fetch`` and deliver parsed messages to
- * ``onMessage`` — the browser EventSource equivalent, but authenticating
- * through the ``Authorization`` header instead of a ``?token=`` query
- * parameter (which leaks the JWT into server/proxy logs).
+ * ``onMessage`` — the browser EventSource equivalent.
+ *
+ * Auth (Slice B, spec AS-7): the session travels in the httpOnly
+ * ``nc_access_token`` cookie, so the request uses ``credentials: "include"``
+ * — no Authorization header, no ``?token=`` query parameter (which leaked
+ * the JWT into server/proxy logs), and no localStorage reads.
  *
  * Frame handling follows the SSE spec: chunks are buffered and split on
  * blank lines, ``:``-prefixed comment lines (e.g. keepalives) are ignored,
@@ -78,7 +79,7 @@ export function openSseStream(
   url: string,
   opts: OpenSseStreamOptions,
 ): () => void {
-  const { token, onOpen, onMessage, onError } = opts;
+  const { onOpen, onMessage, onError } = opts;
   const controller = new AbortController();
   let closed = false;
 
@@ -102,7 +103,7 @@ export function openSseStream(
   void (async () => {
     try {
       const res = await fetch(url, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
         signal: controller.signal,
       });
       if (closed) return;

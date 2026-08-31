@@ -151,31 +151,31 @@ describe("openSseStream", () => {
     expect(messages[0].data).toEqual({ k: 1 });
   });
 
-  it("passes the Authorization header and calls onOpen with the response", async () => {
+  it("sends credentials include (cookie session) and calls onOpen", async () => {
     const fetchMock = stubFetchOk(streamFromChunks([]));
     const onOpen = vi.fn();
 
     openSseStream("/events", {
-      token: "tok-123",
       onOpen,
       onMessage: () => {},
     });
 
     await vi.waitFor(() => expect(onOpen).toHaveBeenCalledTimes(1));
     const [, requestInit] = fetchMock.mock.calls[0];
-    expect((requestInit?.headers as Record<string, string>).Authorization).toBe(
-      "Bearer tok-123",
-    );
+    expect((requestInit as RequestInit).credentials).toBe("include");
   });
 
-  it("omits the Authorization header when no token is given", async () => {
+  it("never sends an Authorization header (Slice B — cookie transport)", async () => {
     const fetchMock = stubFetchOk(streamFromChunks([]));
 
     openSseStream("/events", { onMessage: () => {} });
 
     await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
     const [, requestInit] = fetchMock.mock.calls[0];
-    expect(requestInit?.headers).toEqual({});
+    expect(
+      (requestInit?.headers as Record<string, string> | undefined)
+        ?.Authorization,
+    ).toBeUndefined();
   });
 
   it("calls onError when fetch rejects", async () => {
