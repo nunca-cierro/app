@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  canCreateAgents,
   canManagePlatforms,
   canSeeQuickActions,
   getRoleLandingRoute,
@@ -170,5 +171,22 @@ describe("canManagePlatforms (T2 — platforms are admin/superadmin managed)", (
     expect(canManagePlatforms(null)).toBe(false);
     expect(canManagePlatforms(undefined)).toBe(false);
     expect(canManagePlatforms("")).toBe(false);
+  });
+});
+
+describe("canCreateAgents (T3 — agents/new is admin/superadmin only)", () => {
+  it("returns true for admin and superadmin", () => {
+    expect(canCreateAgents("superadmin")).toBe(true);
+    expect(canCreateAgents("admin")).toBe(true);
+  });
+
+  it("returns false for client (read-only)", () => {
+    expect(canCreateAgents("client")).toBe(false);
+  });
+
+  it("degrades to false for null/undefined/missing roles", () => {
+    expect(canCreateAgents(null)).toBe(false);
+    expect(canCreateAgents(undefined)).toBe(false);
+    expect(canCreateAgents("")).toBe(false);
   });
 });

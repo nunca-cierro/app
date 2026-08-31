@@ -14,6 +14,10 @@ import {
   getProfile as apiGetProfile,
   TOKEN_KEYS,
 } from "@/lib/api";
+import {
+  clearSignedInCookie,
+  setSignedInCookie,
+} from "@/lib/route-guard";
 import type { AuthUser } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
@@ -85,12 +89,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const restored = restoreUserFromProfile(profile);
         setUser(restored);
         localStorage.setItem(TOKEN_KEYS.user, JSON.stringify(restored));
+        // Re-arm the proxy guard's signed-in marker after a page reload.
+        setSignedInCookie();
       })
       .catch(() => {
         if (cancelled) return;
         // Token invalid — clear everything
         localStorage.removeItem(TOKEN_KEYS.access);
         localStorage.removeItem(TOKEN_KEYS.user);
+        clearSignedInCookie();
         setUser(null);
       })
       .finally(() => {
@@ -151,6 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     localStorage.removeItem(TOKEN_KEYS.access);
     localStorage.removeItem(TOKEN_KEYS.user);
+    clearSignedInCookie();
     setUser(null);
     if (typeof window !== "undefined") {
       window.location.href = "/auth/login";

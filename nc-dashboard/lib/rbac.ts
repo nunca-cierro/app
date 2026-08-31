@@ -92,3 +92,14 @@ export function canManagePlatforms(
 ): boolean {
   return role === "superadmin" || role === "admin";
 }
+
+/**
+ * Agent creation is admin/superadmin only (backend `agents.manage` =
+ * [ADMIN, SUPERADMIN]); client is read-only. Gates agents/new (T3) — the
+ * page previously rendered the full create form for any authenticated user.
+ */
+export function canCreateAgents(
+  role?: UserRole | string | null,
+): boolean {
+  return role === "superadmin" || role === "admin";
+}
