@@ -71,11 +71,16 @@ async def test_switch_tenant_valid(client: AsyncClient, db_session: AsyncSession
         assert data["tenant_id"] == str(t2.id)
         assert data["role"] == UserRole.CLIENT
 
-        # Verify JWT contains new tenant context
+        # Verify JWT contains new tenant context — the token now travels in
+        # the session cookie (Slice B, AS-3) instead of the JSON body.
         from jose import jwt
         from app.core.config import settings
 
-        decoded = jwt.decode(data["access_token"], settings.jwt_secret, algorithms=["HS256"])
+        decoded = jwt.decode(
+            response.cookies["nc_access_token"],
+            settings.jwt_secret,
+            algorithms=["HS256"],
+        )
         assert decoded["role"] == UserRole.CLIENT
         assert decoded["tenant_id"] == str(t2.id)
     finally:
@@ -274,11 +279,16 @@ async def test_switch_tenant_preserves_global_superadmin(
         data = response.json()
         assert data["role"] == UserRole.SUPERADMIN.value
 
-        # Verify JWT keeps the global role scoped to the target tenant
+        # Verify JWT keeps the global role scoped to the target tenant — the
+        # token now travels in the session cookie (Slice B, AS-3).
         from jose import jwt
         from app.core.config import settings
 
-        decoded = jwt.decode(data["access_token"], settings.jwt_secret, algorithms=["HS256"])
+        decoded = jwt.decode(
+            response.cookies["nc_access_token"],
+            settings.jwt_secret,
+            algorithms=["HS256"],
+        )
         assert decoded["role"] == UserRole.SUPERADMIN.value
         assert decoded["tenant_id"] == str(t2.id)
     finally:

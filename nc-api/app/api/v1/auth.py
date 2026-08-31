@@ -1,10 +1,11 @@
-"""Auth endpoints — register, login, and switch tenant."""
+"""Auth endpoints — register, login, switch tenant, and logout."""
 
 from __future__ import annotations
 
+import secrets
 import typing as t
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,7 +19,6 @@ from app.modules.auth.schemas import (
     LoginRequest,
     RegisterRequest,
     SwitchTenantRequest,
-    TokenResponse,
     MeResponse,
     UserResponse,
 )
@@ -28,21 +28,114 @@ from app.modules.auth.service import (
     verify_password,
 )
 from app.modules.auth.deps import get_current_user
+from app.modules.auth.csrf import ACCESS_TOKEN_COOKIE, CSRF_COOKIE
 from app.modules.plans.capabilities import effective_capabilities
 from app.modules.tenants.internal import is_internal_tenant
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+SESSION_MAX_AGE = 7 * 24 * 60 * 60  # 7d — aligned with the JWT exp
 
-@router.post("/register", response_model=TokenResponse, status_code=201)
+
+def _set_auth_cookies(
+    response: Response, access_token: str, csrf_token: str | None = None
+) -> None:
+    """Set the httpOnly session cookie + (optionally) the CSRF double-submit
+    cookie (Slice B, spec AS-1/AS-2).
+
+    ``nc_access_token`` is httpOnly (invisible to JS); ``nc_csrf`` is NOT
+    httpOnly so the browser can echo it back in the ``X-CSRF-Token`` header.
+    Both are SameSite=Lax, host-only, path=/, 7d max-age, and carry the
+    ``Secure`` flag unless the dev .env sets AUTH_COOKIE_SECURE=false.
+    """
+    secure = settings.auth_cookie_secure
+    response.set_cookie(
+        key=ACCESS_TOKEN_COOKIE,
+        value=access_token,
+        max_age=SESSION_MAX_AGE,
+        path="/",
+        secure=secure,
+        httponly=True,
+        samesite="lax",
+    )
+    if csrf_token is not None:
+        response.set_cookie(
+            key=CSRF_COOKIE,
+            value=csrf_token,
+            max_age=SESSION_MAX_AGE,
+            path="/",
+            secure=secure,
+            httponly=False,
+            samesite="lax",
+        )
+
+
+def _clear_auth_cookies(response: Response) -> None:
+    """Expire both session cookies (AS-8)."""
+    secure = settings.auth_cookie_secure
+    response.set_cookie(
+        key=ACCESS_TOKEN_COOKIE,
+        value="",
+        max_age=0,
+        path="/",
+        secure=secure,
+        httponly=True,
+        samesite="lax",
+    )
+    response.set_cookie(
+        key=CSRF_COOKIE,
+        value="",
+        max_age=0,
+        path="/",
+        secure=secure,
+        httponly=False,
+        samesite="lax",
+    )
+
+
+def _token_response(
+    *,
+    user_id: str,
+    email: str,
+    name: str,
+    role: str,
+    tenant_id: str | None,
+    tenant_plan: str | None = None,
+    payment_status: str | None = None,
+    plan_activated_at: t.Any = None,
+    capabilities: list[str],
+) -> dict[str, t.Any]:
+    """TokenResponse-shaped body WITHOUT the access_token.
+
+    Slice B (spec AS-1): the JWT travels in the httpOnly session cookie, so
+    the JSON body carries the context fields only — same shape as the old
+    TokenResponse minus ``access_token``.
+    """
+    return {
+        "token_type": "bearer",
+        "user_id": user_id,
+        "email": email,
+        "name": name,
+        "role": role,
+        "tenant_id": tenant_id,
+        "tenant_plan": tenant_plan,
+        "payment_status": payment_status,
+        "plan_activated_at": plan_activated_at,
+        "capabilities": capabilities,
+    }
+
+
+@router.post("/register", status_code=201)
 async def register(
     body: RegisterRequest,
     session: AsyncSession = Depends(get_session),
+    response: Response = None,
 ) -> t.Any:
     """Register a new user.
 
     Creates a bare user account. Tenant assignment is done separately
-    via the admin panel (POST /admin/assign-tenant).
+    via the admin panel (POST /admin/assign-tenant). Sets the session
+    cookie pair like login (AS-2); the JWT no longer travels in the body.
     """
     # Check email uniqueness
     existing = await session.execute(
@@ -58,7 +151,7 @@ async def register(
 
     # Validate role against allowed values
     # superadmin is NOT assignable via public self-registration — that role is
-    # granted only through operator tooling. Allows admin/agent/client.
+    # granted only through operator tooling. Allows admin/client.
     ALLOWED_ROLES = {r.value for r in UserRole} - {UserRole.SUPERADMIN.value}
     if body.role not in ALLOWED_ROLES:
         raise HTTPException(
@@ -79,30 +172,30 @@ async def register(
     token = create_access_token(
         str(user.id), user.email, role=user.role, tenant_id=None
     )
+    _set_auth_cookies(response, token, secrets.token_hex(32))
 
-    return TokenResponse(
-        access_token=token,
+    return _token_response(
         user_id=str(user.id),
         email=user.email,
         name=user.name,
         role=user.role,
         tenant_id=None,
-        tenant_plan=None,
-        payment_status=None,
         capabilities=sorted(effective_capabilities(user.role, None)),
     )
 
 
-@router.post("/switch-tenant", response_model=TokenResponse)
+@router.post("/switch-tenant")
 async def switch_tenant(
     body: SwitchTenantRequest,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
+    response: Response = None,
 ) -> t.Any:
     """Switch the current user's active tenant context.
 
     Validates the user has a UserTenant association with the target tenant,
-    checks the tenant is active, then issues a new JWT scoped to that tenant.
+    checks the tenant is active, then issues a new JWT scoped to that tenant
+    and re-issues the session cookie with the new context (AS-3).
     """
     # Verify UserTenant association
     assoc_result = await session.execute(
@@ -145,9 +238,9 @@ async def switch_tenant(
         role=effective_role,
         tenant_id=str(tenant.id),
     )
+    _set_auth_cookies(response, token, secrets.token_hex(32))
 
-    return TokenResponse(
-        access_token=token,
+    return _token_response(
         user_id=str(current_user.id),
         email=current_user.email,
         name=current_user.name,
@@ -155,18 +248,22 @@ async def switch_tenant(
         tenant_id=str(tenant.id),
         tenant_plan=tenant.plan,
         payment_status=PaymentStatus.ACTIVE if is_internal_tenant(tenant.slug, settings.internal_tenant_slug) else tenant.payment_status,
+        plan_activated_at=getattr(tenant, "plan_activated_at", None),
         capabilities=sorted(effective_capabilities(effective_role, tenant.plan)),
     )
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login")
 async def login(
     body: LoginRequest,
     session: AsyncSession = Depends(get_session),
+    response: Response = None,
 ) -> t.Any:
     """Login with email and password.
 
-    Returns a JWT token valid for 7 days with role and tenant context.
+    Sets the httpOnly session cookie (JWT valid for 7 days with role and
+    tenant context) + the CSRF double-submit cookie (AS-1). The JWT is no
+    longer returned in the JSON body — the cookie IS the session.
     """
     result = await session.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
@@ -225,9 +322,9 @@ async def login(
     token = create_access_token(
         str(user.id), user.email, role=role, tenant_id=tenant_id
     )
+    _set_auth_cookies(response, token, secrets.token_hex(32))
 
-    return TokenResponse(
-        access_token=token,
+    return _token_response(
         user_id=str(user.id),
         email=user.email,
         name=user.name,
@@ -240,10 +337,25 @@ async def login(
     )
 
 
+@router.post("/logout", status_code=200)
+async def logout(response: Response) -> dict[str, str]:
+    """End the session: expire both cookies server-side (AS-8).
+
+    Idempotent and auth-free — clearing an already-dead session is harmless.
+    When the nc_access_token cookie is present the router-level CSRF check
+    applies (the browser sends X-CSRF-Token), so a forged logout needs the
+    double-submit token.
+    """
+    _clear_auth_cookies(response)
+    return {"status": "ok"}
+
+
 @router.get("/me", response_model=MeResponse)
 async def me(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
+    request: Request = None,
+    response: Response = None,
 ) -> t.Any:
     """Get the currently logged-in user's profile with role, tenant context, and plan."""
     # Resolve current plan + payment info from tenant
@@ -260,17 +372,30 @@ async def me(
             if is_internal_tenant(tenant.slug, settings.internal_tenant_slug):
                 payment_status = PaymentStatus.ACTIVE
 
-    response = MeResponse.model_validate(current_user)
-    response.current_plan = current_plan
-    response.payment_status = payment_status
-    response.plan_activated_at = plan_activated_at
-    response.capabilities = sorted(
+    # AS-3: cookie sessions re-issue the session cookie so it reflects the
+    # CURRENT role/tenant (current_role comes from the DB, so a role change
+    # since login is picked up here). Bearer-only callers (tools) get no
+    # cookie; nc_csrf is NOT rotated on this read.
+    if request.cookies.get(ACCESS_TOKEN_COOKIE):
+        token = create_access_token(
+            str(current_user.id),
+            current_user.email,
+            role=getattr(current_user, "current_role", current_user.role),
+            tenant_id=str(current_tid) if current_tid else None,
+        )
+        _set_auth_cookies(response, token)
+
+    response_model = MeResponse.model_validate(current_user)
+    response_model.current_plan = current_plan
+    response_model.payment_status = payment_status
+    response_model.plan_activated_at = plan_activated_at
+    response_model.capabilities = sorted(
         effective_capabilities(
             getattr(current_user, "current_role", current_user.role),
             current_plan,
         )
     )
-    return response
+    return response_model
 
 
 @router.post("/change-password", status_code=200)

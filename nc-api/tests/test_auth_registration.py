@@ -33,8 +33,13 @@ async def test_register_creates_user_with_default_role(client: AsyncClient, db_s
     assert user is not None
     assert user.role == UserRole.CLIENT
 
-    # Verify JWT has no tenant context
-    decoded = jwt.decode(data["access_token"], settings.jwt_secret, algorithms=["HS256"])
+    # Verify JWT has no tenant context — the token now travels in the httpOnly
+    # session cookie (Slice B, AS-2) instead of the JSON body.
+    decoded = jwt.decode(
+        response.cookies["nc_access_token"],
+        settings.jwt_secret,
+        algorithms=["HS256"],
+    )
     assert decoded["role"] == UserRole.CLIENT
     assert decoded["tenant_id"] is None
 

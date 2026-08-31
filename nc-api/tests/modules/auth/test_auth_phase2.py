@@ -62,7 +62,12 @@ async def test_get_current_user_resolves_context():
     user = User(id=user_id, email=email, name="Test", role=UserRole.CLIENT)
     session.get.return_value = user
     
-    resolved_user = await get_current_user(credentials=credentials, session=session)
+    # Cookie-less request — Bearer-only call (Slice B keeps this working).
+    request = MagicMock()
+    request.cookies = {}
+    resolved_user = await get_current_user(
+        request=request, credentials=credentials, session=session
+    )
     
     assert resolved_user.id == user_id
     assert resolved_user.current_role == UserRole.CLIENT
