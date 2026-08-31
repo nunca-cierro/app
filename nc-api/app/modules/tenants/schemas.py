@@ -59,6 +59,18 @@ class TenantUpdate(BaseModel):
     category: str | None = None
     business_profile: dict | None = None
 
+    @field_validator("name", "timezone", "locale")
+    @classmethod
+    def reject_null_non_nullable(cls, v: str | None) -> str:
+        """name/timezone/locale are nullable=False DB columns, so an explicit
+        null would fail at commit (IntegrityError → 500/409) instead of being
+        validated. The PATCH is a partial update: the fields stay OPTIONAL
+        (absent allowed — validators only run on provided fields), but an
+        explicit null is rejected with 422."""
+        if v is None:
+            raise ValueError("must not be null")
+        return v
+
     @field_validator("plan")
     @classmethod
     def validate_plan(cls, v: str | None) -> str | None:

@@ -159,6 +159,82 @@ class TestClientBusinessCardPatch:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# Non-nullable fields — explicit null must 422, not IntegrityError → 500
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TestTenantUpdateRejectsNullNonNullable:
+    """name/timezone/locale are nullable=False DB columns. TenantUpdate keeps
+    them OPTIONAL (partial update — absent allowed), but an explicit null
+    would reach the commit and raise IntegrityError → 500. The schema must
+    reject null with 422 before any role logic runs (applies to every role,
+    including superadmin's full-update path)."""
+
+    @pytest.mark.asyncio
+    async def test_patch_name_null_rejected_422(
+        self, client: AsyncClient, db_session: AsyncSession, actor: User
+    ) -> None:
+        own = _create_tenant(db_session, "Null Guard", "null-guard")
+        await db_session.commit()
+        _act_as(actor, UserRole.SUPERADMIN, own.id)
+
+        response = await client.patch(
+            f"/api/v1/tenants/{own.id}", json={"name": None}
+        )
+
+        assert response.status_code == 422, response.text
+
+    @pytest.mark.asyncio
+    async def test_patch_timezone_locale_null_rejected_422(
+        self, client: AsyncClient, db_session: AsyncSession, actor: User
+    ) -> None:
+        own = _create_tenant(db_session, "Tz Guard", "tz-guard")
+        await db_session.commit()
+        _act_as(actor, UserRole.SUPERADMIN, own.id)
+
+        response = await client.patch(
+            f"/api/v1/tenants/{own.id}",
+            json={"timezone": None, "locale": None},
+        )
+
+        assert response.status_code == 422, response.text
+
+    @pytest.mark.asyncio
+    async def test_patch_omitting_name_still_partial_update(
+        self, client: AsyncClient, db_session: AsyncSession, actor: User
+    ) -> None:
+        """Absent non-nullable fields stay optional — partial update works."""
+        own = _create_tenant(db_session, "Partial Co", "partial-co")
+        await db_session.commit()
+        _act_as(actor, UserRole.SUPERADMIN, own.id)
+
+        response = await client.patch(
+            f"/api/v1/tenants/{own.id}", json={"timezone": "UTC"}
+        )
+
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["timezone"] == "UTC"
+        assert data["name"] == "Partial Co"  # untouched by the partial update
+
+    @pytest.mark.asyncio
+    async def test_client_patch_name_null_rejected_422(
+        self, client: AsyncClient, db_session: AsyncSession, actor: User
+    ) -> None:
+        """The 422 fires at schema validation, before the client raw-body
+        check — role-agnostic protection."""
+        own = _create_tenant(db_session, "Client Null", "client-null")
+        await db_session.commit()
+        _act_as(actor, UserRole.CLIENT, own.id)
+
+        response = await client.patch(
+            f"/api/v1/tenants/{own.id}", json={"name": None}
+        )
+
+        assert response.status_code == 422, response.text
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Admin / superadmin — behavior unchanged
 # ═══════════════════════════════════════════════════════════════════════════
 
