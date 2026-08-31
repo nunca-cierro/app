@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 import typing as t
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from loguru import logger
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
@@ -19,7 +19,11 @@ from app.modules.auth.user_tenant import UserTenant
 from app.modules.tenants.internal import is_internal_tenant
 from app.modules.tenants.models import Tenant
 
-admin_or_super = RoleChecker(allowed_roles=[UserRole.ADMIN, UserRole.SUPERADMIN])
+# Business-card fields a client may edit on their OWN tenant (owner decision #1).
+# Everything else (plan, slug, status, category, business_profile, ...) is
+# rejected with 403 for role=client — see update_tenant_info.
+CLIENT_EDITABLE_FIELDS = frozenset({"name", "timezone", "locale", "notes"})
+
 from app.modules.tenants.schemas import (
     ActivatePlanRequest,
     PaymentStatusRequest,
@@ -166,10 +170,19 @@ async def get_tenant(
 async def update_tenant_info(
     tenant_id: uuid.UUID,
     body: TenantUpdate,
-    current_user: User = Depends(admin_or_super),
+    request: Request,
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> Tenant:
-    """Update tenant information."""
+    """Update tenant information.
+
+    Role contract (owner decision #1 — client business-card editing):
+    - superadmin: full update (plan, status, business_profile, ...)
+    - admin: own current tenant only; plan/status silently dropped (unchanged)
+    - client: OWN current tenant only; restricted to business-card fields
+      {name, timezone, locale, notes}; any other submitted field (plan, slug,
+      status, category, business_profile, ...) is rejected with 403.
+    """
     # Isolation: non-superadmin users can only update their ACTIVE tenant
     # (mirrors agents/platform-connections) — prevents cross-tenant mutation
     # by UUID guessing.
@@ -184,11 +197,33 @@ async def update_tenant_info(
         raise HTTPException(status_code=404, detail="Tenant not found")
 
     update_data = body.model_dump(exclude_unset=True)
-    # plan/status are restricted to superadmin or the authorized activation
-    # flow (PATCH /tenants/{id}/activate-plan). Non-superadmin admins can
-    # never change them — silently dropped so the edit form keeps working
-    # without privilege creep (self-upgrade to enterprise / status tampering).
-    if role != UserRole.SUPERADMIN:
+
+    if role == UserRole.CLIENT:
+        # Client edits ONLY their own business card. The raw body is inspected
+        # because TenantUpdate schema-ignores unknown keys (e.g. slug) — the
+        # check must catch fields the schema drops, not just the ones it parses.
+        # 403 (not 422) keeps the API's role-violation contract uniform: every
+        # unauthorized client action is 403 (deps.RoleChecker contract). The
+        # frontend never sends these fields for clients (use-tenant strips
+        # them), so this is defense in depth against crafted requests.
+        raw_body: dict = {}
+        try:
+            raw_body = await request.json()
+        except Exception:
+            raw_body = {}
+        submitted = set(raw_body.keys())
+        if not submitted.issubset(CLIENT_EDITABLE_FIELDS):
+            raise HTTPException(status_code=403, detail="Operation not permitted")
+        update_data = {
+            key: value
+            for key, value in update_data.items()
+            if key in CLIENT_EDITABLE_FIELDS
+        }
+    elif role != UserRole.SUPERADMIN:
+        # plan/status are restricted to superadmin or the authorized activation
+        # flow (PATCH /tenants/{id}/activate-plan). Non-superadmin admins can
+        # never change them — silently dropped so the edit form keeps working
+        # without privilege creep (self-upgrade to enterprise / status tampering).
         update_data.pop("plan", None)
         update_data.pop("status", None)
 

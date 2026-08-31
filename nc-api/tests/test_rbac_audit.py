@@ -407,7 +407,14 @@ class TestClientMutationMatrix:
                 ),
                 ("PATCH", f"/api/v1/whatsapp-numbers/{number.id}", {"display_phone_number": "+0"}),
                 ("DELETE", f"/api/v1/whatsapp-numbers/{number.id}", None),
-                ("PATCH", f"/api/v1/tenants/{tenant.id}", {"name": "Hacked"}),
+                # NOTE: client PATCH /tenants/{id} is NO LONGER a blanket 403 —
+                # owner decision #1 lets a client edit their OWN tenant's
+                # business card ({name, timezone, locale, notes}). The matrix
+                # keeps asserting the field restriction: plan is outside the
+                # client's business-card fields → 403. (The client's
+                # current_tenant_id here IS tenant.id, so the request passes
+                # the isolation check and hits the field gate.)
+                ("PATCH", f"/api/v1/tenants/{tenant.id}", {"plan": "enterprise"}),
                 ("DELETE", f"/api/v1/tenants/{tenant.id}", None),
                 (
                     "POST",
