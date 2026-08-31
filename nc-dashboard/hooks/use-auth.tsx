@@ -17,6 +17,7 @@ import {
 import {
   clearSignedInCookie,
   setSignedInCookie,
+  clearLegacyAuthStorage,
 } from "@/lib/route-guard";
 import type { AuthUser } from "@/lib/types";
 
@@ -91,6 +92,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /* ── Mount: try silent session restore via the cookie ── */
   useEffect(() => {
     let cancelled = false;
+
+    // One-time hygiene: drop legacy localStorage auth residue from the
+    // pre-Slice B era (the JWT lives in the httpOnly cookie now).
+    clearLegacyAuthStorage();
 
     apiGetProfile()
       .then((profile) => {

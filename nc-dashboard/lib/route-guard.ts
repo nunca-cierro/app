@@ -78,3 +78,25 @@ export function clearSignedInCookie(): void {
   if (typeof document === "undefined") return;
   document.cookie = `${SIGNED_IN_COOKIE}=; path=/; SameSite=Lax; max-age=0`;
 }
+
+/**
+ * Legacy keys written by the pre-Slice B auth flow (JWT + user profile in
+ * localStorage). Slice B moved the session to the httpOnly cookie, so these
+ * keys are never read — but old browsers still carry them from before the
+ * deploy. Remove them once on boot so no stale token lingers in localStorage.
+ */
+export const LEGACY_AUTH_STORAGE_KEYS = ["nc_access_token", "nc_user"] as const;
+
+/** Client-side: drop any legacy localStorage auth residue (one-time hygiene). */
+export function clearLegacyAuthStorage(): void {
+  if (typeof window === "undefined") return;
+  try {
+    for (const key of LEGACY_AUTH_STORAGE_KEYS) {
+      if (window.localStorage.getItem(key) !== null) {
+        window.localStorage.removeItem(key);
+      }
+    }
+  } catch {
+    // Storage unavailable (private mode / blocked) — nothing to clean.
+  }
+}

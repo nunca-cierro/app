@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   SIGNED_IN_COOKIE,
   ACCESS_TOKEN_COOKIE,
+  clearLegacyAuthStorage,
   clearSignedInCookie,
   evaluateDashboardAccess,
   evaluateDashboardAccessWithRole,
@@ -115,5 +116,46 @@ describe("signed-in cookie helpers (client-side marker)", () => {
     // Node/test env has no `document` — the helpers must not throw.
     expect(() => setSignedInCookie()).not.toThrow();
     expect(() => clearSignedInCookie()).not.toThrow();
+  });
+});
+
+describe("clearLegacyAuthStorage (one-time hygiene for pre-Slice B residue)", () => {
+  it("removes the legacy localStorage auth keys when present", () => {
+    const storage = new Map<string, string>([
+      ["nc_access_token", "old.jwt.token"],
+      ["nc_user", '{"email":"old@x.com"}'],
+    ]);
+    const getItem = (k: string) => (storage.has(k) ? storage.get(k) : null);
+    const removeItem = (k: string) => void storage.delete(k);
+
+    vi.stubGlobal("window", { localStorage: { getItem, removeItem } });
+    try {
+      clearLegacyAuthStorage();
+      expect(storage.has("nc_access_token")).toBe(false);
+      expect(storage.has("nc_user")).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("leaves unrelated localStorage keys untouched", () => {
+    const storage = new Map<string, string>([
+      ["nc_access_token", "old.jwt.token"],
+      ["my_theme", "dark"],
+    ]);
+    const getItem = (k: string) => (storage.has(k) ? storage.get(k) : null);
+    const removeItem = (k: string) => void storage.delete(k);
+
+    vi.stubGlobal("window", { localStorage: { getItem, removeItem } });
+    try {
+      clearLegacyAuthStorage();
+      expect(storage.has("my_theme")).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("no-ops safely without a window (server env)", () => {
+    expect(() => clearLegacyAuthStorage()).not.toThrow();
   });
 });
