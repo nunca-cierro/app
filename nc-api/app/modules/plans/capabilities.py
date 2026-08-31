@@ -27,6 +27,13 @@ CAP_AI: Final[str] = "ai.responses"  # Groq AI replies (vs. programmed FAQ respo
 CAP_BUSINESS_VIEW: Final[str] = "business.view"  # read business config
 CAP_BUSINESS_EDIT: Final[str] = "business.edit"  # edit business config / products
 
+# Read-only capability set for client (and any stale/unknown) roles — the ONLY
+# caps a client ever holds, regardless of tenant plan. business.view is kept so
+# the client dashboard still renders the (read-only) business config.
+CLIENT_VIEW_ONLY: Final[frozenset[str]] = frozenset(
+    {CAP_DASHBOARD_VIEW, CAP_CONVERSATIONS_VIEW, CAP_BUSINESS_VIEW}
+)
+
 # ── Plan matrix ─────────────────────────────────────────────────────────────
 # trial/basic run programmed keyword/FAQ responses; professional/enterprise
 # unlock AI + tenant management capabilities. Superadmin is exempt from plan
@@ -122,9 +129,14 @@ def get_plan_limits(plan: str | None) -> dict[str, int | None]:
 def effective_capabilities(role: str | UserRole | None, plan: str | None) -> frozenset[str]:
     """Capabilities the user effectively holds for role + tenant plan.
 
-    Superadmin is the platform operator — exempt from plan gates and always
-    gets the union of every plan's capabilities.
+    Total over role: superadmin is the platform operator — exempt from plan
+    gates and always gets the union of every plan's capabilities. Admin is
+    plan-gated as before. Client (and any stale/unknown role) is view-only on
+    ANY plan: business.edit is role-gated, never plan-gated (a professional or
+    enterprise client must NOT receive edit capabilities).
     """
     if role == UserRole.SUPERADMIN:
         return frozenset().union(*PLAN_CAPABILITIES.values())
-    return get_plan_capabilities(plan)
+    if role == UserRole.ADMIN:
+        return get_plan_capabilities(plan)
+    return CLIENT_VIEW_ONLY

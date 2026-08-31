@@ -26,6 +26,7 @@ from app.core.encryption import encrypt
 from app.main import app
 from app.modules.auth.deps import get_current_user_sse
 from app.modules.auth.models import User, UserRole
+from app.modules.auth.service import create_access_token
 from app.modules.platform_connections.models import PlatformConnection
 from app.modules.tenants.models import Tenant
 
@@ -240,6 +241,59 @@ class TestSseEndpoint:
         # No override of get_current_user_sse → 401
         resp = await client.get(f"/api/v1/platform-connections/{conn_id}/events")
         assert resp.status_code == 401
+
+    async def test_token_query_param_rejected(
+        self, client: AsyncClient, db_session
+    ) -> None:
+        """SSE-1: ?token=<jwt> no longer authenticates — 401, no stream.
+
+        The query fallback was removed from get_current_user_sse; the param is
+        now ignored and the request arrives with no credentials. The user is
+        persisted so the OLD ?token= path would have authenticated and reached
+        the handler (404 unknown connection) — a 401 proves the query param
+        no longer counts as a credential.
+        """
+        user = User(
+            id=uuid.uuid4(),
+            email="sse-token@test.com",
+            name="SSE Token",
+            password_hash="hash",
+        )
+        db_session.add(user)
+        await db_session.commit()
+        token = create_access_token(
+            str(user.id), user.email, role="client", tenant_id=None
+        )
+        resp = await client.get(
+            f"/api/v1/platform-connections/{uuid.uuid4()}/events",
+            params={"token": token},
+        )
+        assert resp.status_code == 401
+
+    async def test_bearer_header_accepted(
+        self, client: AsyncClient, db_session
+    ) -> None:
+        """SSE-2: Authorization: Bearer authenticates the stream.
+
+        A valid JWT + persisted user passes get_current_user_sse; the unknown
+        connection id then yields 404 (auth succeeded), never 401.
+        """
+        user = User(
+            id=uuid.uuid4(),
+            email="sse-bearer@test.com",
+            name="SSE Bearer",
+            password_hash="hash",
+        )
+        db_session.add(user)
+        await db_session.commit()
+        token = create_access_token(
+            str(user.id), user.email, role="client", tenant_id=None
+        )
+        resp = await client.get(
+            f"/api/v1/platform-connections/{uuid.uuid4()}/events",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 404
 
     async def test_unknown_connection_returns_404(self, client: AsyncClient, db_session) -> None:
         _override_sse_auth(db_session)

@@ -26,7 +26,9 @@ from app.modules.plans.capabilities import (
     CAP_AGENTS_MANAGE,
     CAP_AI,
     CAP_BUSINESS_EDIT,
+    CAP_BUSINESS_VIEW,
     CAP_CONNECTIONS_MANAGE,
+    CAP_CONVERSATIONS_VIEW,
     CAP_DASHBOARD_VIEW,
     PLAN_CAPABILITIES,
     effective_capabilities,
@@ -110,6 +112,41 @@ class TestCapabilityMatrix:
         caps = effective_capabilities(UserRole.SUPERADMIN, "basic")
         assert CAP_AGENTS_MANAGE in caps
         assert CAP_BUSINESS_EDIT in caps
+
+    def test_client_is_view_only_on_any_plan(self) -> None:
+        """UR-7: client gets {dashboard.view, conversations.view, business.view} on ANY plan."""
+        for plan in PLAN_CAPABILITIES:
+            caps = effective_capabilities(UserRole.CLIENT, plan)
+            assert caps == frozenset(
+                {CAP_DASHBOARD_VIEW, CAP_CONVERSATIONS_VIEW, CAP_BUSINESS_VIEW}
+            )
+            assert CAP_BUSINESS_EDIT not in caps
+            assert CAP_AGENTS_MANAGE not in caps
+            assert CAP_CONNECTIONS_MANAGE not in caps
+
+    def test_enterprise_client_stays_view_only(self) -> None:
+        """UR-7 scenario: enterprise client excludes edit/manage caps."""
+        caps = effective_capabilities(UserRole.CLIENT, "enterprise")
+        assert caps == frozenset(
+            {CAP_DASHBOARD_VIEW, CAP_CONVERSATIONS_VIEW, CAP_BUSINESS_VIEW}
+        )
+        assert not ({CAP_BUSINESS_EDIT, CAP_AGENTS_MANAGE, CAP_CONNECTIONS_MANAGE} & caps)
+
+    def test_unknown_role_degrades_to_view_only(self) -> None:
+        """Design: stale/unknown roles degrade to the client view-only set."""
+        caps = effective_capabilities("stale-role", "enterprise")
+        assert caps == frozenset(
+            {CAP_DASHBOARD_VIEW, CAP_CONVERSATIONS_VIEW, CAP_BUSINESS_VIEW}
+        )
+
+    def test_admin_keeps_plan_gated_capabilities(self) -> None:
+        """Admin capability derivation is plan-based, unchanged by the rework."""
+        basic_caps = effective_capabilities(UserRole.ADMIN, "basic")
+        assert basic_caps == get_plan_capabilities("basic")
+        assert CAP_BUSINESS_EDIT not in basic_caps
+        pro_caps = effective_capabilities(UserRole.ADMIN, "professional")
+        assert CAP_BUSINESS_EDIT in pro_caps
+        assert CAP_AGENTS_MANAGE in pro_caps
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -219,9 +256,14 @@ class TestMeCapabilities:
             app.dependency_overrides.clear()
 
     @pytest.mark.asyncio
-    async def test_me_returns_capabilities_for_enterprise_plan(
+    async def test_me_returns_view_only_for_client_on_enterprise_plan(
         self, client: AsyncClient, db_session: AsyncSession, user: User
     ) -> None:
+        """RV-3: /auth/me for a client on enterprise reports ONLY view caps.
+
+        Regression for the core fix #2: business.edit used to be plan-gated
+        only, so a professional/enterprise CLIENT saw edit caps in /auth/me.
+        """
         tenant = _create_tenant(db_session, "Ent Me", "ent-me", plan="enterprise")
         await db_session.commit()
         user.role = UserRole.CLIENT
@@ -230,8 +272,14 @@ class TestMeCapabilities:
             response = await client.get("/api/v1/auth/me")
             assert response.status_code == 200
             caps = response.json()["capabilities"]
-            assert CAP_BUSINESS_EDIT in caps
-            assert CAP_AGENTS_MANAGE in caps
+            assert set(caps) == {
+                "dashboard.view",
+                "conversations.view",
+                "business.view",
+            }
+            assert CAP_BUSINESS_EDIT not in caps
+            assert CAP_AGENTS_MANAGE not in caps
+            assert CAP_CONNECTIONS_MANAGE not in caps
         finally:
             app.dependency_overrides.clear()
 
