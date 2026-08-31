@@ -2,7 +2,7 @@
 /*  Auth types — 1:1 con TokenResponse y UserResponse del backend      */
 /* ------------------------------------------------------------------ */
 
-export type UserRole = "superadmin" | "admin" | "agent" | "client";
+export type UserRole = "superadmin" | "admin" | "client";
 
 export interface AuthUser {
   id: string;

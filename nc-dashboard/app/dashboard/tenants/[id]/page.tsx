@@ -155,40 +155,44 @@ export default function TenantDetailPage() {
             <ConfirmPaymentDialog tenant={tenant} onSuccess={refetch} />
           )}
 
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm">
-                <Trash2 className="mr-2 size-4" />
-                Eliminar
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>¿Eliminar negocio?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Esta acción no se puede deshacer. Se eliminará permanentemente{" "}
-                  {tenant.name} y todos sus datos asociados.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  {isDeleting ? (
-                    <>
-                      <Loader2 className="mr-2 size-4 animate-spin" />
-                      Eliminando...
-                    </>
-                  ) : (
-                    "Eliminar"
-                  )}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {/* Eliminar is superadmin-only (backend DELETE is superadmin-only).
+              Editar stays visible for admin — PATCH is admin_or_super (RV-5). */}
+          {!isEditing && isSuperadmin && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                  <Trash2 className="mr-2 size-4" />
+                  Eliminar
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Eliminar negocio?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta acción no se puede deshacer. Se eliminará permanentemente{" "}
+                    {tenant.name} y todos sus datos asociados.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        Eliminando...
+                      </>
+                    ) : (
+                      "Eliminar"
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </div>
 

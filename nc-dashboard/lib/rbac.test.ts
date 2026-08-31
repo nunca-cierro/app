@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  canSeeQuickActions,
   getRoleLandingRoute,
   isRouteAllowed,
   isTenantless,
 } from "@/lib/rbac";
 import type { UserRole } from "@/lib/types";
 
-const ALL_ROLES: UserRole[] = ["superadmin", "admin", "agent", "client"];
+const ALL_ROLES: UserRole[] = ["superadmin", "admin", "client"];
 
 describe("RBAC route matrix", () => {
   /* ── Dashboard home is universal ── */
@@ -20,44 +21,44 @@ describe("RBAC route matrix", () => {
     expect(isRouteAllowed(role, "/auth/login")).toBe(true);
   });
 
-  /* ── Sensitive routes blocked for client/agent ── */
+  /* ── Sensitive routes blocked for client ── */
 
-  it.each(["client", "agent"] as UserRole[])(
+  it.each(["client"] as UserRole[])(
     "blocks /dashboard/agents for %s",
     (role) => {
       expect(isRouteAllowed(role, "/dashboard/agents")).toBe(false);
     },
   );
 
-  it.each(["client", "agent"] as UserRole[])(
+  it.each(["client"] as UserRole[])(
     "blocks /dashboard/agents/new for %s",
     (role) => {
       expect(isRouteAllowed(role, "/dashboard/agents/new")).toBe(false);
     },
   );
 
-  it.each(["client", "agent"] as UserRole[])(
+  it.each(["client"] as UserRole[])(
     "blocks /dashboard/platforms for %s",
     (role) => {
       expect(isRouteAllowed(role, "/dashboard/platforms")).toBe(false);
     },
   );
 
-  it.each(["client", "agent"] as UserRole[])(
+  it.each(["client"] as UserRole[])(
     "blocks /dashboard/platforms/evolution/abc for %s",
     (role) => {
       expect(isRouteAllowed(role, "/dashboard/platforms/evolution/abc")).toBe(false);
     },
   );
 
-  it.each(["client", "agent"] as UserRole[])(
+  it.each(["client"] as UserRole[])(
     "blocks /dashboard/tenants for %s",
     (role) => {
       expect(isRouteAllowed(role, "/dashboard/tenants")).toBe(false);
     },
   );
 
-  it.each(["client", "agent"] as UserRole[])(
+  it.each(["client"] as UserRole[])(
     "blocks /dashboard/tenants/abc for %s",
     (role) => {
       expect(isRouteAllowed(role, "/dashboard/tenants/abc")).toBe(false);
@@ -99,7 +100,7 @@ describe("RBAC route matrix", () => {
 
   /* ── Landing routes ── */
 
-  it.each(["client", "agent"] as UserRole[])(
+  it.each(["client"] as UserRole[])(
     "lands on /dashboard/conversations for %s",
     (role) => {
       expect(getRoleLandingRoute(role)).toBe("/dashboard/conversations");
@@ -138,5 +139,18 @@ describe("RBAC route matrix", () => {
   it("superadmin is never tenantless", () => {
     expect(isTenantless({ role: "superadmin", tenant_id: null })).toBe(false);
     expect(isTenantless({ current_role: "superadmin", tenant_id: undefined })).toBe(false);
+  });
+});
+
+describe("canSeeQuickActions (RV-4 — superadmin-only affordances)", () => {
+  it("returns true only for superadmin", () => {
+    expect(canSeeQuickActions("superadmin")).toBe(true);
+    expect(canSeeQuickActions("admin")).toBe(false);
+    expect(canSeeQuickActions("client")).toBe(false);
+  });
+
+  it("degrades to false for null/undefined/missing roles", () => {
+    expect(canSeeQuickActions(null)).toBe(false);
+    expect(canSeeQuickActions(undefined)).toBe(false);
   });
 });

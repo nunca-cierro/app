@@ -140,18 +140,19 @@ describe("canEditUserRole (pure gate)", () => {
 describe("role option constants", () => {
   it("assign-form options exclude superadmin (R4)", () => {
     const values = ASSIGNABLE_ROLE_OPTIONS.map((option) => option.value);
-    expect(values).toEqual(["client", "agent", "admin"]);
+    expect(values).toEqual(["client", "admin"]);
     expect(values).not.toContain("superadmin");
   });
 
-  it("role-edit select offers all four roles (D7)", () => {
+  it("role-edit select offers the three remaining roles (D7)", () => {
     const values = ROLE_OPTIONS.map((option) => option.value);
-    expect(values).toEqual(["client", "agent", "admin", "superadmin"]);
+    expect(values).toEqual(["client", "admin", "superadmin"]);
+    expect(values).not.toContain("agent");
   });
 });
 
 describe("RoleSelect (SSR render)", () => {
-  it("renders an enabled role select with all four options for a superadmin editing another user", async () => {
+  it("renders an enabled role select with the three remaining options for a superadmin editing another user", async () => {
     mocks.authUser.id = "sa-1";
     mocks.authUser.current_role = "superadmin";
     mocks.authUser.role = "superadmin";
@@ -168,11 +169,11 @@ describe("RoleSelect (SSR render)", () => {
     const selects = selectTags(html);
     expect(selects).toHaveLength(1);
     const options = optionTags(html);
-    expect(options).toHaveLength(4);
+    expect(options).toHaveLength(3);
     expect(html).toContain('value="superadmin"');
     expect(html).toContain('value="admin"');
-    expect(html).toContain('value="agent"');
     expect(html).toContain('value="client"');
+    expect(html).not.toContain('value="agent"');
     // The select is bound to the target row (Spanish aria-label carries identity)
     expect(html).toContain("Cambiar rol de admin@test.com");
     // Current role preselected
@@ -229,8 +230,9 @@ describe("AdminUsersPage — Rol column wiring (SSR)", () => {
 
     // Exactly one select: the target's role editor (own row keeps the Badge)
     expect(selectTags(html)).toHaveLength(1);
-    expect(optionTags(html)).toHaveLength(4);
+    expect(optionTags(html)).toHaveLength(3);
     expect(html).toContain("Cambiar rol de admin@test.com");
+    expect(html).not.toContain('value="agent"');
     // Own row renders the role as a plain badge (no select bound to sa@test.com)
     expect(html).not.toContain("Cambiar rol de sa@test.com");
     expect(html).toContain("Superadmin");

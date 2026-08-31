@@ -11,7 +11,6 @@ import type { AdminUser, AuthUser, UserRole } from "@/lib/types";
 /** All roles offered by the role-edit select. Superadmin promotion is an equal-privilege edit. */
 export const ROLE_OPTIONS: ReadonlyArray<{ value: UserRole; label: string }> = [
   { value: "client", label: "Cliente" },
-  { value: "agent", label: "Agente" },
   { value: "admin", label: "Admin" },
   { value: "superadmin", label: "Superadmin" },
 ];

@@ -110,23 +110,6 @@ describe("sidebar nav items — client", () => {
   });
 });
 
-describe("sidebar nav items — agent", () => {
-  const role: UserRole = "agent";
-
-  it("hides Negocios, Agentes and Plataformas for agent role too", () => {
-    const items = getNavItems(role);
-    const labels = items.map((i) => i.label);
-    expect(labels).not.toContain("Negocios");
-    expect(labels).not.toContain("Agentes");
-    expect(labels).not.toContain("Plataformas");
-  });
-
-  it("shows only Dashboard and Conversaciones for agent", () => {
-    const items = getNavItems(role);
-    expect(items.length).toBe(2);
-  });
-});
-
 /* ── Tenant Switcher logic (component is tested via import check) ── */
 
 describe("sidebar tenant switcher", () => {

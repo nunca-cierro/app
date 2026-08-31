@@ -39,6 +39,8 @@ import { ApiError } from "@/lib/api";
 import { PLAN_LABELS } from "@/lib/plans";
 import { INTERNAL_TENANT_SLUG } from "@/lib/config";
 import { CAPABILITIES, hasCapability } from "@/lib/capabilities";
+import { canSeeQuickActions } from "@/lib/rbac";
+import type { UserRole } from "@/lib/types";
 import type { BusinessConfig } from "@/lib/types/agent";
 
 /* ------------------------------------------------------------------ */
@@ -166,7 +168,44 @@ function SectionHeader({
 /*  Admin dashboard (full metrics)                                      */
 /* ------------------------------------------------------------------ */
 
-function AdminDashboard({ userName }: { userName?: string | null }) {
+/**
+ * Superadmin-only quick actions (owner decision #1: ALL THREE — Nuevo Agente,
+ * Nuevo Negocio, Conversaciones — are gated, including the navigation link).
+ *
+ * "Por ahora" asymmetry (owner decision #3): admin keeps backend edit caps
+ * (agents/connections are plan-gated for admin+superadmin) but temporarily
+ * loses the create quick actions — see canSeeQuickActions() in lib/rbac.ts.
+ */
+export function AdminQuickActions({ role }: { role?: UserRole | string | null }) {
+  if (!canSeeQuickActions(role)) return null;
+  return (
+    <>
+      <Button asChild size="sm">
+        <Link href="/dashboard/agents/new">
+          <PlusCircle className="size-4" />
+          Nuevo Agente
+        </Link>
+      </Button>
+      <Button asChild variant="outline" size="sm">
+        <Link href="/dashboard/tenants/new">Nuevo Negocio</Link>
+      </Button>
+      <Button asChild variant="ghost" size="sm">
+        <Link href="/dashboard/conversations">
+          Conversaciones
+          <ArrowRight className="size-3.5" />
+        </Link>
+      </Button>
+    </>
+  );
+}
+
+function AdminDashboard({
+  userName,
+  role,
+}: {
+  userName?: string | null;
+  role?: UserRole | string | null;
+}) {
   const { metrics, isLoading, error } = useMetrics();
   const { tenants, isLoading: loadingTenants } = useTenants();
   const { conversations, isLoading: loadingConversations } = useConversations({ limit: 5 });
@@ -194,29 +233,11 @@ function AdminDashboard({ userName }: { userName?: string | null }) {
 
   return (
     <div className="space-y-8">
-      {/* Welcome + quick actions */}
+      {/* Welcome + quick actions (superadmin-only per RV-4) */}
       <WelcomeHeader
         title="Dashboard"
         subtitle={`${todayLabel} · Bienvenido, ${userName ?? "Usuario"}`}
-        actions={
-          <>
-            <Button asChild size="sm">
-              <Link href="/dashboard/agents/new">
-                <PlusCircle className="size-4" />
-                Nuevo Agente
-              </Link>
-            </Button>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/dashboard/tenants/new">Nuevo Negocio</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/dashboard/conversations">
-                Conversaciones
-                <ArrowRight className="size-3.5" />
-              </Link>
-            </Button>
-          </>
-        }
+        actions={<AdminQuickActions role={role} />}
       />
 
       {/* Requiere atención */}
@@ -649,7 +670,7 @@ export default function DashboardPage() {
   // Admin/superadmin view
   return (
     <div className="space-y-8">
-      <AdminDashboard userName={user?.name ?? user?.email} />
+      <AdminDashboard userName={user?.name ?? user?.email} role={role} />
     </div>
   );
 }
