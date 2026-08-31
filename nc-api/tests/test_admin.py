@@ -33,7 +33,7 @@ async def test_assign_tenant_as_superadmin(client: AsyncClient, db_session: Asyn
     payload = {
         "user_id": str(user_to_assign.id),
         "tenant_id": str(tenant.id),
-        "role": "agent"
+        "role": "client"
     }
     response = await client.post("/api/v1/admin/assign-tenant", json=payload)
 
@@ -50,7 +50,7 @@ async def test_assign_tenant_as_superadmin(client: AsyncClient, db_session: Asyn
     )
     assoc = result.scalar_one_or_none()
     assert assoc is not None
-    assert assoc.role == "agent"
+    assert assoc.role == "client"
     assert assoc.is_primary is True
 
 
@@ -100,7 +100,7 @@ async def test_update_user_role_forbidden_for_non_superadmin(client: AsyncClient
     override_current_user(admin)
 
     response = await client.patch(
-        f"/api/v1/admin/users/{target.id}", json={"role": "agent"}
+        f"/api/v1/admin/users/{target.id}", json={"role": "client"}
     )
 
     assert response.status_code == 403
@@ -185,6 +185,27 @@ async def test_update_user_role_invalid_role_rejected(client: AsyncClient, db_se
     assert target.role == "client"
 
 
+@pytest.mark.asyncio
+async def test_update_user_role_agent_rejected(client: AsyncClient, db_session: AsyncSession):
+    """PATCH role='agent' → 422 once AGENT leaves the enum (UR-6)."""
+    target = make_user(UserRole.CLIENT, "target@test.com")
+    db_session.add(target)
+    await db_session.commit()
+
+    superadmin = make_user(UserRole.SUPERADMIN, "super@test.com")
+    setattr(superadmin, "current_role", UserRole.SUPERADMIN)
+    override_current_user(superadmin)
+
+    response = await client.patch(
+        f"/api/v1/admin/users/{target.id}", json={"role": "agent"}
+    )
+
+    assert response.status_code == 422
+
+    await db_session.refresh(target)
+    assert target.role == "client"
+
+
 # ── POST /admin/users — superadmin-grant policy (R2) ──────────────────────
 
 
@@ -213,25 +234,25 @@ async def test_non_superadmin_cannot_create_superadmin(client: AsyncClient, db_s
 
 
 @pytest.mark.asyncio
-async def test_assign_tenant_unauthorized_agent(client: AsyncClient, db_session: AsyncSession):
+async def test_assign_tenant_unauthorized_client(client: AsyncClient, db_session: AsyncSession):
     # Setup
     tenant = create_tenant(db_session, "Omega", "omega")
     user_to_assign = User(id=uuid.uuid4(), email="john@doe.com", name="John Doe", password_hash="hash")
     db_session.add(user_to_assign)
     await db_session.commit()
 
-    agent_user = User(id=uuid.uuid4(), email="agent@test.com", name="Agent", password_hash="hash")
-    setattr(agent_user, "current_role", UserRole.AGENT)
+    client_user = User(id=uuid.uuid4(), email="client@test.com", name="Client", password_hash="hash")
+    setattr(client_user, "current_role", UserRole.CLIENT)
 
     # Override auth
     async def mock_get_current_user():
-        return agent_user
+        return client_user
     app.dependency_overrides[get_current_user] = mock_get_current_user
 
     payload = {
         "user_id": str(user_to_assign.id),
         "tenant_id": str(tenant.id),
-        "role": "agent"
+        "role": "client"
     }
     response = await client.post("/api/v1/admin/assign-tenant", json=payload)
 

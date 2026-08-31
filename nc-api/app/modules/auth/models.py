@@ -16,7 +16,6 @@ from app.db.base import Base
 class UserRole(str, enum.Enum):
     SUPERADMIN = "superadmin"
     ADMIN = "admin"
-    AGENT = "agent"
     CLIENT = "client"
 
 

@@ -73,14 +73,14 @@ async def test_bootstrap_demotes_duplicate_primaries(db_session: AsyncSession):
     """Users with several is_primary=True rows keep only the oldest one."""
     user = User(
         id=uuid.uuid4(), email="dup-primaries@test.com", password_hash="hash",
-        name="Dup Primaries", role=UserRole.AGENT,
+        name="Dup Primaries", role=UserRole.CLIENT,
     )
     db_session.add(user)
     t_old = _create_tenant_row(db_session, "Dup Old", "dup-old")
     t_new = _create_tenant_row(db_session, "Dup New", "dup-new")
     await db_session.flush()
     db_session.add(UserTenant(
-        user_id=user.id, tenant_id=t_old.id, role=UserRole.AGENT, is_primary=True,
+        user_id=user.id, tenant_id=t_old.id, role=UserRole.CLIENT, is_primary=True,
         created_at=datetime(2026, 1, 1, tzinfo=UTC),
     ))
     db_session.add(UserTenant(

@@ -37,8 +37,8 @@ async def test_role_checker_allows_correct_role():
 @pytest.mark.asyncio
 async def test_role_checker_raises_on_unauthorized_role():
     checker = RoleChecker(allowed_roles=[UserRole.SUPERADMIN])
-    user = User(id=uuid.uuid4(), email="agent@test.com", name="Agent")
-    setattr(user, "current_role", UserRole.AGENT)
+    user = User(id=uuid.uuid4(), email="client@test.com", name="Client")
+    setattr(user, "current_role", UserRole.CLIENT)
     
 from unittest.mock import AsyncMock, MagicMock
 from fastapi.security import HTTPAuthorizationCredentials
@@ -47,7 +47,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 async def test_get_current_user_resolves_context():
     user_id = uuid.uuid4()
     email = "test@example.com"
-    role = "agent"
+    role = "client"
     tenant_id = str(uuid.uuid4())
     
     token = create_access_token(str(user_id), email, role=role, tenant_id=tenant_id)
@@ -55,11 +55,11 @@ async def test_get_current_user_resolves_context():
     credentials.credentials = token
     
     session = AsyncMock(spec=AsyncSession)
-    user = User(id=user_id, email=email, name="Test", role=UserRole.AGENT)
+    user = User(id=user_id, email=email, name="Test", role=UserRole.CLIENT)
     session.get.return_value = user
     
     resolved_user = await get_current_user(credentials=credentials, session=session)
     
     assert resolved_user.id == user_id
-    assert resolved_user.current_role == UserRole.AGENT
+    assert resolved_user.current_role == UserRole.CLIENT
     assert str(resolved_user.current_tenant_id) == tenant_id
