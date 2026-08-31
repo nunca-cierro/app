@@ -39,7 +39,11 @@ async def test_role_checker_raises_on_unauthorized_role():
     checker = RoleChecker(allowed_roles=[UserRole.SUPERADMIN])
     user = User(id=uuid.uuid4(), email="client@test.com", name="Client")
     setattr(user, "current_role", UserRole.CLIENT)
-    
+
+    with pytest.raises(HTTPException) as exc:
+        await checker(user=user)
+    assert exc.value.status_code == 403
+
 from unittest.mock import AsyncMock, MagicMock
 from fastapi.security import HTTPAuthorizationCredentials
 
