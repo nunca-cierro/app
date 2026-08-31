@@ -18,8 +18,16 @@ from app.api.v1.platform_connections import (
 from app.api.v1.agent_templates import router as agent_templates_router
 from app.api.v1.billing import router as billing_router
 from app.modules.auth.deps import get_current_user
+from app.modules.auth.csrf import require_csrf
 
-router = APIRouter(prefix="/api/v1")
+# CSRF double-submit enforced ONCE for every /api/v1 mutation (Slice B,
+# spec AS-5). Safe methods (GET/HEAD/OPTIONS) and cookie-less requests
+# (login/register, Bearer tooling) are skipped inside the dependency, so
+# auth endpoints and SSE streams are unaffected.
+router = APIRouter(
+    prefix="/api/v1",
+    dependencies=[Depends(require_csrf)],
+)
 
 # Auth endpoints are public (register, login)
 router.include_router(auth_router)
