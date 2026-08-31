@@ -54,7 +54,6 @@ export interface NavSection {
 /*  Pure: getNavSections(role) + getNavItems(role) — testable          */
 /* ------------------------------------------------------------------ */
 
-const CLIENT_ROUTES: UserRole[] = ["client"];
 const ADMIN_ROUTES: UserRole[] = ["superadmin", "admin", "client"];
 
 function filterChildren(item: NavItem, role?: UserRole | null): NavItem {
@@ -72,7 +71,6 @@ export function getNavSections(
   plan?: string | null,
 ): NavSection[] {
   void plan; // plan controls actions (capabilities), never navigation
-  const isClientOrAgent = role && CLIENT_ROUTES.includes(role);
 
   const sections: NavSection[] = [];
 
@@ -89,37 +87,36 @@ export function getNavSections(
     ],
   });
 
-  // ── Gestión (solo superadmin/admin) ──
-  if (!isClientOrAgent) {
-    sections.push({
-      label: "Gestión",
-      items: [
-        {
-          href: "/dashboard/tenants",
-          label: "Negocios",
-          icon: Building2,
-          roles: ["superadmin", "admin"],
-        },
-        {
-          href: "/dashboard/agents",
-          label: "Agentes",
-          icon: Bot,
-          roles: ["superadmin", "admin"],
-        },
-        {
-          href: "/dashboard/platforms",
-          label: "Conexiones",
-          icon: Phone,
-          roles: ["superadmin", "admin"],
-          children: [
-            { href: "/dashboard/platforms/evolution", label: "WhatsApp", icon: Phone, roles: ["superadmin", "admin"] },
-            { href: "/dashboard/platforms/whatsapp", label: "Meta API", icon: Phone, roles: ["superadmin"] },
-            { href: "/dashboard/platforms/telegram", label: "Telegram", icon: Send, roles: ["superadmin"] },
-          ],
-        },
-      ],
-    });
-  }
+  // ── Gestión ── item-level roles decide visibility (client keeps only
+  //    Negocios — owner decision #1: client edits their own business card).
+  sections.push({
+    label: "Gestión",
+    items: [
+      {
+        href: "/dashboard/tenants",
+        label: "Negocios",
+        icon: Building2,
+        roles: ["superadmin", "admin", "client"],
+      },
+      {
+        href: "/dashboard/agents",
+        label: "Agentes",
+        icon: Bot,
+        roles: ["superadmin", "admin"],
+      },
+      {
+        href: "/dashboard/platforms",
+        label: "Conexiones",
+        icon: Phone,
+        roles: ["superadmin", "admin"],
+        children: [
+          { href: "/dashboard/platforms/evolution", label: "WhatsApp", icon: Phone, roles: ["superadmin", "admin"] },
+          { href: "/dashboard/platforms/whatsapp", label: "Meta API", icon: Phone, roles: ["superadmin"] },
+          { href: "/dashboard/platforms/telegram", label: "Telegram", icon: Send, roles: ["superadmin"] },
+        ],
+      },
+    ],
+  });
 
   // ── Comunicación ──
   sections.push({

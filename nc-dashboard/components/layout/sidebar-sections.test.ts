@@ -18,12 +18,16 @@ describe("sidebar nav sections", () => {
     ]);
   });
 
-  it("omits Gestión and Administración for the client role", () => {
+  it("shows only Negocios under Gestión for the client role (owner decision #1)", () => {
     const sections = getNavSections("client");
     expect(sections.map((s) => s.label)).toEqual([
       "General",
+      "Gestión",
       "Comunicación",
     ]);
+    const gestion = sections.find((s) => s.label === "Gestión");
+    expect(gestion).toBeDefined();
+    expect(gestion!.items.map((i) => i.label)).toEqual(["Negocios"]);
   });
 
   it("filters Conexiones children by role inside the Gestión section", () => {
