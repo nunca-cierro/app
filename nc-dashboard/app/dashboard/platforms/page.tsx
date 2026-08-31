@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePlatformConnections } from "@/hooks/use-platform-connections";
+import { useAuth } from "@/hooks/use-auth";
+import { canManagePlatforms } from "@/lib/rbac";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Phone, Send, Loader2, ExternalLink } from "lucide-react";
@@ -20,6 +22,10 @@ const PLATFORM_ICONS: Record<string, React.ComponentType<{ className?: string }>
 
 export default function PlatformsPage() {
   const { connections, isLoading, error } = usePlatformConnections();
+  const { user } = useAuth();
+  // Client is read-only on platforms (T2) — create buttons are
+  // admin/superadmin only.
+  const canManage = canManagePlatforms(user?.current_role ?? user?.role);
 
   if (isLoading) {
     return (
@@ -48,20 +54,22 @@ export default function PlatformsPage() {
             Conexiones a plataformas de mensajería.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/dashboard/platforms/evolution/new">
-              <Phone className="mr-2 size-4" />
-              WhatsApp
-            </Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link href="/dashboard/platforms/telegram/new">
-              <Send className="mr-2 size-4" />
-              Telegram
-            </Link>
-          </Button>
-        </div>
+        {canManage && (
+          <div className="flex gap-2">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/dashboard/platforms/evolution/new">
+                <Phone className="mr-2 size-4" />
+                WhatsApp
+              </Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href="/dashboard/platforms/telegram/new">
+                <Send className="mr-2 size-4" />
+                Telegram
+              </Link>
+            </Button>
+          </div>
+        )}
       </div>
 
       {connections.length === 0 ? (

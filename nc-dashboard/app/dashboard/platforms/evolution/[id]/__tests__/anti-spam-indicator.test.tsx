@@ -15,10 +15,21 @@ import Page from "@/app/dashboard/platforms/evolution/[id]/page";
 
 const mocks = vi.hoisted(() => ({
   connection: null as Record<string, unknown> | null,
+  authUser: {
+    id: "sa-1",
+    email: "sa@test.com",
+    name: "Súper Admin",
+    role: "superadmin",
+    current_role: "superadmin",
+  } as Record<string, unknown>,
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
+}));
+
+vi.mock("@/hooks/use-auth", () => ({
+  useAuth: () => ({ user: mocks.authUser }),
 }));
 
 vi.mock("@/hooks/use-platform-connections", () => ({

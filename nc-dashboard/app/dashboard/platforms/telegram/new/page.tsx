@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePlatformConnections } from "@/hooks/use-platform-connections";
 import { useTenants } from "@/hooks/use-tenants";
+import { useAuth } from "@/hooks/use-auth";
+import { canManagePlatforms } from "@/lib/rbac";
+import { AccessDeniedCard } from "@/components/access-denied";
 import { TelegramForm } from "@/components/telegram-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +20,13 @@ export default function NewTelegramConnectionPage() {
   const router = useRouter();
   const { createConnection } = usePlatformConnections();
   const { tenants, isLoading: loadingTenants } = useTenants();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Client is read-only on platforms (T2) — the create flow is unreachable.
+  if (!canManagePlatforms(user?.current_role ?? user?.role)) {
+    return <AccessDeniedCard />;
+  }
 
   const handleSubmit = async (data: TelegramConnectionFormValues) => {
     setIsSubmitting(true);

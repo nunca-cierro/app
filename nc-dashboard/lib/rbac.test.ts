@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  canManagePlatforms,
   canSeeQuickActions,
   getRoleLandingRoute,
   isRouteAllowed,
@@ -152,5 +153,22 @@ describe("canSeeQuickActions (RV-4 — superadmin-only affordances)", () => {
   it("degrades to false for null/undefined/missing roles", () => {
     expect(canSeeQuickActions(null)).toBe(false);
     expect(canSeeQuickActions(undefined)).toBe(false);
+  });
+});
+
+describe("canManagePlatforms (T2 — platforms are admin/superadmin managed)", () => {
+  it("returns true for admin and superadmin", () => {
+    expect(canManagePlatforms("superadmin")).toBe(true);
+    expect(canManagePlatforms("admin")).toBe(true);
+  });
+
+  it("returns false for client (read-only)", () => {
+    expect(canManagePlatforms("client")).toBe(false);
+  });
+
+  it("degrades to false for null/undefined/missing roles", () => {
+    expect(canManagePlatforms(null)).toBe(false);
+    expect(canManagePlatforms(undefined)).toBe(false);
+    expect(canManagePlatforms("")).toBe(false);
   });
 });

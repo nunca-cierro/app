@@ -4,6 +4,8 @@ import { useState, use, useEffect, useRef, useReducer } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePlatformConnection, type EvolutionConnectionState } from "@/hooks/use-platform-connections";
+import { useAuth } from "@/hooks/use-auth";
+import { canManagePlatforms } from "@/lib/rbac";
 import { isAntiSpamMode, resolveAntiSpamConfig } from "@/lib/schemas/evolution";
 import { TOKEN_KEYS } from "@/lib/api";
 import { isConnectionStateChanged, openSseStream } from "@/lib/sse";
@@ -36,6 +38,10 @@ export default function PlatformEvolutionDetailPage({
 }) {
   const params = use(paramsPromise);
   const router = useRouter();
+  const { user } = useAuth();
+  // Client is read-only on platforms (T2): connect/anti-spam/delete controls
+  // are admin/superadmin only; status info and diagnostics stay visible.
+  const canManage = canManagePlatforms(user?.current_role ?? user?.role);
   const { connection, isLoading, error, connectEvolution, refetchConnection, disconnectEvolution, updateConnection, checkEvolutionState } = usePlatformConnection(params.id);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -585,24 +591,26 @@ export default function PlatformEvolutionDetailPage({
               </div>
             )}
 
-            {/* Connect / Reconnect button */}
-            <Button
-              onClick={handleConnect}
-              disabled={evoState === "connecting"}
-              variant={evoState === "connected" ? "outline" : "default"}
-              className="w-full"
-            >
-              {evoState === "connecting" ? (
-                <LoaderIcon className="mr-2 size-4 animate-spin" />
-              ) : (
-                <QrIcon className="mr-2 size-4" />
-              )}
-              {evoState === "qr" || evoState === "timeout"
-                ? "Generar nuevo QR"
-                : evoState === "connected"
-                  ? "Cambiar número vinculado"
-                  : "Vincular WhatsApp"}
-            </Button>
+            {/* Connect / Reconnect button — admin/superadmin only (T2) */}
+            {canManage && (
+              <Button
+                onClick={handleConnect}
+                disabled={evoState === "connecting"}
+                variant={evoState === "connected" ? "outline" : "default"}
+                className="w-full"
+              >
+                {evoState === "connecting" ? (
+                  <LoaderIcon className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <QrIcon className="mr-2 size-4" />
+                )}
+                {evoState === "qr" || evoState === "timeout"
+                  ? "Generar nuevo QR"
+                  : evoState === "connected"
+                    ? "Cambiar número vinculado"
+                    : "Vincular WhatsApp"}
+              </Button>
+            )}
 
           </CardContent>
         </Card>
@@ -637,80 +645,87 @@ export default function PlatformEvolutionDetailPage({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* ── Enabled toggle ── */}
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <label className="text-sm font-medium">Activar filtro anti-spam</label>
-                <p className="text-xs text-muted-foreground">
-                  Cuando está desactivado, todos los mensajes se procesan normalmente.
-                </p>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={antiSpamEnabled}
-                onClick={() => setAntiSpamEnabled(!antiSpamEnabled)}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                  antiSpamEnabled ? "bg-green-600" : "bg-input"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none block size-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${
-                    antiSpamEnabled ? "translate-x-5" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
+            {/* Enabled toggle + mode + save — admin/superadmin only (T2).
+                Client keeps the read-only state badges from the header. */}
+            {canManage && (
+              <>
+                {/* ── Enabled toggle ── */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <label className="text-sm font-medium">Activar filtro anti-spam</label>
+                    <p className="text-xs text-muted-foreground">
+                      Cuando está desactivado, todos los mensajes se procesan normalmente.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={antiSpamEnabled}
+                    onClick={() => setAntiSpamEnabled(!antiSpamEnabled)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                      antiSpamEnabled ? "bg-green-600" : "bg-input"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none block size-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${
+                        antiSpamEnabled ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
 
-            {/* ── Mode selector ── */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Modo de acción</label>
-              <select
-                value={antiSpamMode}
-                onChange={(e) => setAntiSpamMode(e.target.value)}
-                disabled={!antiSpamEnabled}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {antiSpamMode === "" && (
-                  <option value="" disabled>
-                    Sin configurar
-                  </option>
-                )}
-                <option value="log">Solo registrar (log)</option>
-                <option value="block">Bloquear</option>
-              </select>
-              <p className="text-xs text-muted-foreground">
-                <strong>Log:</strong> detecta y registra, pero el bot sigue respondiendo.
-                {" "}<strong>Bloquear:</strong> ignora el mensaje sin responder.
-              </p>
-              {antiSpamMode === "" && (
-                <p className="text-xs text-amber-600">
-                  Esta conexión no tiene un modo guardado. El sistema usa su valor
-                  por defecto (registro) hasta que elijas uno y guardes.
-                </p>
-              )}
-            </div>
+                {/* ── Mode selector ── */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Modo de acción</label>
+                  <select
+                    value={antiSpamMode}
+                    onChange={(e) => setAntiSpamMode(e.target.value)}
+                    disabled={!antiSpamEnabled}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {antiSpamMode === "" && (
+                      <option value="" disabled>
+                        Sin configurar
+                      </option>
+                    )}
+                    <option value="log">Solo registrar (log)</option>
+                    <option value="block">Bloquear</option>
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Log:</strong> detecta y registra, pero el bot sigue respondiendo.
+                    {" "}<strong>Bloquear:</strong> ignora el mensaje sin responder.
+                  </p>
+                  {antiSpamMode === "" && (
+                    <p className="text-xs text-amber-600">
+                      Esta conexión no tiene un modo guardado. El sistema usa su valor
+                      por defecto (registro) hasta que elijas uno y guardes.
+                    </p>
+                  )}
+                </div>
 
-            {/* ── Save button ── */}
-            <Button
-              onClick={handleSaveAntiSpam}
-              disabled={isSavingAntiSpam}
-              variant="outline"
-              size="sm"
-              className="w-full"
-            >
-              {isSavingAntiSpam ? (
-                <LoaderIcon className="mr-2 size-4 animate-spin" />
-              ) : (
-                <ShieldIcon className="mr-2 size-4" />
-              )}
-              Guardar configuración anti-spam
-            </Button>
+                {/* ── Save button ── */}
+                <Button
+                  onClick={handleSaveAntiSpam}
+                  disabled={isSavingAntiSpam}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  {isSavingAntiSpam ? (
+                    <LoaderIcon className="mr-2 size-4 animate-spin" />
+                  ) : (
+                    <ShieldIcon className="mr-2 size-4" />
+                  )}
+                  Guardar configuración anti-spam
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
 
-        {/* ── Danger Zone: Delete Instance ── */}
-        <Card className="border-destructive/30 bg-destructive/5">
+        {/* ── Danger Zone: Delete Instance — admin/superadmin only (T2) ── */}
+        {canManage && (
+          <Card className="border-destructive/30 bg-destructive/5">
           <CardHeader>
             <div className="flex items-center gap-2">
               <TrashIcon className="size-5 text-destructive" />
@@ -762,6 +777,7 @@ export default function PlatformEvolutionDetailPage({
             )}
           </CardContent>
         </Card>
+        )}
       </div>
     </div>
   );
