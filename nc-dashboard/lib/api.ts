@@ -17,6 +17,7 @@ import type { AuthUser, LoginResponse, Tenant } from "@/lib/types";
 import {
   clearSignedInCookie,
   setSignedInCookie,
+  shouldRedirectOn401,
 } from "@/lib/route-guard";
 import { friendlyErrorMessage } from "@/lib/api-errors";
 
@@ -179,11 +180,17 @@ export async function apiClient<T = unknown>(
   });
 
   if (response.status === 401) {
-    // Session expired — redirect to login. The proxy guard marker must go
-    // (next /dashboard navigation redirects server-side); localStorage
-    // holds nothing to clean anymore (AS-9).
+    // Session expired. The proxy guard marker must go (next /dashboard
+    // navigation redirects server-side); localStorage holds nothing to
+    // clean (AS-9). Redirect ONLY on protected /dashboard pages — on public
+    // pages (/auth/login, /auth/register, landing) the silent-restore probe
+    // 401s too, and redirecting to the page you are already on reloads it
+    // forever (AuthProvider re-probes on every mount).
     clearSignedInCookie();
-    if (typeof window !== "undefined") {
+    if (
+      typeof window !== "undefined" &&
+      shouldRedirectOn401(window.location.pathname)
+    ) {
       window.location.href = "/auth/login";
     }
     throw new ApiError(401, "Unauthorized");

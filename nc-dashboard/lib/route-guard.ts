@@ -53,6 +53,20 @@ export function evaluateDashboardAccessWithRole(
   return evaluateDashboardAccess(pathname, hasSignedInCookie);
 }
 
+/**
+ * True when a 401 on the CURRENT page should hard-redirect to /auth/login.
+ *
+ * The proxy only guards /dashboard/*; every other route (/auth/login,
+ * /auth/register, /inicio landing, demos, legal...) must render for
+ * unauthenticated users. The AuthProvider silently probes /auth/me on every
+ * mount (Slice B), so a 401 on a public page MUST NOT redirect — assigning
+ * window.location.href to the page you are already on reloads it, and the
+ * re-mount probes again → infinite reload loop.
+ */
+export function shouldRedirectOn401(pathname: string): boolean {
+  return pathname.startsWith("/dashboard");
+}
+
 /** Client-side: mark the session as signed-in (non-sensitive boolean). */
 export function setSignedInCookie(): void {
   if (typeof document === "undefined") return;

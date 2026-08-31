@@ -30,8 +30,8 @@ function stubDocumentCookie(cookie: string) {
   vi.stubGlobal("document", { cookie });
 }
 
-function stubBrowserGlobals() {
-  const location: { href: string } = { href: "" };
+function stubBrowserGlobals(pathname = "/") {
+  const location: { href: string; pathname: string } = { href: "", pathname };
   vi.stubGlobal("window", { location });
   const storage = {
     getItem: vi.fn(),
@@ -184,8 +184,8 @@ describe("apiClient", () => {
     expect(headers["X-CSRF-Token"]).toBeUndefined();
   });
 
-  it("redirects to /auth/login on 401 with NO storage cleanup", async () => {
-    const { location, storage } = stubBrowserGlobals();
+  it("redirects to /auth/login on 401 when on a protected dashboard page", async () => {
+    const { location, storage } = stubBrowserGlobals("/dashboard/agents");
     stubFetch(new Response("Unauthorized", { status: 401 }));
 
     await expect(apiClient("/api/v1/tenants")).rejects.toThrow("Unauthorized");
@@ -193,6 +193,29 @@ describe("apiClient", () => {
     expect(location.href).toBe("/auth/login");
     expect(storage.removeItem).not.toHaveBeenCalled();
     expect(storage.clear).not.toHaveBeenCalled();
+  });
+
+  it("does NOT redirect on 401 when already on /auth/login (loop guard)", async () => {
+    // Unauthenticated visit to /auth/login: AuthProvider probes /auth/me →
+    // 401. Redirecting here would reload the page and re-probe forever.
+    const { location } = stubBrowserGlobals("/auth/login");
+    stubFetch(new Response("Unauthorized", { status: 401 }));
+
+    await expect(apiClient("/api/v1/tenants")).rejects.toThrow("Unauthorized");
+
+    expect(location.href).toBe("");
+  });
+
+  it("does NOT redirect on 401 on /auth/register or the landing page", async () => {
+    const register = stubBrowserGlobals("/auth/register");
+    stubFetch(new Response("Unauthorized", { status: 401 }));
+    await expect(apiClient("/api/v1/tenants")).rejects.toThrow("Unauthorized");
+    expect(register.location.href).toBe("");
+
+    const landing = stubBrowserGlobals("/inicio");
+    stubFetch(new Response("Unauthorized", { status: 401 }));
+    await expect(apiClient("/api/v1/tenants")).rejects.toThrow("Unauthorized");
+    expect(landing.location.href).toBe("");
   });
 });
 
