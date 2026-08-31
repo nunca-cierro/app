@@ -6,6 +6,7 @@ import {
   evaluateDashboardAccess,
   evaluateDashboardAccessWithRole,
   setSignedInCookie,
+  shouldRedirectOn401,
 } from "@/lib/route-guard";
 
 describe("evaluateDashboardAccess (T4 — proxy guard)", () => {
@@ -80,9 +81,30 @@ describe("evaluateDashboardAccessWithRole (Slice B — server role gate)", () =>
   });
 });
 
+describe("shouldRedirectOn401 (Slice B loop guard)", () => {
+  it("redirects when a 401 happens on protected /dashboard pages", () => {
+    expect(shouldRedirectOn401("/dashboard")).toBe(true);
+    expect(shouldRedirectOn401("/dashboard/agents")).toBe(true);
+    expect(shouldRedirectOn401("/dashboard/conversations/abc")).toBe(true);
+  });
+
+  it("never redirects on public pages that must render unauthenticated", () => {
+    expect(shouldRedirectOn401("/auth/login")).toBe(false);
+    expect(shouldRedirectOn401("/auth/register")).toBe(false);
+    expect(shouldRedirectOn401("/inicio")).toBe(false);
+    expect(shouldRedirectOn401("/")).toBe(false);
+    expect(shouldRedirectOn401("/whatsapp")).toBe(false);
+    expect(shouldRedirectOn401("/legal")).toBe(false);
+  });
+});
+
 describe("signed-in cookie helpers (client-side marker)", () => {
   it("exposes the nc_signed_in cookie name used by the proxy", () => {
     expect(SIGNED_IN_COOKIE).toBe("nc_signed_in");
+  });
+
+  it("exposes the httpOnly session cookie name (Slice B)", () => {
+    expect(ACCESS_TOKEN_COOKIE).toBe("nc_access_token");
   });
 
   it("exposes the httpOnly session cookie name (Slice B)", () => {
