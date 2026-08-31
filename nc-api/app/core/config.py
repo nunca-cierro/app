@@ -100,6 +100,13 @@ class Settings(BaseSettings):
             raise ValueError("JWT_SECRET es obligatorio. Generalo con: openssl rand -base64 48")
         return v
 
+    # ── Session cookies (Slice B — auth-session-cookies) ─────────────────
+    # Secure flag for the httpOnly session cookie + the CSRF double-submit
+    # cookie. Production default True; the dev .env sets AUTH_COOKIE_SECURE=
+    # false so the cookies work over plain http://localhost (browsers reject
+    # Secure cookies on non-HTTPS origins). Spec AS-1.
+    auth_cookie_secure: bool = True
+
     # ── Encryption ─────────────────────────────────────────────────────────
     encryption_key: str = ""
 

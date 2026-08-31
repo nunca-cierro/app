@@ -62,3 +62,18 @@ def test_internal_tenant_slug_can_be_empty() -> None:
     # Empty = safe fallback (no tenant is exempt from payment).
     s = _settings(internal_tenant_slug="")
     assert s.internal_tenant_slug == ""
+
+
+# ── Auth session cookies (Slice B — AS-1: Secure per environment) ──────────
+
+
+def test_auth_cookie_secure_defaults_to_true() -> None:
+    """Production default: the session/CSRF cookies MUST be Secure."""
+    s = _settings()
+    assert s.auth_cookie_secure is True
+
+
+def test_auth_cookie_secure_can_be_disabled_for_local_dev() -> None:
+    """Dev .env sets AUTH_COOKIE_SECURE=false so local http:// works."""
+    s = _settings(auth_cookie_secure=False)
+    assert s.auth_cookie_secure is False
