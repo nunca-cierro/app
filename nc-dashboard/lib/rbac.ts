@@ -106,3 +106,23 @@ export function canCreateAgents(
 ): boolean {
   return role === "superadmin" || role === "admin";
 }
+
+/**
+ * Tenant creation is superadmin-only OR first-tenant onboarding for
+ * tenantless users (mirrors the backend POST /tenants contract — a tenantless
+ * non-superadmin is allowed, any tenantful non-superadmin is not). Gates
+ * tenants/new: a client WITH a tenant reaches the page via the prefix route
+ * match and the layout effect does not redirect, so the page itself gates.
+ */
+export function canCreateTenant(
+  user: {
+    role?: string | null;
+    current_role?: string | null;
+    tenant_id?: string | null;
+    current_tenant_id?: string | null;
+  } | null | undefined,
+): boolean {
+  if (!user) return false;
+  const effectiveRole = user.current_role ?? user.role;
+  return effectiveRole === "superadmin" || isTenantless(user);
+}
