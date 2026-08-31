@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   SIGNED_IN_COOKIE,
+  ACCESS_TOKEN_COOKIE,
   clearSignedInCookie,
   evaluateDashboardAccess,
+  evaluateDashboardAccessWithRole,
   setSignedInCookie,
 } from "@/lib/route-guard";
 
@@ -28,9 +30,63 @@ describe("evaluateDashboardAccess (T4 — proxy guard)", () => {
   });
 });
 
+describe("evaluateDashboardAccessWithRole (Slice B — server role gate)", () => {
+  it("allows a role on its own routes", () => {
+    expect(
+      evaluateDashboardAccessWithRole("/dashboard/agents", "admin", true),
+    ).toBeNull();
+    expect(
+      evaluateDashboardAccessWithRole("/dashboard/tenants/abc", "admin", true),
+    ).toBeNull();
+    expect(
+      evaluateDashboardAccessWithRole("/dashboard", "superadmin", true),
+    ).toBeNull();
+  });
+
+  it("redirects client away from agents/platforms/admin to their landing", () => {
+    expect(
+      evaluateDashboardAccessWithRole("/dashboard/agents", "client", true),
+    ).toBe("/dashboard/conversations");
+    expect(
+      evaluateDashboardAccessWithRole("/dashboard/platforms", "client", true),
+    ).toBe("/dashboard/conversations");
+    expect(
+      evaluateDashboardAccessWithRole("/dashboard/admin/users", "client", true),
+    ).toBe("/dashboard/conversations");
+  });
+
+  it("lets client through on conversations and their own tenants", () => {
+    expect(
+      evaluateDashboardAccessWithRole("/dashboard/conversations", "client", true),
+    ).toBeNull();
+    expect(
+      evaluateDashboardAccessWithRole("/dashboard/tenants/abc", "client", true),
+    ).toBeNull();
+  });
+
+  it("redirects admin away from the superadmin-only /dashboard/admin tree", () => {
+    expect(
+      evaluateDashboardAccessWithRole("/dashboard/admin/users", "admin", true),
+    ).toBe("/dashboard/tenants");
+  });
+
+  it("falls back to the signed-in marker when no role is decoded", () => {
+    expect(
+      evaluateDashboardAccessWithRole("/dashboard/agents", null, false),
+    ).toBe("/auth/login");
+    expect(
+      evaluateDashboardAccessWithRole("/dashboard/agents", null, true),
+    ).toBeNull();
+  });
+});
+
 describe("signed-in cookie helpers (client-side marker)", () => {
   it("exposes the nc_signed_in cookie name used by the proxy", () => {
     expect(SIGNED_IN_COOKIE).toBe("nc_signed_in");
+  });
+
+  it("exposes the httpOnly session cookie name (Slice B)", () => {
+    expect(ACCESS_TOKEN_COOKIE).toBe("nc_access_token");
   });
 
   it("no-ops safely in a server environment (no document)", () => {
