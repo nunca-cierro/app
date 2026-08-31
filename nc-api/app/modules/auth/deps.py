@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 import typing as t
 
-from fastapi import Depends, HTTPException, Query, status
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy import select
@@ -87,17 +87,15 @@ class RoleChecker:
 
 
 async def get_current_user_sse(
-    token: str | None = Query(default=None, description="JWT passed as ?token= for EventSource streams"),
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     session: AsyncSession = Depends(get_session),
 ) -> User:
     """Authenticate an SSE stream.
 
-    ``EventSource`` in browsers cannot send ``Authorization`` headers, so
-    the JWT is accepted either via the ``?token=`` query param (used by the
-    dashboard) or the standard ``Authorization: Bearer`` header (used by
-    tools/curl). Falls back to the shared :func:`get_current_user` logic.
+    Header-only: the ``?token=`` query fallback was removed — ``EventSource``
+    cannot send headers, but no EventSource consumers remain (the dashboard
+    uses fetch + Authorization header). A request with ``?token=<jwt>`` is now
+    an unauthenticated request (the param is ignored) and returns 401.
+    Delegates to the shared :func:`get_current_user` logic.
     """
-    if token:
-        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
     return await get_current_user(credentials=credentials, session=session)
