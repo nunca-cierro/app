@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { apiClient, ApiError } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
 import type { Tenant } from "@/lib/types";
 import type { TenantFormValues } from "@/lib/schemas/tenant";
 import { slugify } from "@/lib/utils";
@@ -20,10 +21,39 @@ export interface UseTenantReturn {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Pure: PATCH body builder (testable without rendering)              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Build the PATCH /tenants/{id} body for a role.
+ *
+ * Client (T5/owner decision #1): ONLY business-card fields {name, timezone,
+ * locale, notes} — the backend rejects plan/slug/business_profile for client
+ * with 403, so they are never sent. Admin/superadmin keep the full form plus
+ * the auto-generated slug (schema-ignored by the backend, kept for parity).
+ */
+export function buildTenantPatchBody(
+  data: TenantFormValues,
+  role: string | null | undefined,
+): Record<string, unknown> {
+  if (role === "client") {
+    return {
+      name: data.name,
+      timezone: data.timezone,
+      locale: data.locale,
+      notes: data.notes ?? null,
+    };
+  }
+  return { ...data, slug: slugify(data.name) };
+}
+
+/* ------------------------------------------------------------------ */
 /*  Hook                                                               */
 /* ------------------------------------------------------------------ */
 
 export function useTenant(id: string): UseTenantReturn {
+  const { user } = useAuth();
+  const effectiveRole = user?.current_role ?? user?.role;
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,15 +86,12 @@ export function useTenant(id: string): UseTenantReturn {
     async (data: TenantFormValues): Promise<Tenant> => {
       const updated = await apiClient<Tenant>(`/api/v1/tenants/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({
-          ...data,
-          slug: slugify(data.name), // ← auto-generado
-        }),
+        body: JSON.stringify(buildTenantPatchBody(data, effectiveRole)),
       });
       setTenant(updated);
       return updated;
     },
-    [id],
+    [id, effectiveRole],
   );
 
   const deleteTenant = useCallback(async () => {

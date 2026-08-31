@@ -54,16 +54,16 @@ describe("RBAC route matrix", () => {
   );
 
   it.each(["client"] as UserRole[])(
-    "blocks /dashboard/tenants for %s",
+    "allows /dashboard/tenants for %s (own business card — owner decision #1)",
     (role) => {
-      expect(isRouteAllowed(role, "/dashboard/tenants")).toBe(false);
+      expect(isRouteAllowed(role, "/dashboard/tenants")).toBe(true);
     },
   );
 
   it.each(["client"] as UserRole[])(
-    "blocks /dashboard/tenants/abc for %s",
+    "allows /dashboard/tenants/abc for %s (own business card — owner decision #1)",
     (role) => {
-      expect(isRouteAllowed(role, "/dashboard/tenants/abc")).toBe(false);
+      expect(isRouteAllowed(role, "/dashboard/tenants/abc")).toBe(true);
     },
   );
 

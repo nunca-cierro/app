@@ -68,6 +68,10 @@ export function TenantForm({
   // Plan changes are restricted to superadmin server-side (self-upgrade guard);
   // only superadmin sees the plan selector.
   const canManagePlan = effectiveRole === "superadmin";
+  // The backend (T1) restricts client PATCHes to business-card fields
+  // {name, timezone, locale, notes} — business_profile would 403, so client
+  // never sees the section. Admin/superadmin keep it (backend allows it).
+  const canEditBusinessProfile = effectiveRole !== "client";
 
   const {
     register,
@@ -187,7 +191,8 @@ export function TenantForm({
         )}
       </div>
 
-      {/* ── Business profile (fills template placeholders) ── */}
+      {/* ── Business profile (fills template placeholders) — hidden for client (T5) ── */}
+      {canEditBusinessProfile && (
       <div className="space-y-3 rounded-lg border p-4">
         <div>
           <h3 className="text-sm font-medium">Perfil de negocio</h3>
@@ -298,6 +303,7 @@ export function TenantForm({
           </p>
         </div>
       </div>
+      )}
 
       {/* ── Submit ── */}
       <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">

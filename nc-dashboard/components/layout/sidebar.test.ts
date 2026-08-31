@@ -78,32 +78,34 @@ describe("sidebar nav items — superadmin", () => {
 describe("sidebar nav items — client", () => {
   const role: UserRole = "client";
 
-  it("hides Negocios, Agentes and Plataformas for client role", () => {
+  it("hides Agentes and Conexiones but keeps Negocios for client role", () => {
     const items = getNavItems(role);
     const labels = items.map((i) => i.label);
-    expect(labels).not.toContain("Negocios");
+    expect(labels).toContain("Negocios");
     expect(labels).not.toContain("Agentes");
     expect(labels).not.toContain("Plataformas");
   });
 
-  it("shows Dashboard and Conversaciones for client role", () => {
+  it("shows Dashboard, Negocios and Conversaciones for client role", () => {
     const items = getNavItems(role);
     const labels = items.map((i) => i.label);
     expect(labels).toContain("Dashboard");
+    expect(labels).toContain("Negocios");
     expect(labels).toContain("Conversaciones");
   });
 
-  it("shows only 2 items for client role", () => {
+  it("shows only 3 items for client role (own business card — owner decision #1)", () => {
     const items = getNavItems(role);
-    expect(items.length).toBe(2);
+    expect(items.length).toBe(3);
   });
 
-  it("client on basic plan still sees Dashboard and Conversaciones", () => {
+  it("client on basic plan still sees Dashboard, Negocios and Conversaciones", () => {
     // Plan must control actions, never dashboard entry
     const items = getNavItems(role, "basic");
     const labels = items.map((i) => i.label);
-    expect(items.length).toBe(2);
+    expect(items.length).toBe(3);
     expect(labels).toContain("Dashboard");
+    expect(labels).toContain("Negocios");
     expect(labels).toContain("Conversaciones");
     expect(labels).not.toContain("Agentes");
     expect(labels).not.toContain("Conexiones");

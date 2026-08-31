@@ -8,7 +8,10 @@ import type { UserRole } from "@/lib/types";
 export const ROLE_ROUTE_MATRIX: Record<UserRole, readonly string[]> = {
   superadmin: ["/dashboard", "/dashboard/admin", "/dashboard/tenants", "/dashboard/agents", "/dashboard/platforms", "/dashboard/conversations"],
   admin: ["/dashboard/tenants", "/dashboard/agents", "/dashboard/platforms", "/dashboard/conversations"],
-  client: ["/dashboard/conversations"],
+  // client: conversations + their OWN business (Negocios). Owner decision #1 —
+  // the client edits their own tenant's business card; the backend restricts
+  // PATCH /tenants/{id} to business-card fields on the current tenant.
+  client: ["/dashboard/conversations", "/dashboard/tenants"],
 };
 
 const ALL_ROLES: UserRole[] = ["superadmin", "admin", "client"];
