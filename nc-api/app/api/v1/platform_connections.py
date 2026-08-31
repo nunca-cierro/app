@@ -45,9 +45,10 @@ router = APIRouter(prefix="/platform-connections", tags=["platform-connections"]
 # ═══════════════════════════════════════════════════════════════════════════════
 # SSE events — real-time connection state pushes
 # ═══════════════════════════════════════════════════════════════════════════════
-# Separate router: EventSource cannot send Authorization headers, so this
-# endpoint authenticates via ?token= (get_current_user_sse) instead of the
-# header-based admin_deps applied to the main router.
+# Separate router: get_current_user_sse authenticates via the standard
+# Authorization: Bearer header (shared get_current_user logic) — the ?token=
+# query fallback was removed. The separate router keeps this endpoint free of
+# the dependencies applied to the main router.
 
 sse_router = APIRouter(prefix="/platform-connections", tags=["platform-connections"])
 

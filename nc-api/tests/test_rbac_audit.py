@@ -333,7 +333,7 @@ class TestClientMutationMatrix:
     agents, connections, tenants, admin, platform, whatsapp — regardless of
     the tenant plan (trial/basic/professional/enterprise)."""
 
-    @pytest.mark.parametrize("plan", ["basic", "professional", "enterprise"])
+    @pytest.mark.parametrize("plan", ["trial", "basic", "professional", "enterprise"])
     @pytest.mark.asyncio
     async def test_client_cannot_mutate_any_resource(
         self, client: AsyncClient, db_session: AsyncSession, plan: str
