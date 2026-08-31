@@ -17,13 +17,13 @@ from app.modules.auth.user_tenant import UserTenant
 from app.modules.tenants.models import Tenant
 
 
-def _create_tenant(db_session: AsyncSession, name: str, slug: str) -> Tenant:
+def _create_tenant(db_session: AsyncSession, name: str, slug: str, plan: str = "basic") -> Tenant:
     tenant = Tenant(
         id=uuid.uuid4(),
         name=name,
         slug=slug,
         status="active",
-        plan="basic",
+        plan=plan,
         timezone="UTC",
         locale="en",
     )
@@ -321,3 +321,153 @@ async def test_admin_can_assign_tenant(client: AsyncClient, db_session: AsyncSes
         assert response.status_code == 200
     finally:
         app.dependency_overrides.clear()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# RV-2: client-403 matrix — EVERY mutation endpoint rejects client on ANY plan
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TestClientMutationMatrix:
+    """A client (read-only role) gets 403 on every mutation endpoint —
+    agents, connections, tenants, admin, platform, whatsapp — regardless of
+    the tenant plan (trial/basic/professional/enterprise)."""
+
+    @pytest.mark.parametrize("plan", ["basic", "professional", "enterprise"])
+    @pytest.mark.asyncio
+    async def test_client_cannot_mutate_any_resource(
+        self, client: AsyncClient, db_session: AsyncSession, plan: str
+    ) -> None:
+        from app.modules.agents.models import AiAgent
+        from app.modules.platform_connections.models import PlatformConnection
+        from app.modules.whatsapp.models import WhatsAppNumber
+
+        tenant = _create_tenant(db_session, f"Matrix {plan}", f"matrix-{plan}", plan=plan)
+        agent = AiAgent(id=uuid.uuid4(), tenant_id=tenant.id, name="Matrix Agent")
+        conn = PlatformConnection(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            platform_type="whatsapp",
+            display_name="Matrix Conn",
+            credentials="encrypted",
+            status="active",
+        )
+        number = WhatsAppNumber(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            phone_number_id="999",
+            waba_id="waba-999",
+            display_phone_number="+999",
+            status="active",
+        )
+        target = User(
+            id=uuid.uuid4(), email="target-matrix@test.com", name="Target", password_hash="hash"
+        )
+        db_session.add_all([agent, conn, number, target])
+        await db_session.commit()
+
+        client_user = User(
+            id=uuid.uuid4(), email="client-matrix@test.com", name="Client", password_hash="hash"
+        )
+        setattr(client_user, "current_role", UserRole.CLIENT)
+        setattr(client_user, "current_tenant_id", tenant.id)
+
+        async def mock_get_current_user() -> User:
+            return client_user
+
+        app.dependency_overrides[get_current_user] = mock_get_current_user
+        try:
+            mutations: list[tuple[str, str, dict | None]] = [
+                ("POST", "/api/v1/agents", {"name": "X", "tenant_id": str(tenant.id)}),
+                ("POST", f"/api/v1/agents/{agent.id}/prompts", {"content": "p"}),
+                ("PATCH", f"/api/v1/agents/{agent.id}", {"name": "Renamed"}),
+                ("DELETE", f"/api/v1/agents/{agent.id}", None),
+                (
+                    "POST",
+                    "/api/v1/platform-connections",
+                    {
+                        "tenant_id": str(tenant.id),
+                        "platform_type": "whatsapp",
+                        "display_name": "Test",
+                        "credentials": {"token": "x"},
+                        "status": "active",
+                    },
+                ),
+                ("PATCH", f"/api/v1/platform-connections/{conn.id}", {"display_name": "R"}),
+                ("DELETE", f"/api/v1/platform-connections/{conn.id}", None),
+                (
+                    "POST",
+                    "/api/v1/whatsapp-numbers",
+                    {
+                        "tenant_id": str(tenant.id),
+                        "phone_number_id": "12345",
+                        "display_phone_number": "+1234567890",
+                        "status": "active",
+                    },
+                ),
+                ("PATCH", f"/api/v1/whatsapp-numbers/{number.id}", {"display_phone_number": "+0"}),
+                ("DELETE", f"/api/v1/whatsapp-numbers/{number.id}", None),
+                ("PATCH", f"/api/v1/tenants/{tenant.id}", {"name": "Hacked"}),
+                ("DELETE", f"/api/v1/tenants/{tenant.id}", None),
+                (
+                    "POST",
+                    "/api/v1/admin/users",
+                    {"email": "u@t.com", "password": "secret123", "name": "U", "role": "client"},
+                ),
+                ("PATCH", f"/api/v1/admin/users/{target.id}", {"role": "client"}),
+                ("DELETE", f"/api/v1/admin/users/{target.id}", None),
+                ("POST", "/api/v1/agent-templates", {"name": "T", "category": "general"}),
+            ]
+            for method, url, body in mutations:
+                response = await client.request(method, url, json=body)
+                assert response.status_code == 403, (
+                    f"{method} {url} → {response.status_code} on plan={plan} "
+                    f"(detail={response.text[:120]})"
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# UR-9: pre-migration agent JWTs authenticate as client (DB role is truth)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@pytest.mark.asyncio
+async def test_legacy_agent_jwt_authenticates_as_client(db_session: AsyncSession):
+    """A JWT issued BEFORE the migration (role claim 'agent') resolves
+    current_role from DB users.role — now 'client' — and is denied every
+    admin-gated endpoint (UR-9 scenario)."""
+    from unittest.mock import MagicMock
+
+    from fastapi import HTTPException
+    from fastapi.security import HTTPAuthorizationCredentials
+
+    from app.modules.auth.deps import RoleChecker
+    from app.modules.auth.service import create_access_token
+
+    user = User(
+        id=uuid.uuid4(),
+        email="legacy@test.com",
+        name="Legacy Agent",
+        password_hash="hash",
+        role=UserRole.CLIENT,  # post-migration DB role
+    )
+    db_session.add(user)
+    await db_session.commit()
+
+    # Token carries the OLD role claim (issued while the role was still agent)
+    token = create_access_token(str(user.id), user.email, role="agent", tenant_id=None)
+    credentials = MagicMock(spec=HTTPAuthorizationCredentials)
+    credentials.credentials = token
+
+    resolved = await get_current_user(credentials=credentials, session=db_session)
+
+    # current_role comes from DB users.role, never the JWT claim
+    assert resolved.current_role == UserRole.CLIENT
+
+    # Admin-gated endpoints deny the legacy user
+    checker = RoleChecker(allowed_roles=[UserRole.SUPERADMIN])
+    with pytest.raises(HTTPException) as exc:
+        await checker(user=resolved)
+    assert exc.value.status_code == 403

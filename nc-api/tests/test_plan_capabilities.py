@@ -283,6 +283,30 @@ class TestMeCapabilities:
         finally:
             app.dependency_overrides.clear()
 
+    @pytest.mark.asyncio
+    async def test_me_returns_view_only_for_client_on_professional_plan(
+        self, client: AsyncClient, db_session: AsyncSession, user: User
+    ) -> None:
+        """RV-3: /auth/me for a client on professional reports ONLY view caps."""
+        tenant = _create_tenant(db_session, "Pro Me", "pro-me", plan="professional")
+        await db_session.commit()
+        user.role = UserRole.CLIENT
+        _act_as(user, UserRole.CLIENT, tenant.id)
+        try:
+            response = await client.get("/api/v1/auth/me")
+            assert response.status_code == 200
+            caps = response.json()["capabilities"]
+            assert set(caps) == {
+                "dashboard.view",
+                "conversations.view",
+                "business.view",
+            }
+            assert CAP_BUSINESS_EDIT not in caps
+            assert CAP_AGENTS_MANAGE not in caps
+            assert CAP_AI not in caps
+        finally:
+            app.dependency_overrides.clear()
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Self-upgrade guard — plan/status tampering on tenants
