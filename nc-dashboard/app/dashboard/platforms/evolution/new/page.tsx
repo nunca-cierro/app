@@ -40,14 +40,11 @@ export default function PlatformsNewEvolutionPage() {
   useEffect(() => {
     if (step !== "qr" || !connectionId) return;
 
-    const token = localStorage.getItem("nc_access_token");
-    if (!token) return;
-
-    // Token travels in the Authorization header — never in the URL.
+    // The httpOnly session cookie authenticates the stream
+    // (credentials:"include" — Slice B, AS-7).
     const closeStream = openSseStream(
       `/api/v1/platform-connections/${connectionId}/events`,
       {
-        token,
         onMessage: (msg) => {
           if (
             msg.type === "connection_state_changed" &&

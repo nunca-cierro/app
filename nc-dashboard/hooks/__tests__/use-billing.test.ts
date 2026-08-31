@@ -4,7 +4,6 @@ vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
   return {
     ...actual,
-    TOKEN_KEYS: { access: "test_token", user: "test_user" },
   };
 });
 

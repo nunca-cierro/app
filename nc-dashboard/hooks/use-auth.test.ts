@@ -1,12 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { restoreUserFromProfile } from "@/hooks/use-auth";
+import {
+  restoreUserFromProfile,
+  runLogoutFlow,
+} from "@/hooks/use-auth";
 
 vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
   return {
     ...actual,
-    TOKEN_KEYS: { access: "test_token", user: "test_user" },
     switchTenant: vi.fn(),
   };
 });
@@ -49,6 +51,31 @@ describe("restoreUserFromProfile — silent /auth/me restore", () => {
       tenant_id: null,
     });
     expect(restored.plan).toBeNull();
+  });
+});
+
+describe("runLogoutFlow — async logout (AS-8/AS-9)", () => {
+  it("calls the API, clears the proxy marker, and redirects", async () => {
+    const apiLogout = vi.fn().mockResolvedValue({ status: "ok" });
+    const clearMarker = vi.fn();
+    const navigate = vi.fn();
+
+    await runLogoutFlow(apiLogout, clearMarker, navigate);
+
+    expect(apiLogout).toHaveBeenCalledTimes(1);
+    expect(clearMarker).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith("/auth/login");
+  });
+
+  it("still redirects when the API call fails (dead session)", async () => {
+    const apiLogout = vi.fn().mockRejectedValue(new Error("session expired"));
+    const clearMarker = vi.fn();
+    const navigate = vi.fn();
+
+    await runLogoutFlow(apiLogout, clearMarker, navigate);
+
+    expect(clearMarker).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith("/auth/login");
   });
 });
 
