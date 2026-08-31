@@ -57,7 +57,9 @@ describe("hasCapability — safe fallback for legacy sessions (no capabilities)"
     const u = user({ plan: "basic", capabilities: null });
     expect(hasCapability(u, CAPABILITIES.dashboardView)).toBe(true);
     expect(hasCapability(u, CAPABILITIES.conversationsView)).toBe(true);
-    expect(hasCapability(u, CAPABILITIES.businessView)).toBe(false);
+    // business.view is read-only — part of the client view-only set (UR-7)
+    expect(hasCapability(u, CAPABILITIES.businessView)).toBe(true);
+    expect(hasCapability(u, CAPABILITIES.businessEdit)).toBe(false);
     expect(hasCapability(u, CAPABILITIES.agentsManage)).toBe(false);
   });
 
@@ -71,6 +73,17 @@ describe("hasCapability — safe fallback for legacy sessions (no capabilities)"
   it("enterprise fallback includes edit", () => {
     const u = user({ role: "admin", plan: "enterprise", capabilities: null });
     expect(hasCapability(u, CAPABILITIES.businessEdit)).toBe(true);
+  });
+
+  it("client fallback is view-only even on professional/enterprise plans (UR-7)", () => {
+    const pro = user({ role: "client", plan: "professional", capabilities: null });
+    expect(hasCapability(pro, CAPABILITIES.businessView)).toBe(true);
+    expect(hasCapability(pro, CAPABILITIES.businessEdit)).toBe(false);
+    expect(hasCapability(pro, CAPABILITIES.agentsManage)).toBe(false);
+
+    const ent = user({ role: "client", plan: "enterprise", capabilities: null });
+    expect(hasCapability(ent, CAPABILITIES.businessView)).toBe(true);
+    expect(hasCapability(ent, CAPABILITIES.connectionsManage)).toBe(false);
   });
 
   it("superadmin fallback gets everything", () => {

@@ -8,11 +8,10 @@ import type { UserRole } from "@/lib/types";
 export const ROLE_ROUTE_MATRIX: Record<UserRole, readonly string[]> = {
   superadmin: ["/dashboard", "/dashboard/admin", "/dashboard/tenants", "/dashboard/agents", "/dashboard/platforms", "/dashboard/conversations"],
   admin: ["/dashboard/tenants", "/dashboard/agents", "/dashboard/platforms", "/dashboard/conversations"],
-  agent: ["/dashboard/conversations"],
   client: ["/dashboard/conversations"],
 };
 
-const ALL_ROLES: UserRole[] = ["superadmin", "admin", "agent", "client"];
+const ALL_ROLES: UserRole[] = ["superadmin", "admin", "client"];
 
 function normalizePath(pathname: string): string {
   if (!pathname) return "/";
@@ -62,4 +61,22 @@ export function getAllowedRolesForPath(pathname: string): UserRole[] {
 export function getRoleLandingRoute(role: UserRole): string {
   const allowed = ROLE_ROUTE_MATRIX[role] ?? [];
   return allowed.length > 0 ? allowed[0] : "/dashboard";
+}
+
+/**
+ * Single source of truth for superadmin-only affordances: the dashboard
+ * quick actions (Nuevo Agente / Nuevo Negocio / Conversaciones), the agents
+ * page header "Nuevo Agente", and the tenants detail "Eliminar" button
+ * (backend DELETE is superadmin-only; PATCH is admin_or_super).
+ *
+ * NOTE (owner decision, "por ahora"): admin keeps its backend edit caps
+ * (agents/connections plan-gated) but TEMPORARILY loses the create quick
+ * actions. The backend still allows POST /agents for admin+superadmin on an
+ * AI-capable plan — this is a deliberate UI asymmetry until admin creation
+ * is re-enabled.
+ */
+export function canSeeQuickActions(
+  role?: UserRole | string | null,
+): boolean {
+  return role === "superadmin";
 }

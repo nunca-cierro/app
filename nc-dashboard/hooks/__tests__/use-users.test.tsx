@@ -49,12 +49,12 @@ describe("useUsers.updateUserRole", () => {
     await renderProbe();
     expect(captured).not.toBeNull();
 
-    await captured!.updateUserRole("user-9", "agent");
+    await captured!.updateUserRole("user-9", "client");
 
     expect(mocks.apiClient).toHaveBeenCalledTimes(1);
     expect(mocks.apiClient).toHaveBeenCalledWith("/api/v1/admin/users/user-9", {
       method: "PATCH",
-      body: JSON.stringify({ role: "agent" }),
+      body: JSON.stringify({ role: "client" }),
     });
   });
 

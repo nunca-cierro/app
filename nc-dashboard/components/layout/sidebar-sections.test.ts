@@ -18,14 +18,12 @@ describe("sidebar nav sections", () => {
     ]);
   });
 
-  it("omits Gestión and Administración for client and agent roles", () => {
-    for (const role of ["client", "agent"] as const) {
-      const sections = getNavSections(role);
-      expect(sections.map((s) => s.label)).toEqual([
-        "General",
-        "Comunicación",
-      ]);
-    }
+  it("omits Gestión and Administración for the client role", () => {
+    const sections = getNavSections("client");
+    expect(sections.map((s) => s.label)).toEqual([
+      "General",
+      "Comunicación",
+    ]);
   });
 
   it("filters Conexiones children by role inside the Gestión section", () => {

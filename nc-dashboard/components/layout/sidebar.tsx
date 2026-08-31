@@ -54,8 +54,8 @@ export interface NavSection {
 /*  Pure: getNavSections(role) + getNavItems(role) — testable          */
 /* ------------------------------------------------------------------ */
 
-const CLIENT_ROUTES: UserRole[] = ["client", "agent"];
-const ADMIN_ROUTES: UserRole[] = ["superadmin", "admin", "agent", "client"];
+const CLIENT_ROUTES: UserRole[] = ["client"];
+const ADMIN_ROUTES: UserRole[] = ["superadmin", "admin", "client"];
 
 function filterChildren(item: NavItem, role?: UserRole | null): NavItem {
   if (!item.children) return item;

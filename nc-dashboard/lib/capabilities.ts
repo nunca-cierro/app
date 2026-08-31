@@ -31,27 +31,38 @@ export interface CapabilityUser {
 
 /**
  * Safe fallback for sessions that predate the `capabilities` field — mirrors
- * the backend matrix (basic/trial → view-only; professional adds management,
- * AI and business edit; superadmin → everything).
+ * the backend matrix: superadmin → everything; admin → plan-gated; client
+ * (and unknown/stale roles) → view-only on ANY plan. business.view is kept so
+ * the client dashboard still renders the read-only business config.
  */
 function fallbackCapabilities(user: CapabilityUser): Capability[] {
   const role = user.current_role ?? user.role;
   const plan = user.plan ?? null;
 
   if (role === "superadmin") return [...ALL_CAPABILITIES];
-  if (plan === "professional" || plan === "enterprise") {
-    return [
-      CAPABILITIES.dashboardView,
-      CAPABILITIES.conversationsView,
-      CAPABILITIES.agentsManage,
-      CAPABILITIES.connectionsManage,
-      CAPABILITIES.ai,
-      CAPABILITIES.businessView,
-      CAPABILITIES.businessEdit,
-    ];
+  if (role === "admin") {
+    // Admin is plan-gated exactly like the backend matrix.
+    if (plan === "professional" || plan === "enterprise") {
+      return [
+        CAPABILITIES.dashboardView,
+        CAPABILITIES.conversationsView,
+        CAPABILITIES.agentsManage,
+        CAPABILITIES.connectionsManage,
+        CAPABILITIES.ai,
+        CAPABILITIES.businessView,
+        CAPABILITIES.businessEdit,
+      ];
+    }
+    // basic/trial/unknown plan → view-only dashboard + conversations
+    return [CAPABILITIES.dashboardView, CAPABILITIES.conversationsView];
   }
-  // basic/trial/unknown → view-only dashboard + conversations
-  return [CAPABILITIES.dashboardView, CAPABILITIES.conversationsView];
+  // client + unknown/stale roles → view-only on ANY plan (UR-7). business.view
+  // is kept so the client dashboard still renders the read-only config.
+  return [
+    CAPABILITIES.dashboardView,
+    CAPABILITIES.conversationsView,
+    CAPABILITIES.businessView,
+  ];
 }
 
 /**
