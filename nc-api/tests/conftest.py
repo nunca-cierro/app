@@ -14,6 +14,10 @@ os.environ.setdefault("JWT_SECRET", "test-jwt-secret-not-production")
 os.environ.setdefault("PAYMENT_NEQUI_NUMBER", "3001234567")
 os.environ.setdefault("PAYMENT_BREB_NUMBER", "3007654321")
 os.environ.setdefault("PAYMENT_ACCOUNT_HOLDER", "NuncaCierro SAS")
+# Pin the Secure cookie flag for the test env: the dev .env sets
+# AUTH_COOKIE_SECURE=false (local http), but tests must verify the
+# production Secure-on behavior deterministically (Slice B, AS-1).
+os.environ.setdefault("AUTH_COOKIE_SECURE", "true")
 
 import asyncpg
 import pytest
