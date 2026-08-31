@@ -21,7 +21,7 @@ class UserTenant(Base):
         UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), primary_key=True
     )
     role: Mapped[str] = mapped_column(
-        String(20), nullable=False, default=UserRole.AGENT
+        String(20), nullable=False, default=UserRole.CLIENT
     )
     is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 

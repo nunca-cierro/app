@@ -42,6 +42,28 @@ async def test_register_creates_user_with_default_role(client: AsyncClient, db_s
 @pytest.mark.asyncio
 async def test_register_with_custom_role(client: AsyncClient, db_session: AsyncSession):
     payload = {
+        "email": "client@test.com",
+        "password": "securepassword123",
+        "name": "Client User",
+        "role": "client",
+    }
+    response = await client.post("/api/v1/auth/register", json=payload)
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["role"] == "client"
+
+    # Verify in DB
+    result = await db_session.execute(select(User).where(User.email == "client@test.com"))
+    user = result.scalar_one_or_none()
+    assert user is not None
+    assert user.role == UserRole.CLIENT
+
+
+@pytest.mark.asyncio
+async def test_register_agent_role_rejected(client: AsyncClient, db_session: AsyncSession):
+    """role='agent' left the enum — public self-registration must 422 (UR-6)."""
+    payload = {
         "email": "agent@test.com",
         "password": "securepassword123",
         "name": "Agent User",
@@ -49,15 +71,11 @@ async def test_register_with_custom_role(client: AsyncClient, db_session: AsyncS
     }
     response = await client.post("/api/v1/auth/register", json=payload)
 
-    assert response.status_code == 201
-    data = response.json()
-    assert data["role"] == "agent"
+    assert response.status_code == 422
 
-    # Verify in DB
+    # No user should have been created
     result = await db_session.execute(select(User).where(User.email == "agent@test.com"))
-    user = result.scalar_one_or_none()
-    assert user is not None
-    assert user.role == UserRole.AGENT
+    assert result.scalar_one_or_none() is None
 
 
 @pytest.mark.asyncio

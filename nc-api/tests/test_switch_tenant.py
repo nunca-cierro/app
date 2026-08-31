@@ -47,7 +47,7 @@ async def test_switch_tenant_valid(client: AsyncClient, db_session: AsyncSession
     await db_session.flush()
 
     ut1 = UserTenant(user_id=user.id, tenant_id=t1.id, role=UserRole.ADMIN, is_primary=True)
-    ut2 = UserTenant(user_id=user.id, tenant_id=t2.id, role=UserRole.AGENT, is_primary=False)
+    ut2 = UserTenant(user_id=user.id, tenant_id=t2.id, role=UserRole.CLIENT, is_primary=False)
     db_session.add(ut1)
     db_session.add(ut2)
     await db_session.commit()
@@ -69,14 +69,14 @@ async def test_switch_tenant_valid(client: AsyncClient, db_session: AsyncSession
         assert response.status_code == 200
         data = response.json()
         assert data["tenant_id"] == str(t2.id)
-        assert data["role"] == UserRole.AGENT
+        assert data["role"] == UserRole.CLIENT
 
         # Verify JWT contains new tenant context
         from jose import jwt
         from app.core.config import settings
 
         decoded = jwt.decode(data["access_token"], settings.jwt_secret, algorithms=["HS256"])
-        assert decoded["role"] == UserRole.AGENT
+        assert decoded["role"] == UserRole.CLIENT
         assert decoded["tenant_id"] == str(t2.id)
     finally:
         app.dependency_overrides.clear()
@@ -175,7 +175,7 @@ async def test_switch_tenant_suspended_returns_403(client: AsyncClient, db_sessi
     await db_session.flush()
 
     ut1 = UserTenant(user_id=user.id, tenant_id=active_t.id, role=UserRole.ADMIN, is_primary=True)
-    ut2 = UserTenant(user_id=user.id, tenant_id=suspended_t.id, role=UserRole.AGENT, is_primary=False)
+    ut2 = UserTenant(user_id=user.id, tenant_id=suspended_t.id, role=UserRole.CLIENT, is_primary=False)
     db_session.add(ut1)
     db_session.add(ut2)
     await db_session.commit()

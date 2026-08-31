@@ -391,7 +391,7 @@ class TestEscalationAndIsolation:
                 json={
                     "user_id": str(target.id),
                     "tenant_id": str(other.id),
-                    "role": "agent",
+                    "role": "client",
                 },
             )
             assert response.status_code == 403
@@ -416,7 +416,7 @@ class TestEscalationAndIsolation:
                 json={
                     "user_id": str(target.id),
                     "tenant_id": str(own.id),
-                    "role": "agent",
+                    "role": "client",
                 },
             )
             assert response.status_code == 200, response.text
@@ -470,7 +470,7 @@ class TestEscalationAndIsolation:
                 json={
                     "user_id": str(target.id),
                     "tenant_id": str(own.id),
-                    "role": "agent",
+                    "role": "client",
                 },
             )
             assert response.status_code == 403

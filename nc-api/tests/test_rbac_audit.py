@@ -32,9 +32,9 @@ def _create_tenant(db_session: AsyncSession, name: str, slug: str) -> Tenant:
 
 
 @pytest_asyncio.fixture
-async def agent_user(db_session: AsyncSession) -> User:
-    """Return a user with AGENT role attached to a tenant."""
-    user = User(id=uuid.uuid4(), email="agent@test.com", name="Agent User", password_hash="hash")
+async def client_user(db_session: AsyncSession) -> User:
+    """Return a user with CLIENT role attached to a tenant (read-only role)."""
+    user = User(id=uuid.uuid4(), email="client@test.com", name="Client User", password_hash="hash")
     db_session.add(user)
     await db_session.flush()
     return user
@@ -61,19 +61,19 @@ async def tenant_with_data(db_session: AsyncSession, admin_user: User) -> Tenant
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Agent role: should NOT be able to create/delete agents, platform connections,
-# whatsapp numbers, tenants, or assign tenants
+# Client role (read-only): should NOT be able to create/delete agents, platform
+# connections, whatsapp numbers, tenants, or assign tenants — on ANY plan (RV-2)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 @pytest.mark.asyncio
-async def test_agent_cannot_create_agent(client: AsyncClient, db_session: AsyncSession, agent_user: User, tenant_with_data: Tenant):
-    """AGENT role should get 403 when creating an agent."""
-    setattr(agent_user, "current_role", UserRole.AGENT)
-    setattr(agent_user, "current_tenant_id", tenant_with_data.id)
+async def test_client_cannot_create_agent(client: AsyncClient, db_session: AsyncSession, client_user: User, tenant_with_data: Tenant):
+    """CLIENT role should get 403 when creating an agent."""
+    setattr(client_user, "current_role", UserRole.CLIENT)
+    setattr(client_user, "current_tenant_id", tenant_with_data.id)
 
     async def mock_get_current_user():
-        return agent_user
+        return client_user
 
     app.dependency_overrides[get_current_user] = mock_get_current_user
     try:
@@ -87,19 +87,19 @@ async def test_agent_cannot_create_agent(client: AsyncClient, db_session: AsyncS
 
 
 @pytest.mark.asyncio
-async def test_agent_cannot_delete_agent(client: AsyncClient, db_session: AsyncSession, agent_user: User, tenant_with_data: Tenant):
-    """AGENT role should get 403 when deleting an agent."""
+async def test_client_cannot_delete_agent(client: AsyncClient, db_session: AsyncSession, client_user: User, tenant_with_data: Tenant):
+    """CLIENT role should get 403 when deleting an agent."""
     from app.modules.agents.models import AiAgent
 
     agent = AiAgent(id=uuid.uuid4(), tenant_id=tenant_with_data.id, name="Delete Me")
     db_session.add(agent)
     await db_session.commit()
 
-    setattr(agent_user, "current_role", UserRole.AGENT)
-    setattr(agent_user, "current_tenant_id", tenant_with_data.id)
+    setattr(client_user, "current_role", UserRole.CLIENT)
+    setattr(client_user, "current_tenant_id", tenant_with_data.id)
 
     async def mock_get_current_user():
-        return agent_user
+        return client_user
 
     app.dependency_overrides[get_current_user] = mock_get_current_user
     try:
@@ -110,13 +110,13 @@ async def test_agent_cannot_delete_agent(client: AsyncClient, db_session: AsyncS
 
 
 @pytest.mark.asyncio
-async def test_agent_cannot_create_platform_connection(client: AsyncClient, db_session: AsyncSession, agent_user: User, tenant_with_data: Tenant):
-    """AGENT role should get 403 when creating a platform connection."""
-    setattr(agent_user, "current_role", UserRole.AGENT)
-    setattr(agent_user, "current_tenant_id", tenant_with_data.id)
+async def test_client_cannot_create_platform_connection(client: AsyncClient, db_session: AsyncSession, client_user: User, tenant_with_data: Tenant):
+    """CLIENT role should get 403 when creating a platform connection."""
+    setattr(client_user, "current_role", UserRole.CLIENT)
+    setattr(client_user, "current_tenant_id", tenant_with_data.id)
 
     async def mock_get_current_user():
-        return agent_user
+        return client_user
 
     app.dependency_overrides[get_current_user] = mock_get_current_user
     try:
@@ -136,8 +136,8 @@ async def test_agent_cannot_create_platform_connection(client: AsyncClient, db_s
 
 
 @pytest.mark.asyncio
-async def test_agent_cannot_delete_platform_connection(client: AsyncClient, db_session: AsyncSession, agent_user: User, tenant_with_data: Tenant):
-    """AGENT role should get 403 when deleting a platform connection."""
+async def test_client_cannot_delete_platform_connection(client: AsyncClient, db_session: AsyncSession, client_user: User, tenant_with_data: Tenant):
+    """CLIENT role should get 403 when deleting a platform connection."""
     from app.modules.platform_connections.models import PlatformConnection
 
     conn = PlatformConnection(
@@ -151,11 +151,11 @@ async def test_agent_cannot_delete_platform_connection(client: AsyncClient, db_s
     db_session.add(conn)
     await db_session.commit()
 
-    setattr(agent_user, "current_role", UserRole.AGENT)
-    setattr(agent_user, "current_tenant_id", tenant_with_data.id)
+    setattr(client_user, "current_role", UserRole.CLIENT)
+    setattr(client_user, "current_tenant_id", tenant_with_data.id)
 
     async def mock_get_current_user():
-        return agent_user
+        return client_user
 
     app.dependency_overrides[get_current_user] = mock_get_current_user
     try:
@@ -166,13 +166,13 @@ async def test_agent_cannot_delete_platform_connection(client: AsyncClient, db_s
 
 
 @pytest.mark.asyncio
-async def test_agent_cannot_create_whatsapp_number(client: AsyncClient, db_session: AsyncSession, agent_user: User, tenant_with_data: Tenant):
-    """AGENT role should get 403 when creating a WhatsApp number."""
-    setattr(agent_user, "current_role", UserRole.AGENT)
-    setattr(agent_user, "current_tenant_id", tenant_with_data.id)
+async def test_client_cannot_create_whatsapp_number(client: AsyncClient, db_session: AsyncSession, client_user: User, tenant_with_data: Tenant):
+    """CLIENT role should get 403 when creating a WhatsApp number."""
+    setattr(client_user, "current_role", UserRole.CLIENT)
+    setattr(client_user, "current_tenant_id", tenant_with_data.id)
 
     async def mock_get_current_user():
-        return agent_user
+        return client_user
 
     app.dependency_overrides[get_current_user] = mock_get_current_user
     try:
@@ -191,13 +191,13 @@ async def test_agent_cannot_create_whatsapp_number(client: AsyncClient, db_sessi
 
 
 @pytest.mark.asyncio
-async def test_agent_cannot_create_tenant(client: AsyncClient, db_session: AsyncSession, agent_user: User, tenant_with_data: Tenant):
-    """AGENT role should get 403 when creating a tenant."""
-    setattr(agent_user, "current_role", UserRole.AGENT)
-    setattr(agent_user, "current_tenant_id", tenant_with_data.id)
+async def test_client_cannot_create_tenant(client: AsyncClient, db_session: AsyncSession, client_user: User, tenant_with_data: Tenant):
+    """CLIENT role should get 403 when creating a tenant."""
+    setattr(client_user, "current_role", UserRole.CLIENT)
+    setattr(client_user, "current_tenant_id", tenant_with_data.id)
 
     async def mock_get_current_user():
-        return agent_user
+        return client_user
 
     app.dependency_overrides[get_current_user] = mock_get_current_user
     try:
@@ -211,13 +211,13 @@ async def test_agent_cannot_create_tenant(client: AsyncClient, db_session: Async
 
 
 @pytest.mark.asyncio
-async def test_agent_cannot_access_admin_panel(client: AsyncClient, db_session: AsyncSession, agent_user: User):
-    """AGENT role should get 403 when listing users (admin endpoint)."""
-    setattr(agent_user, "current_role", UserRole.AGENT)
-    setattr(agent_user, "current_tenant_id", None)
+async def test_client_cannot_access_admin_panel(client: AsyncClient, db_session: AsyncSession, client_user: User):
+    """CLIENT role should get 403 when listing users (admin endpoint)."""
+    setattr(client_user, "current_role", UserRole.CLIENT)
+    setattr(client_user, "current_tenant_id", None)
 
     async def mock_get_current_user():
-        return agent_user
+        return client_user
 
     app.dependency_overrides[get_current_user] = mock_get_current_user
     try:
@@ -315,7 +315,7 @@ async def test_admin_can_assign_tenant(client: AsyncClient, db_session: AsyncSes
         payload = {
             "user_id": str(target_user.id),
             "tenant_id": str(tenant.id),
-            "role": "agent",
+            "role": "client",
         }
         response = await client.post("/api/v1/admin/assign-tenant", json=payload)
         assert response.status_code == 200
