@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAgents } from "@/hooks/use-agents";
 import { useTenants } from "@/hooks/use-tenants";
+import { useAuth } from "@/hooks/use-auth";
+import { canCreateAgents } from "@/lib/rbac";
+import { AccessDeniedCard } from "@/components/access-denied";
 import { AgentForm } from "@/app/dashboard/agents/components/agent-form";
 import { TemplateSelector } from "@/app/dashboard/agents/components/template-selector";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,9 +22,17 @@ export default function NewAgentPage() {
   const router = useRouter();
   const { createAgent, createAgentFromTemplate } = useAgents();
   const { tenants, isLoading: loadingTenants } = useTenants();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedTemplate, setSelectedTemplate] =
     useState<AgentTemplate | null>(null);
+
+  // Agent creation is admin/superadmin only (T3). Client never reaches this
+  // page via the matrix (layout redirects), but a direct URL must not render
+  // the create form during the guard-window flash.
+  if (!canCreateAgents(user?.current_role ?? user?.role)) {
+    return <AccessDeniedCard />;
+  }
 
   const handleSubmit = async (data: AgentFormValues) => {
     setIsSubmitting(true);

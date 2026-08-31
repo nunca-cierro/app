@@ -8,6 +8,10 @@
 /* ------------------------------------------------------------------ */
 
 import type { AuthUser, LoginResponse, Tenant } from "@/lib/types";
+import {
+  clearSignedInCookie,
+  setSignedInCookie,
+} from "@/lib/route-guard";
 
 export const TOKEN_KEYS = {
   access: "nc_access_token",
@@ -48,6 +52,8 @@ export async function login(
     TOKEN_KEYS.user,
     JSON.stringify({ id: data.user_id, email: data.email, name: data.name }),
   );
+  // Server-readable signed-in marker for the proxy guard (T4).
+  setSignedInCookie();
   return data;
 }
 
@@ -74,6 +80,8 @@ export async function register(
     TOKEN_KEYS.user,
     JSON.stringify({ id: data.user_id, email: data.email, name: data.name }),
   );
+  // Server-readable signed-in marker for the proxy guard (T4).
+  setSignedInCookie();
   return data;
 }
 
@@ -103,6 +111,8 @@ export async function switchTenant(tenantId: string): Promise<LoginResponse> {
     TOKEN_KEYS.user,
     JSON.stringify({ id: data.user_id, email: data.email, name: data.name }),
   );
+  // Server-readable signed-in marker for the proxy guard (T4).
+  setSignedInCookie();
   return data;
 }
 
@@ -152,6 +162,7 @@ export async function apiClient<T = unknown>(
     // Token expired or invalid — clear and redirect
     localStorage.removeItem(TOKEN_KEYS.access);
     localStorage.removeItem(TOKEN_KEYS.user);
+    clearSignedInCookie();
     if (typeof window !== "undefined") {
       window.location.href = "/auth/login";
     }
