@@ -12,6 +12,7 @@ import {
   clearSignedInCookie,
   setSignedInCookie,
 } from "@/lib/route-guard";
+import { friendlyErrorMessage } from "@/lib/api-errors";
 
 export const TOKEN_KEYS = {
   access: "nc_access_token",
@@ -43,7 +44,10 @@ export async function login(
 
   if (!response.ok) {
     const text = await response.text();
-    throw new ApiError(response.status, text);
+    throw new ApiError(
+      response.status,
+      friendlyErrorMessage(response.status, text),
+    );
   }
 
   const data: LoginResponse = await response.json();
@@ -71,7 +75,10 @@ export async function register(
 
   if (!response.ok) {
     const text = await response.text();
-    throw new ApiError(response.status, text);
+    throw new ApiError(
+      response.status,
+      friendlyErrorMessage(response.status, text),
+    );
   }
 
   const data: LoginResponse = await response.json();
@@ -102,7 +109,10 @@ export async function switchTenant(tenantId: string): Promise<LoginResponse> {
 
   if (!response.ok) {
     const text = await response.text();
-    throw new ApiError(response.status, text);
+    throw new ApiError(
+      response.status,
+      friendlyErrorMessage(response.status, text),
+    );
   }
 
   const data: LoginResponse = await response.json();
@@ -171,7 +181,16 @@ export async function apiClient<T = unknown>(
 
   if (!response.ok) {
     const text = await response.text();
-    throw new ApiError(response.status, text);
+    // T6 — never leak raw backend JSON to users; keep it in the console for
+    // debugging instead.
+    console.error(
+      `[apiClient] ${response.status} ${endpoint} — raw response:`,
+      text,
+    );
+    throw new ApiError(
+      response.status,
+      friendlyErrorMessage(response.status, text),
+    );
   }
 
   return response.status === 204 ? (undefined as T) : response.json();
