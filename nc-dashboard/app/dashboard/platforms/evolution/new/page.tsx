@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePlatformConnections } from "@/hooks/use-platform-connections";
 import { useTenants } from "@/hooks/use-tenants";
+import { useAuth } from "@/hooks/use-auth";
+import { canManagePlatforms } from "@/lib/rbac";
+import { AccessDeniedCard } from "@/components/access-denied";
 import { EvolutionForm } from "@/app/dashboard/platforms/whatsapp/components/evolution-form";
 import { QrDisplay } from "@/app/dashboard/platforms/evolution/components/qr-display";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,11 +24,17 @@ export default function PlatformsNewEvolutionPage() {
   const router = useRouter();
   const { createConnection } = usePlatformConnections();
   const { tenants, isLoading: loadingTenants } = useTenants();
+  const { user } = useAuth();
   const [step, setStep] = useState<Step>("form");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Client is read-only on platforms (T2) — the create flow is unreachable.
+  if (!canManagePlatforms(user?.current_role ?? user?.role)) {
+    return <AccessDeniedCard />;
+  }
 
   // SSE subscription for real-time connection state updates
   useEffect(() => {

@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useWhatsAppNumbers } from "@/hooks/use-whatsapp-numbers";
 import { useTenants } from "@/hooks/use-tenants";
+import { useAuth } from "@/hooks/use-auth";
+import { canManagePlatforms } from "@/lib/rbac";
+import { AccessDeniedCard } from "@/components/access-denied";
 import { WhatsAppForm } from "@/app/dashboard/whatsapp/components/whatsapp-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +20,13 @@ export default function PlatformsNewWhatsAppPage() {
   const router = useRouter();
   const { createNumber } = useWhatsAppNumbers();
   const { tenants, isLoading: loadingTenants } = useTenants();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Client is read-only on platforms (T2) — the create flow is unreachable.
+  if (!canManagePlatforms(user?.current_role ?? user?.role)) {
+    return <AccessDeniedCard />;
+  }
 
   const handleSubmit = async (data: WhatsAppNumberFormValues) => {
     setIsSubmitting(true);

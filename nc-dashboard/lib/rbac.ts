@@ -80,3 +80,15 @@ export function canSeeQuickActions(
 ): boolean {
   return role === "superadmin";
 }
+
+/**
+ * Platform connections are managed by admin/superadmin only (backend
+ * `connections.manage` = [ADMIN, SUPERADMIN]); client is read-only. Gates the
+ * entire platforms tree: create/edit/delete/connect/anti-spam/webhook
+ * controls (T2).
+ */
+export function canManagePlatforms(
+  role?: UserRole | string | null,
+): boolean {
+  return role === "superadmin" || role === "admin";
+}

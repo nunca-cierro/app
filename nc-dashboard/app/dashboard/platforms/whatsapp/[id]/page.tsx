@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useWhatsAppNumber } from "@/hooks/use-whatsapp-number";
 import { useTenants } from "@/hooks/use-tenants";
+import { useAuth } from "@/hooks/use-auth";
+import { canManagePlatforms } from "@/lib/rbac";
 import { WhatsAppInfo } from "@/app/dashboard/whatsapp/components/whatsapp-info";
 import { WhatsAppForm } from "@/app/dashboard/whatsapp/components/whatsapp-form";
 import { Button } from "@/components/ui/button";
@@ -30,6 +32,10 @@ export default function PlatformsWhatsAppDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const { user } = useAuth();
+  // Client is read-only on platforms (T2) — delete/edit controls are
+  // admin/superadmin only; the info tab stays visible.
+  const canManage = canManagePlatforms(user?.current_role ?? user?.role);
   const { number, isLoading, error, updateNumber, deleteNumber } =
     useWhatsAppNumber(id);
   const { tenants, isLoading: loadingTenants } = useTenants();
@@ -130,85 +136,91 @@ export default function PlatformsWhatsAppDetailPage() {
           </Link>
         </Button>
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm">
-              <Trash2 className="mr-2 size-4" />
-              Eliminar
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar número?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción no se puede deshacer. Se eliminará permanentemente
-                el número {number.display_phone_number}.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {isDeleting ? (
-                  <>
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                    Eliminando...
-                  </>
-                ) : (
-                  "Eliminar"
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {canManage && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="mr-2 size-4" />
+                Eliminar
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Eliminar número?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta acción no se puede deshacer. Se eliminará permanentemente
+                  el número {number.display_phone_number}.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      Eliminando...
+                    </>
+                  ) : (
+                    "Eliminar"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       {/* ── Tabs ── */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="info">Información</TabsTrigger>
-          <TabsTrigger value="edit">
-            <Pencil className="mr-2 size-4" />
-            Editar
-          </TabsTrigger>
+          {canManage && (
+            <TabsTrigger value="edit">
+              <Pencil className="mr-2 size-4" />
+              Editar
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="info" className="mt-6">
           <WhatsAppInfo number={number} />
         </TabsContent>
 
-        <TabsContent value="edit" className="mt-6">
-          <Card className="max-w-2xl">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold tracking-tight">
-                Editar Número
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <WhatsAppForm
-                defaultValues={{
-                  phone_number_id: number.phone_number_id,
-                  waba_id: number.waba_id,
-                  display_phone_number: number.display_phone_number,
-                  verified_name: number.verified_name ?? "",
-                  status: number.status as
-                    | "active"
-                    | "inactive"
-                    | "disconnected",
-                  is_primary: number.is_primary,
-                }}
-                onSubmit={handleUpdate}
-                isSubmitting={isSubmitting}
-                mode="edit"
-                tenants={tenants}
-                tenantsLoading={loadingTenants}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {canManage && (
+          <TabsContent value="edit" className="mt-6">
+            <Card className="max-w-2xl">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold tracking-tight">
+                  Editar Número
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <WhatsAppForm
+                  defaultValues={{
+                    phone_number_id: number.phone_number_id,
+                    waba_id: number.waba_id,
+                    display_phone_number: number.display_phone_number,
+                    verified_name: number.verified_name ?? "",
+                    status: number.status as
+                      | "active"
+                      | "inactive"
+                      | "disconnected",
+                    is_primary: number.is_primary,
+                  }}
+                  onSubmit={handleUpdate}
+                  isSubmitting={isSubmitting}
+                  mode="edit"
+                  tenants={tenants}
+                  tenantsLoading={loadingTenants}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

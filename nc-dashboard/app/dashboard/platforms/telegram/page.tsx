@@ -1,6 +1,8 @@
 "use client";
 
 import { usePlatformConnections } from "@/hooks/use-platform-connections";
+import { useAuth } from "@/hooks/use-auth";
+import { canManagePlatforms } from "@/lib/rbac";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -8,6 +10,9 @@ import { Plus, Send, ExternalLink, Loader2 } from "lucide-react";
 
 export default function TelegramConnectionsPage() {
   const { connections, isLoading, error } = usePlatformConnections("telegram");
+  const { user } = useAuth();
+  // Client is read-only on platforms (T2) — connect CTA is admin/superadmin only.
+  const canManage = canManagePlatforms(user?.current_role ?? user?.role);
 
   if (isLoading) {
     return (
@@ -36,12 +41,14 @@ export default function TelegramConnectionsPage() {
             Bots de Telegram conectados a la plataforma.
           </p>
         </div>
-        <Button asChild size="sm">
-          <Link href="/dashboard/platforms/telegram/new">
-            <Plus className="mr-2 size-4" />
-            Conectar Bot
-          </Link>
-        </Button>
+        {canManage && (
+          <Button asChild size="sm">
+            <Link href="/dashboard/platforms/telegram/new">
+              <Plus className="mr-2 size-4" />
+              Conectar Bot
+            </Link>
+          </Button>
+        )}
       </div>
 
       {connections.length === 0 ? (
@@ -51,12 +58,14 @@ export default function TelegramConnectionsPage() {
             <p className="text-muted-foreground text-sm">
               No hay bots de Telegram conectados.
             </p>
-            <Button asChild variant="default" size="sm">
-              <Link href="/dashboard/platforms/telegram/new">
-                <Plus className="mr-2 size-4" />
-                Conectar Bot
-              </Link>
-            </Button>
+            {canManage && (
+              <Button asChild variant="default" size="sm">
+                <Link href="/dashboard/platforms/telegram/new">
+                  <Plus className="mr-2 size-4" />
+                  Conectar Bot
+                </Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (

@@ -1,6 +1,8 @@
 "use client";
 
 import { useWhatsAppNumbers } from "@/hooks/use-whatsapp-numbers";
+import { useAuth } from "@/hooks/use-auth";
+import { canManagePlatforms } from "@/lib/rbac";
 import { WhatsAppList } from "@/app/dashboard/whatsapp/components/whatsapp-list";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -8,6 +10,9 @@ import { Plus } from "lucide-react";
 
 export default function PlatformsWhatsAppPage() {
   const { numbers, isLoading, error } = useWhatsAppNumbers();
+  const { user } = useAuth();
+  // Client is read-only on platforms (T2) — create CTA is admin/superadmin only.
+  const canManage = canManagePlatforms(user?.current_role ?? user?.role);
 
   return (
     <div className="space-y-6">
@@ -20,15 +25,22 @@ export default function PlatformsWhatsAppPage() {
             Gestiona los números telefónicos asociados a cada negocio.
           </p>
         </div>
-        <Button asChild size="sm">
-          <Link href="/dashboard/platforms/whatsapp/new">
-            <Plus className="mr-2 size-4" />
-            Nuevo Número
-          </Link>
-        </Button>
+        {canManage && (
+          <Button asChild size="sm">
+            <Link href="/dashboard/platforms/whatsapp/new">
+              <Plus className="mr-2 size-4" />
+              Nuevo Número
+            </Link>
+          </Button>
+        )}
       </div>
 
-      <WhatsAppList numbers={numbers} isLoading={isLoading} error={error} />
+      <WhatsAppList
+        numbers={numbers}
+        isLoading={isLoading}
+        error={error}
+        canCreate={canManage}
+      />
     </div>
   );
 }

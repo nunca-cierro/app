@@ -15,13 +15,15 @@ interface WhatsAppListProps {
   numbers: WhatsAppNumber[];
   isLoading: boolean;
   error: string | null;
+  /** Client is read-only on platforms (T2) — empty-state create CTA hidden. */
+  canCreate?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
 /*  Empty state                                                         */
 /* ------------------------------------------------------------------ */
 
-function EmptyState() {
+function EmptyState({ canCreate }: { canCreate: boolean }) {
   return (
     <Card>
       <CardContent className="flex flex-col items-center gap-3 py-12">
@@ -29,12 +31,14 @@ function EmptyState() {
         <p className="text-muted-foreground text-sm">
           No hay números WhatsApp registrados.
         </p>
-        <Button asChild variant="default" size="sm">
-          <Link href="/dashboard/whatsapp/new">
-            <Plus className="mr-2 size-4" />
-            Registrar Número
-          </Link>
-        </Button>
+        {canCreate && (
+          <Button asChild variant="default" size="sm">
+            <Link href="/dashboard/whatsapp/new">
+              <Plus className="mr-2 size-4" />
+              Registrar Número
+            </Link>
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
@@ -63,7 +67,7 @@ function Skeleton() {
 /*  List                                                               */
 /* ------------------------------------------------------------------ */
 
-export function WhatsAppList({ numbers, isLoading, error }: WhatsAppListProps) {
+export function WhatsAppList({ numbers, isLoading, error, canCreate = true }: WhatsAppListProps) {
   if (isLoading) {
     return <Skeleton />;
   }
@@ -79,7 +83,7 @@ export function WhatsAppList({ numbers, isLoading, error }: WhatsAppListProps) {
   }
 
   if (numbers.length === 0) {
-    return <EmptyState />;
+    return <EmptyState canCreate={canCreate} />;
   }
 
   return (

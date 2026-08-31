@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePlatformConnection } from "@/hooks/use-platform-connections";
+import { useAuth } from "@/hooks/use-auth";
+import { canManagePlatforms } from "@/lib/rbac";
 import { TelegramForm } from "@/components/telegram-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,6 +71,10 @@ export default function TelegramConnectionDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const { user } = useAuth();
+  // Client is read-only on platforms (T2) — delete/edit/webhook controls are
+  // admin/superadmin only; the info tab stays visible.
+  const canManage = canManagePlatforms(user?.current_role ?? user?.role);
   const {
     connection,
     isLoading,
@@ -214,50 +220,54 @@ export default function TelegramConnectionDetailPage() {
           </Link>
         </Button>
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm">
-              <Trash2 className="mr-2 size-4" />
-              Eliminar
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar conexión?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción no se puede deshacer. Se eliminará permanentemente
-                la conexión {connection.display_name}.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {isDeleting ? (
-                  <>
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                    Eliminando...
-                  </>
-                ) : (
-                  "Eliminar"
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {canManage && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="mr-2 size-4" />
+                Eliminar
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Eliminar conexión?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta acción no se puede deshacer. Se eliminará permanentemente
+                  la conexión {connection.display_name}.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      Eliminando...
+                    </>
+                  ) : (
+                    "Eliminar"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       {/* ── Tabs ── */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="info">Información</TabsTrigger>
-          <TabsTrigger value="edit">
-            <Pencil className="mr-2 size-4" />
-            Editar
-          </TabsTrigger>
+          {canManage && (
+            <TabsTrigger value="edit">
+              <Pencil className="mr-2 size-4" />
+              Editar
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="info" className="mt-6">
@@ -367,55 +377,59 @@ export default function TelegramConnectionDetailPage() {
                   </div>
                 )}
 
-                <Button
-                  onClick={handleRegisterWebhook}
-                  disabled={isRegisteringWebhook}
-                  size="sm"
-                  variant={
-                    extraData?.webhook_status === "registered"
-                      ? "outline"
-                      : "default"
-                  }
-                >
-                  {isRegisteringWebhook ? (
-                    <>
-                      <Loader2 className="mr-2 size-4 animate-spin" />
-                      Registrando...
-                    </>
-                  ) : extraData?.webhook_status === "registered" ? (
-                    <>
-                      <Globe className="mr-2 size-4" />
-                      Re-registrar Webhook
-                    </>
-                  ) : (
-                    <>
-                      <Globe className="mr-2 size-4" />
-                      Registrar Webhook
-                    </>
-                  )}
-                </Button>
+                {canManage && (
+                  <Button
+                    onClick={handleRegisterWebhook}
+                    disabled={isRegisteringWebhook}
+                    size="sm"
+                    variant={
+                      extraData?.webhook_status === "registered"
+                        ? "outline"
+                        : "default"
+                    }
+                  >
+                    {isRegisteringWebhook ? (
+                      <>
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        Registrando...
+                      </>
+                    ) : extraData?.webhook_status === "registered" ? (
+                      <>
+                        <Globe className="mr-2 size-4" />
+                        Re-registrar Webhook
+                      </>
+                    ) : (
+                      <>
+                        <Globe className="mr-2 size-4" />
+                        Registrar Webhook
+                      </>
+                    )}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        <TabsContent value="edit" className="mt-6">
-          <Card className="max-w-2xl">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold tracking-tight">
-                Editar Conexión
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <TelegramForm
-                defaultValues={defaultFormValues}
-                onSubmit={handleUpdate}
-                isSubmitting={isSubmitting}
-                mode="edit"
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {canManage && (
+          <TabsContent value="edit" className="mt-6">
+            <Card className="max-w-2xl">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold tracking-tight">
+                  Editar Conexión
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TelegramForm
+                  defaultValues={defaultFormValues}
+                  onSubmit={handleUpdate}
+                  isSubmitting={isSubmitting}
+                  mode="edit"
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

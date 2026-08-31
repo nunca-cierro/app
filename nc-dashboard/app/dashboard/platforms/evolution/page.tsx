@@ -2,12 +2,17 @@
 
 import Link from "next/link";
 import { usePlatformConnections } from "@/hooks/use-platform-connections";
+import { useAuth } from "@/hooks/use-auth";
+import { canManagePlatforms } from "@/lib/rbac";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Phone, Loader2, Plus } from "lucide-react";
 
 export default function EvolutionPlatformsPage() {
   const { connections, isLoading, error } = usePlatformConnections("evolution");
+  const { user } = useAuth();
+  // Client is read-only on platforms (T2) — create CTA is admin/superadmin only.
+  const canManage = canManagePlatforms(user?.current_role ?? user?.role);
 
   if (isLoading) {
     return (
@@ -26,12 +31,14 @@ export default function EvolutionPlatformsPage() {
             Gestiona tus instancias de Evolution API conectadas.
           </p>
         </div>
-        <Button asChild size="sm">
-          <Link href="/dashboard/platforms/evolution/new">
-            <Plus className="mr-2 size-4" />
-            Nueva Conexión
-          </Link>
-        </Button>
+        {canManage && (
+          <Button asChild size="sm">
+            <Link href="/dashboard/platforms/evolution/new">
+              <Plus className="mr-2 size-4" />
+              Nueva Conexión
+            </Link>
+          </Button>
+        )}
       </div>
 
       {error && (
@@ -48,9 +55,11 @@ export default function EvolutionPlatformsPage() {
             <p className="text-muted-foreground text-sm">
               No hay instancias de Evolution configuradas.
             </p>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/dashboard/platforms/evolution/new">Configurar primera instancia</Link>
-            </Button>
+            {canManage && (
+              <Button asChild variant="outline" size="sm">
+                <Link href="/dashboard/platforms/evolution/new">Configurar primera instancia</Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
