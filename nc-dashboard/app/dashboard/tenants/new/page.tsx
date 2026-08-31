@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTenants } from "@/hooks/use-tenants";
+import { useAuth } from "@/hooks/use-auth";
+import { canCreateTenant } from "@/lib/rbac";
+import { AccessDeniedCard } from "@/components/access-denied";
 import { TenantForm } from "@/app/dashboard/tenants/components/tenant-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +18,17 @@ import type { TenantFormValues } from "@/lib/schemas/tenant";
 export default function NewTenantPage() {
   const router = useRouter();
   const { createTenant } = useTenants();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Tenant creation is superadmin-only or first-tenant onboarding for
+  // tenantless users (backend POST /tenants contract). A client WITH a tenant
+  // reaches this page via the prefix route match — the layout effect does not
+  // redirect (own business card tree is client-visible), so a direct URL must
+  // not render the create form during the guard-window flash.
+  if (!canCreateTenant(user)) {
+    return <AccessDeniedCard />;
+  }
 
   const handleSubmit = async (data: TenantFormValues) => {
     setIsSubmitting(true);

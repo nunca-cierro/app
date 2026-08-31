@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   canCreateAgents,
+  canCreateTenant,
   canManagePlatforms,
   canSeeQuickActions,
   getRoleLandingRoute,
@@ -188,5 +189,39 @@ describe("canCreateAgents (T3 — agents/new is admin/superadmin only)", () => {
     expect(canCreateAgents(null)).toBe(false);
     expect(canCreateAgents(undefined)).toBe(false);
     expect(canCreateAgents("")).toBe(false);
+  });
+});
+
+describe("canCreateTenant (tenants/new — superadmin or tenantless self-service onboarding)", () => {
+  it("returns true for superadmin even without a tenant", () => {
+    expect(
+      canCreateTenant({ current_role: "superadmin", current_tenant_id: null }),
+    ).toBe(true);
+    expect(canCreateTenant({ role: "superadmin", tenant_id: null })).toBe(true);
+  });
+
+  it("returns true for a tenantless client (self-service onboarding path)", () => {
+    expect(
+      canCreateTenant({ current_role: "client", current_tenant_id: null }),
+    ).toBe(true);
+    expect(canCreateTenant({ role: "client", tenant_id: undefined })).toBe(true);
+  });
+
+  it("returns false for a client WITH a tenant (already onboarded)", () => {
+    expect(
+      canCreateTenant({ current_role: "client", current_tenant_id: "t-1" }),
+    ).toBe(false);
+    expect(canCreateTenant({ role: "client", tenant_id: "t-1" })).toBe(false);
+  });
+
+  it("returns false for an admin with a tenant (backend: admin cannot create tenants)", () => {
+    expect(
+      canCreateTenant({ current_role: "admin", current_tenant_id: "t-1" }),
+    ).toBe(false);
+  });
+
+  it("degrades to false for null/undefined/missing user", () => {
+    expect(canCreateTenant(null)).toBe(false);
+    expect(canCreateTenant(undefined)).toBe(false);
   });
 });
