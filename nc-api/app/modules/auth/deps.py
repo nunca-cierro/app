@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 import typing as t
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from sqlalchemy import select
@@ -14,25 +14,36 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.db.session import get_session
 from app.modules.auth.models import User, UserRole
+from app.modules.auth.csrf import ACCESS_TOKEN_COOKIE
 
 security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     session: AsyncSession = Depends(get_session),
 ) -> User:
-    """Extract and verify the current user from the JWT token.
+    """Extract and verify the current user from the JWT.
 
-    Injects `current_role` and `current_tenant_id` into the user object.
+    Accepts the ``Authorization: Bearer`` header OR the ``nc_access_token``
+    session cookie, with Bearer preferred when both are present (Slice B,
+    spec AS-4) — tools/scripts using the header keep working unchanged.
+    JWT decode/verify, 7-day expiry and the ``current_role`` /
+    ``current_tenant_id`` injection are unchanged (stateless session).
     """
-    if credentials is None:
+    token: str | None = None
+    if credentials is not None:
+        token = credentials.credentials
+    elif request.cookies.get(ACCESS_TOKEN_COOKIE):
+        token = request.cookies[ACCESS_TOKEN_COOKIE]
+
+    if token is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
         )
 
-    token = credentials.credentials
     try:
         payload = jwt.decode(
             token,
@@ -87,15 +98,17 @@ class RoleChecker:
 
 
 async def get_current_user_sse(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
     session: AsyncSession = Depends(get_session),
 ) -> User:
     """Authenticate an SSE stream.
 
-    Header-only: the ``?token=`` query fallback was removed — ``EventSource``
-    cannot send headers, but no EventSource consumers remain (the dashboard
-    uses fetch + Authorization header). A request with ``?token=<jwt>`` is now
-    an unauthenticated request (the param is ignored) and returns 401.
-    Delegates to the shared :func:`get_current_user` logic.
+    Header-only for the ``?token=`` removal (Slice A); since Slice B the
+    session cookie also authenticates via the shared :func:`get_current_user`
+    (spec SSE-3). A request with ``?token=<jwt>`` is an unauthenticated
+    request (the param is ignored) and returns 401.
     """
-    return await get_current_user(credentials=credentials, session=session)
+    return await get_current_user(
+        request=request, credentials=credentials, session=session
+    )

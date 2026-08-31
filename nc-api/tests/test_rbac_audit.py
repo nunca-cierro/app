@@ -467,8 +467,13 @@ async def test_legacy_agent_jwt_authenticates_as_client(db_session: AsyncSession
     token = create_access_token(str(user.id), user.email, role="agent", tenant_id=None)
     credentials = MagicMock(spec=HTTPAuthorizationCredentials)
     credentials.credentials = token
+    # Cookie-less request — Bearer-only call (Slice B keeps this working).
+    request = MagicMock()
+    request.cookies = {}
 
-    resolved = await get_current_user(credentials=credentials, session=db_session)
+    resolved = await get_current_user(
+        request=request, credentials=credentials, session=db_session
+    )
 
     # current_role comes from DB users.role, never the JWT claim
     assert resolved.current_role == UserRole.CLIENT
