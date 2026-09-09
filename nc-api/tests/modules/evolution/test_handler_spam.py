@@ -46,9 +46,9 @@ def _make_event(text: str, msg_id: str = "test_msg") -> dict:
 
 @pytest.fixture
 def mock_groq() -> AsyncMock:
-    """Mock groq_client.generate to return a canned response."""
+    """Mock llm_client.generate to return a canned response."""
     with patch(
-        "app.modules.evolution.handler.groq_client.generate",
+        "app.modules.evolution.handler.llm_client.generate",
         new=AsyncMock(return_value="Mocked AI response"),
     ) as mock:
         yield mock

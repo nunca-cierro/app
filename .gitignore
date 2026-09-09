@@ -39,7 +39,7 @@ Thumbs.db
 
 # Local tools
 .atl/
-.openspec/
+.opencode/
 .sdd/
 .cache/
 

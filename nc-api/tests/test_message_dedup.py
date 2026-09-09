@@ -109,7 +109,7 @@ class TestHandlerDedup:
         mock_generate = AsyncMock(return_value="AI reply")
         mock_send = AsyncMock(return_value={"key": {"id": "evo-out-1"}})
         with (
-            patch("app.modules.evolution.handler.groq_client.generate", new=mock_generate),
+            patch("app.modules.evolution.handler.llm_client.generate", new=mock_generate),
             patch("app.modules.evolution.adapter.EvolutionAdapter.send_message", new=mock_send),
         ):
             first = await client.post(

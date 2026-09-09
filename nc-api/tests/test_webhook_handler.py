@@ -205,7 +205,7 @@ class TestHandleIncoming:
                 "app.modules.integrations.webhook.WhatsAppAdapter"
             ) as MockAdapter,
             patch(
-                "app.modules.integrations.webhook.groq_client.generate",
+                "app.modules.integrations.webhook.llm_client.generate",
                 new=AsyncMock(
                     return_value="AI response from mocked Groq"
                 ),

@@ -213,7 +213,7 @@ class TestCourtesyCreditOnSendFailure:
         silent on a courtesy the customer never received.
         """
         from app.modules.conversations.models import Conversation
-        from app.modules.evolution.handler import groq_client, handle_evolution_incoming
+        from app.modules.evolution.handler import llm_client, handle_evolution_incoming
 
         tenant, connection = await _create_basic_plan_setup(db_session)
 
@@ -233,7 +233,7 @@ class TestCourtesyCreditOnSendFailure:
             new_callable=AsyncMock,
         ) as mock_send:
             with patch.object(
-                groq_client, "generate", new_callable=AsyncMock
+                llm_client, "generate", new_callable=AsyncMock
             ) as mock_groq:
                 # ── First message: phrase keyword escalates, send FAILS ──
                 mock_send.side_effect = Exception("Evolution API down")
@@ -287,7 +287,7 @@ class TestBasicPlanNeverUsesGroq:
         Also exercises FIX 1 end-to-end: "atencion" matches the FAQ
         question "¿Cuál es el horario de atención?".
         """
-        from app.modules.evolution.handler import groq_client, handle_evolution_incoming
+        from app.modules.evolution.handler import llm_client, handle_evolution_incoming
 
         tenant, connection = await _create_basic_plan_setup(db_session)
 
@@ -297,7 +297,7 @@ class TestBasicPlanNeverUsesGroq:
         ) as mock_send:
             mock_send.return_value = {"key": {"id": "mock-evo-msg-id"}}
             with patch.object(
-                groq_client, "generate", new_callable=AsyncMock
+                llm_client, "generate", new_callable=AsyncMock
             ) as mock_groq:
                 mock_groq.return_value = "NO DEBERÍA LLAMARSE"
 
@@ -318,7 +318,7 @@ class TestBasicPlanNeverUsesGroq:
     ) -> None:
         """FIX 3 end-to-end: 'quejarnos' does NOT trigger keyword 'queja'."""
         from app.modules.conversations.models import Conversation
-        from app.modules.evolution.handler import groq_client, handle_evolution_incoming
+        from app.modules.evolution.handler import llm_client, handle_evolution_incoming
 
         tenant, connection = await _create_basic_plan_setup(db_session)
 
@@ -328,7 +328,7 @@ class TestBasicPlanNeverUsesGroq:
         ) as mock_send:
             mock_send.return_value = {"key": {"id": "mock-evo-msg-id"}}
             with patch.object(
-                groq_client, "generate", new_callable=AsyncMock
+                llm_client, "generate", new_callable=AsyncMock
             ) as mock_groq:
                 await handle_evolution_incoming(
                     event=_make_evolution_event("quiero quejarnos de algo"),

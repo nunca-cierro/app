@@ -65,7 +65,7 @@ class TestHandleTelegramIncoming:
                 "app.modules.telegram.handler.TelegramAdapter"
             ) as MockAdapter,
             patch(
-                "app.modules.telegram.handler.groq_client.generate",
+                "app.modules.telegram.handler.llm_client.generate",
                 new=AsyncMock(
                     return_value="AI response from mocked Groq"
                 ),

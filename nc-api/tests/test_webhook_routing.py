@@ -73,7 +73,7 @@ class TestTelegramWebhookEndpoint:
         conn = await _create_connection(db_session, tenant.id, "telegram", "active")
 
         with patch(
-            "app.modules.integrations.webhook.groq_client.generate",
+            "app.modules.integrations.webhook.llm_client.generate",
             new=AsyncMock(return_value="AI reply"),
         ):
             response = await client.post(
@@ -194,7 +194,7 @@ class TestWhatsAppWebhookEndpoint:
                 "test-secret",
             ),
             patch(
-                "app.modules.integrations.webhook.groq_client.generate",
+                "app.modules.integrations.webhook.llm_client.generate",
                 new=AsyncMock(return_value="AI reply"),
             ),
         ):

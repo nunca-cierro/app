@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.tenancy import resolve_by_phone_number_id
 from app.modules.conversations.models import Conversation, Message
 from app.modules.agents.utils import format_business_config, universal_format_block
-from app.modules.integrations.llm.provider import CONTEXT_WINDOW_SIZE, groq_client
+from app.modules.integrations.llm.provider import llm_client
 from app.modules.integrations.meta.client import send_text_message
 from app.modules.platforms.adapter import WhatsAppAdapter
 
@@ -207,7 +207,7 @@ async def handle_incoming(
                 Message.id != inbound_msg.id,
             )
             .order_by(Message.created_at.desc())
-            .limit(CONTEXT_WINDOW_SIZE)
+            .limit(30)
         )
         past_messages = list(reversed(history_result.scalars().all()))
         conversation_history = [
@@ -225,10 +225,12 @@ async def handle_incoming(
         )
 
         model = None
+        provider = None
         temperature = None
         max_tokens = None
         if resolution.agent:
             model = resolution.agent.model
+            provider = resolution.agent.provider
             temperature = resolution.agent.temperature
             max_tokens = resolution.agent.max_tokens
 
@@ -244,10 +246,11 @@ async def handle_incoming(
 
         # ── 6. Generate response via LLM ─────────────────────────────────
         try:
-            response = await groq_client.generate(
+            response = await llm_client.generate(
                 system_prompt=system_prompt,
-                user_message=msg["text"],
+                user_message=f"<user_query>\n{msg['text']}\n</user_query>",
                 conversation_history=conversation_history,
+                provider=provider,
                 model=model,
                 max_tokens=max_tokens,
                 temperature=temperature,

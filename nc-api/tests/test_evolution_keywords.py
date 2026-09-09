@@ -82,9 +82,9 @@ class TestHandlerPaymentKeywords:
         ) as mock_send:
             mock_send.return_value = {"key": {"id": "mock-evo-msg-id"}}
 
-            # Also mock groq_client.generate to ensure it's NOT called
+            # Also mock llm_client.generate to ensure it's NOT called
             with patch(
-                "app.modules.evolution.handler.groq_client.generate",
+                "app.modules.evolution.handler.llm_client.generate",
                 new_callable=AsyncMock,
             ) as mock_groq:
                 # Simulate a webhook event with "pago" keyword
@@ -121,7 +121,7 @@ class TestHandlerPaymentKeywords:
             mock_send.return_value = {"key": {"id": "mock-evo-msg-id"}}
 
             with patch(
-                "app.modules.evolution.handler.groq_client.generate",
+                "app.modules.evolution.handler.llm_client.generate",
                 new_callable=AsyncMock,
             ) as mock_groq:
                 mock_groq.return_value = "Hola, soy un asistente."
@@ -197,7 +197,7 @@ class TestHandlerPaymentKeywords:
             mock_send.return_value = {"key": {"id": "mock-evo-msg-id"}}
 
             with patch(
-                "app.modules.evolution.handler.groq_client.generate",
+                "app.modules.evolution.handler.llm_client.generate",
                 new_callable=AsyncMock,
             ) as mock_groq:
                 from app.modules.evolution.handler import handle_evolution_incoming
@@ -227,7 +227,7 @@ class TestHandlerPaymentKeywords:
             new_callable=AsyncMock,
         ) as mock_send:
             with patch(
-                "app.modules.evolution.handler.groq_client.generate",
+                "app.modules.evolution.handler.llm_client.generate",
                 new_callable=AsyncMock,
             ) as mock_groq:
                 from app.modules.evolution.handler import handle_evolution_incoming
@@ -269,7 +269,7 @@ class TestHandlerPaymentKeywords:
             mock_send.return_value = {"key": {"id": "mock-evo-msg-id"}}
 
             with patch(
-                "app.modules.evolution.handler.groq_client.generate",
+                "app.modules.evolution.handler.llm_client.generate",
                 new_callable=AsyncMock,
             ) as mock_groq:
                 mock_groq.return_value = "Hola, soy un asistente."
@@ -466,7 +466,7 @@ class TestEscalationSilence:
             mock_send.return_value = {"key": {"id": "mock-evo-msg-id"}}
 
             with patch(
-                "app.modules.evolution.handler.groq_client.generate",
+                "app.modules.evolution.handler.llm_client.generate",
                 new_callable=AsyncMock,
             ) as mock_groq:
                 mock_groq.return_value = "Respuesta de cortesía."
@@ -528,7 +528,7 @@ class TestEscalationSilence:
             new_callable=AsyncMock,
         ) as mock_send:
             with patch(
-                "app.modules.evolution.handler.groq_client.generate",
+                "app.modules.evolution.handler.llm_client.generate",
                 new_callable=AsyncMock,
             ) as mock_groq:
                 mock_groq.return_value = "NO DEBERÍA LLAMARSE"
@@ -572,7 +572,7 @@ class TestEscalationSilence:
             mock_send.return_value = {"key": {"id": "mock-evo-msg-id"}}
 
             with patch(
-                "app.modules.evolution.handler.groq_client.generate",
+                "app.modules.evolution.handler.llm_client.generate",
                 new_callable=AsyncMock,
             ) as mock_groq:
                 mock_groq.return_value = "Hola, soy un asistente."

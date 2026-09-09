@@ -163,7 +163,7 @@ class TestEvolutionWebhookEndpoint:
         tenant, conn = await self._create_tenant_and_conn(db_session)
         with (
             patch(
-                "app.modules.evolution.handler.groq_client.generate",
+                "app.modules.evolution.handler.llm_client.generate",
                 new=AsyncMock(return_value="AI reply"),
             ),
             patch(

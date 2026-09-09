@@ -110,6 +110,7 @@ class TestEvolutionHandlerAgentResolution:
         linked_agent = MagicMock()
         linked_agent.id = connection.agent_id
         linked_agent.enabled = True
+        linked_agent.provider = "openai"
         linked_agent.model = "gpt-4"
         linked_agent.temperature = 0.7
         linked_agent.max_tokens = 1000
@@ -162,7 +163,7 @@ class TestEvolutionHandlerAgentResolution:
             result_history, result_agent, result_prompts
         ]
 
-        with patch("app.modules.evolution.handler.groq_client") as mock_groq, \
+        with patch("app.modules.evolution.handler.llm_client") as mock_groq, \
              patch("app.modules.evolution.handler.EvolutionAdapter") as mock_adapter:
             
             mock_groq.generate = AsyncMock(return_value="AI Response")
@@ -176,10 +177,15 @@ class TestEvolutionHandlerAgentResolution:
             params = agent_query.compile().params
             assert params["id_1"] == connection.agent_id
             
-            # Verify groq was called with agent's model
+            # History fetch window raised to 30 (llm-multi-provider spec)
+            history_query = session.execute.call_args_list[3][0][0]
+            assert history_query._limit == 30
+            
+            # Verify groq was called with agent's model + provider
             mock_groq.generate.assert_called_once()
             kwargs = mock_groq.generate.call_args.kwargs
             assert kwargs["model"] == "gpt-4"
+            assert kwargs["provider"] == "openai"
 
 from app.modules.platform_connections.service import create_connection, update_connection
 from app.modules.agents.models import AiAgent
@@ -307,6 +313,7 @@ class TestPlatformConnectionServiceValidation:
         default_agent = MagicMock()
         default_agent.id = uuid.uuid4()
         default_agent.enabled = True
+        default_agent.provider = "openai"
         default_agent.model = "gpt-3.5-turbo"
         default_agent.temperature = 0.5
         default_agent.max_tokens = 500
@@ -348,7 +355,7 @@ class TestPlatformConnectionServiceValidation:
             result_prompts,
         ]
 
-        with patch("app.modules.evolution.handler.groq_client") as mock_groq, \
+        with patch("app.modules.evolution.handler.llm_client") as mock_groq, \
              patch("app.modules.evolution.handler.EvolutionAdapter") as mock_adapter:
             
             mock_groq.generate = AsyncMock(return_value="AI Response")
@@ -364,7 +371,12 @@ class TestPlatformConnectionServiceValidation:
             agent_query_2 = session.execute.call_args_list[5][0][0]
             assert "id_1" not in agent_query_2.compile().params
             
-            # Verify groq was called with default agent's model
+            # History fetch window raised to 30 (llm-multi-provider spec)
+            history_query = session.execute.call_args_list[3][0][0]
+            assert history_query._limit == 30
+            
+            # Verify groq was called with default agent's model + provider
             mock_groq.generate.assert_called_once()
             kwargs = mock_groq.generate.call_args.kwargs
             assert kwargs["model"] == "gpt-3.5-turbo"
+            assert kwargs["provider"] == "openai"

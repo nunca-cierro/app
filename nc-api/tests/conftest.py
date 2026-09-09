@@ -13,6 +13,11 @@ os.environ.setdefault("ENCRYPTION_KEY", "dGhpcyBpcyBhIDE2LWJ5dGUgZXhhbXBsZSBrZXk
 os.environ.setdefault("JWT_SECRET", "test-jwt-secret-not-production")
 os.environ.setdefault("PAYMENT_BREB_NUMBER", "3007654321")
 os.environ.setdefault("PAYMENT_ACCOUNT_HOLDER", "NuncaCierro SAS")
+# LLM multi-provider (Slice 1): the provider layer reads settings at import
+# time, so the ACTIVE provider must be pinned to openai with a dummy key
+# before any app import — otherwise the AsyncOpenAI singleton cannot boot.
+os.environ.setdefault("LLM_PROVIDER", "openai")
+os.environ.setdefault("OPENAI_API_KEY", "test-openai-api-key-dummy")
 # Pin the Secure cookie flag for the test env: the dev .env sets
 # AUTH_COOKIE_SECURE=false (local http), but tests must verify the
 # production Secure-on behavior deterministically (Slice B, AS-1).
