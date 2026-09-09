@@ -2,7 +2,9 @@
 # Uso: docker compose up -d
 #
 # Variables de entorno requeridas (copiar .env.production a .env):
-#   POSTGRES_PASSWORD, JWT_SECRET, ENCRYPTION_KEY, GROQ_API_KEY
+#   POSTGRES_PASSWORD, JWT_SECRET, ENCRYPTION_KEY
+# LLM: LLM_PROVIDER selecciona el proveedor activo (openai por defecto) y solo
+# se exige la key de ese proveedor — OPENAI_API_KEY (default) o GROQ_API_KEY.
 #
 # SSL con Caddy
 # ───────────────────────────────────────────────────────────────────────
@@ -46,8 +48,15 @@ services:
       DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/nuncacierro"
       JWT_SECRET: ${JWT_SECRET:?Debe definir JWT_SECRET}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Debe definir ENCRYPTION_KEY}
-      GROQ_API_KEY: ${GROQ_API_KEY:?Debe definir GROQ_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
       GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+      # ── LLM multi-provider (OpenAI default + Groq opcional) ───────────
+      # LLM_PROVIDER selecciona el proveedor activo (openai|groq). El fail-fast
+      # de config.py exige solo la key del proveedor activo al bootear.
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_MAX_TOKENS: ${OPENAI_MAX_TOKENS:-1024}
       LOG_LEVEL: ${LOG_LEVEL:-info}
 
       # ── Runtime config (CORS + datos de pago mostrados al tenant) ───
