@@ -266,7 +266,7 @@ export default function AgentDetailPage() {
                 <AgentForm
                   defaultValues={{
                     name: agent.name,
-                    provider: "groq",
+                    provider: agent.provider as "openai" | "groq",
                     model: agent.model,
                     temperature: agent.temperature,
                     max_tokens: agent.max_tokens,

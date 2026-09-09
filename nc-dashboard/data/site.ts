@@ -226,7 +226,7 @@ export const sitePlans = {
       hasClientAccess: true,
       clientAccessType: "read",
       supportLevel: "whatsapp_email",
-      model: "openai/gpt-oss-120b",
+      model: "gpt-4o-mini",
     },
     enterprise: {
       name: "Empresarial",
@@ -240,7 +240,7 @@ export const sitePlans = {
       hasClientAccess: true,
       clientAccessType: "full",
       supportLevel: "priority_24_7",
-      model: "openai/gpt-oss-120b",
+      model: "gpt-4o-mini",
     },
   },
   trialInfo: {

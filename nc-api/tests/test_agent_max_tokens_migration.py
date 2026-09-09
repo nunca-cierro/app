@@ -36,7 +36,7 @@ async def _seed_agent(db_session, max_tokens: int) -> AiAgent:
     await db_session.flush()
     agent = AiAgent(
         id=uuid.uuid4(), tenant_id=tenant.id, name="A",
-        provider="groq", model="openai/gpt-oss-120b", temperature=0,
+        provider="openai", model="gpt-4o-mini", temperature=0,
         max_tokens=max_tokens,
     )
     db_session.add(agent)

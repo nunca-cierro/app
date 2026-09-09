@@ -6,6 +6,7 @@ import {
   agentFormSchema,
   agentEditFormSchema,
   defaultAgentValues,
+  MODELS_BY_PROVIDER,
   type AgentFormValues,
 } from "@/lib/schemas/agent";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,8 @@ export function AgentForm({
     register,
     handleSubmit,
     control,
+    setValue,
+    getValues,
     formState: { errors },
   } = useForm<AgentFormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -60,6 +63,23 @@ export function AgentForm({
   const selectedTenantId = useWatch({ control, name: "tenant_id" });
   const currentTemperature = useWatch({ control, name: "temperature" });
   const currentMaxTokens = useWatch({ control, name: "max_tokens" });
+  const currentProvider = useWatch({ control, name: "provider" });
+  const currentModel = useWatch({ control, name: "model" });
+
+  // Models for the currently selected provider — keeps the model dropdown in
+  // sync with the backend's supported providers (openai + groq).
+  const availableModels = MODELS_BY_PROVIDER[currentProvider] ?? [];
+
+  const handleProviderChange = (provider: string) => {
+    const nextModels = MODELS_BY_PROVIDER[provider] ?? [];
+    const current = getValues("model");
+    setValue("provider", provider as "openai" | "groq");
+    // When the stored model is not offered by the newly selected provider,
+    // fall back to that provider's first available model.
+    if (!nextModels.includes(current)) {
+      setValue("model", nextModels[0] ?? "");
+    }
+  };
 
   /* ── Detect plan ── */
   const plan =
@@ -136,24 +156,51 @@ export function AgentForm({
         </div>
       ) : (
         <>
-          {/* Provider — fixed */}
+          {/* Provider — selectable (openai default, groq optional) */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Proveedor</label>
-            <div className="flex h-10 items-center rounded-md border bg-muted/50 px-3 text-sm text-muted-foreground">
-              Groq
-            </div>
+            <label htmlFor="provider" className="text-sm font-medium">
+              Proveedor
+            </label>
+            <select
+              id="provider"
+              {...register("provider", {
+                onChange: (e) => handleProviderChange(e.target.value),
+              })}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="openai">OpenAI</option>
+              <option value="groq">Groq</option>
+            </select>
+            {errors.provider && (
+              <p className="text-xs text-destructive">
+                {errors.provider.message}
+              </p>
+            )}
           </div>
 
-          {/* Model — fixed */}
+          {/* Model — filtered by the selected provider */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Modelo</label>
-            <div className="flex h-10 items-center rounded-md border bg-muted/50 px-3 text-sm text-muted-foreground">
-              openai/gpt-oss-120b
-            </div>
+            <label htmlFor="model" className="text-sm font-medium">
+              Modelo
+            </label>
+            <select
+              id="model"
+              {...register("model")}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {!availableModels.includes(currentModel) && (
+                <option value={currentModel}>{currentModel}</option>
+              )}
+              {availableModels.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+            {errors.model && (
+              <p className="text-xs text-destructive">{errors.model.message}</p>
+            )}
           </div>
-
-          <input type="hidden" {...register("provider")} value="groq" />
-          <input type="hidden" {...register("model")} value="openai/gpt-oss-120b" />
 
           {/* Temperature */}
           <div className="space-y-2">

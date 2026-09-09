@@ -3,6 +3,7 @@ import {
   agentFormSchema,
   agentEditFormSchema,
   defaultAgentValues,
+  MODELS_BY_PROVIDER,
   type AgentFormValues,
   type AgentEditFormValues,
 } from "@/lib/schemas/agent";
@@ -11,8 +12,8 @@ describe("agentFormSchema", () => {
   const validCreate: AgentFormValues = {
     tenant_id: "00000000-0000-0000-0000-000000000000",
     name: "Test Agent",
-    provider: "groq",
-    model: "openai/gpt-oss-120b",
+    provider: "openai",
+    model: "gpt-4o-mini",
     temperature: 0,
     max_tokens: 512,
   };
@@ -49,6 +50,24 @@ describe("agentFormSchema", () => {
     const result = agentFormSchema.safeParse({ ...validCreate, max_tokens: 32 });
     expect(result.success).toBe(false);
   });
+
+  it("accepts groq provider with a groq model", () => {
+    const groq = {
+      ...validCreate,
+      provider: "groq",
+      model: "openai/gpt-oss-120b",
+    };
+    const result = agentFormSchema.safeParse(groq);
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects unsupported provider (anthropic)", () => {
+    const result = agentFormSchema.safeParse({
+      ...validCreate,
+      provider: "anthropic",
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("defaultAgentValues", () => {
@@ -61,13 +80,40 @@ describe("defaultAgentValues", () => {
       true,
     );
   });
+
+  it("seeds provider=openai and model=gpt-4o-mini (multi-provider parity)", () => {
+    expect(defaultAgentValues.provider).toBe("openai");
+    expect(defaultAgentValues.model).toBe("gpt-4o-mini");
+    // The seeded defaults must pass the schema's own validation.
+    expect(agentFormSchema.shape.provider.safeParse(defaultAgentValues.provider).success).toBe(
+      true,
+    );
+    expect(agentFormSchema.shape.model.safeParse(defaultAgentValues.model).success).toBe(
+      true,
+    );
+  });
+});
+
+describe("MODELS_BY_PROVIDER", () => {
+  it("offers exactly the backend-supported providers (openai + groq)", () => {
+    expect(Object.keys(MODELS_BY_PROVIDER).sort()).toEqual(expect.arrayContaining(["groq", "openai"]));
+  });
+
+  it("has no anthropic entry", () => {
+    expect(MODELS_BY_PROVIDER.anthropic).toBeUndefined();
+  });
+
+  it("lists gpt-4o-mini under openai and openai/gpt-oss-120b under groq", () => {
+    expect(MODELS_BY_PROVIDER.openai).toContain("gpt-4o-mini");
+    expect(MODELS_BY_PROVIDER.groq).toContain("openai/gpt-oss-120b");
+  });
 });
 
 describe("agentEditFormSchema", () => {
   const validEdit: AgentEditFormValues = {
     name: "Updated Agent",
-    provider: "groq",
-    model: "openai/gpt-oss-120b",
+    provider: "openai",
+    model: "gpt-4o-mini",
     temperature: 0.5,
     max_tokens: 1024,
   };
