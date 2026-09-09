@@ -63,8 +63,8 @@ async def test_evolution_respects_linked_agent_integration(client, db_session) -
     await db_session.commit()
     
     # 4. Mock Groq and Evolution Adapter
-    # We mock groq_client.generate to capture the model name
-    with patch("app.modules.evolution.handler.groq_client.generate", new=AsyncMock(return_value="AI Reply")) as mock_gen, \
+    # We mock llm_client.generate to capture the model name + provider
+    with patch("app.modules.evolution.handler.llm_client.generate", new=AsyncMock(return_value="AI Reply")) as mock_gen, \
          patch("app.modules.evolution.handler.EvolutionAdapter.send_message", new=AsyncMock()), \
          patch("app.modules.evolution.adapter.EvolutionAdapter.validate_webhook", return_value=True):
          
@@ -87,6 +87,7 @@ async def test_evolution_respects_linked_agent_integration(client, db_session) -
         
         # 6. Verify Agent Linked was used (model "gpt-linked")
         assert mock_gen.call_args.kwargs["model"] == "gpt-linked"
+        assert mock_gen.call_args.kwargs["provider"] == "openai"
 
 @pytest.mark.asyncio
 async def test_evolution_falls_back_when_no_link_integration(client, db_session) -> None:
@@ -119,7 +120,7 @@ async def test_evolution_falls_back_when_no_link_integration(client, db_session)
     await db_session.commit()
     
     # 4. Mock Groq and Evolution Adapter
-    with patch("app.modules.evolution.handler.groq_client.generate", new=AsyncMock(return_value="AI Reply")) as mock_gen, \
+    with patch("app.modules.evolution.handler.llm_client.generate", new=AsyncMock(return_value="AI Reply")) as mock_gen, \
          patch("app.modules.evolution.handler.EvolutionAdapter.send_message", new=AsyncMock()), \
          patch("app.modules.evolution.adapter.EvolutionAdapter.validate_webhook", return_value=True):
          

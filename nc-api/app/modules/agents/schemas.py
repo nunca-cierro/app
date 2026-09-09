@@ -8,13 +8,13 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from app.core.config import DEFAULT_GROQ_MODEL, DEFAULT_MAX_TOKENS
+from app.core.config import DEFAULT_LLM_MODEL, DEFAULT_MAX_TOKENS
 
 
 # Providers the platform can actually route to today. Kept as a frozenset
 # (single source of truth for create + PATCH validation) until a
 # multi-provider enum is warranted.
-SUPPORTED_PROVIDERS: frozenset[str] = frozenset({"groq"})
+SUPPORTED_PROVIDERS: frozenset[str] = frozenset({"openai", "groq"})
 
 MIN_TEMPERATURE = 0.0
 MAX_TEMPERATURE = 2.0
@@ -46,7 +46,7 @@ class _AgentParams(BaseModel):
     values PATCH rejected).
     """
 
-    provider: str = "groq"
+    provider: str = "openai"
     temperature: float = 0
     max_tokens: int = DEFAULT_MAX_TOKENS
 
@@ -80,7 +80,7 @@ class AiAgentCreate(_AgentParams):
     tenant_id: uuid.UUID
     name: str
     description: str | None = None
-    model: str = DEFAULT_GROQ_MODEL
+    model: str = DEFAULT_LLM_MODEL
     enabled: bool = True
     business_config: dict[str, Any] | None = None
 

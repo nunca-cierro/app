@@ -18,7 +18,7 @@ from app.core.config import settings
 from app.core.rate_limiter import rate_limiter
 from app.modules.conversations.models import Conversation, Message
 from app.modules.agents.utils import format_business_config, universal_format_block
-from app.modules.integrations.llm.provider import CONTEXT_WINDOW_SIZE, groq_client
+from app.modules.integrations.llm.provider import llm_client
 from app.modules.platform_connections.models import PlatformConnection
 from app.modules.platform_connections.service import get_connection
 from app.modules.telegram.webhook import extract_telegram_message
@@ -123,7 +123,7 @@ async def handle_telegram_incoming(
             Message.id != inbound_msg.id,
         )
         .order_by(Message.created_at.desc())
-        .limit(CONTEXT_WINDOW_SIZE)
+        .limit(30)
     )
     past_messages = list(reversed(history_result.scalars().all()))
     conversation_history = [
@@ -300,10 +300,12 @@ async def handle_telegram_incoming(
     )
 
     model = None
+    provider = None
     temperature = None
     max_tokens = None
     if agent:
         model = agent.model
+        provider = agent.provider
         temperature = agent.temperature
         max_tokens = agent.max_tokens
 
@@ -332,10 +334,11 @@ async def handle_telegram_incoming(
 
     # ── 6. Generate response via LLM ────────────────────────────────────
     try:
-        response = await groq_client.generate(
+        response = await llm_client.generate(
             system_prompt=system_prompt,
             user_message=f"<user_query>\n{parsed['content']}\n</user_query>",
             conversation_history=conversation_history,
+            provider=provider,
             model=model,
             max_tokens=max_tokens,
             temperature=temperature,

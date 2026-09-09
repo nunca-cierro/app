@@ -9,6 +9,18 @@ from pydantic import field_validator, model_validator
 
 
 # ── Default LLM model ─────────────────────────────────────────────────────
+# Canonical default model for the ACTIVE provider (openai by default).
+# Override with OPENAI_MODEL / GROQ_MODEL per provider block.
+DEFAULT_LLM_MODEL: str = "gpt-4o-mini"
+
+# OpenAI-compatible base URLs per provider. The active provider is selected
+# by LLM_PROVIDER and its base URL is used to construct the AsyncOpenAI
+# client (Groq exposes an OpenAI-compatible /openai/v1 endpoint).
+PROVIDER_BASE_URLS: dict[str, str] = {
+    "openai": "https://api.openai.com/v1",
+    "groq": "https://api.groq.com/openai/v1",
+}
+
 # Single source of truth for the default Groq model. Groq deprecated
 # `llama-3.3-70b-versatile` (shutdown 2026-08-16); per Groq docs the
 # recommended replacement is `openai/gpt-oss-120b` (production-grade,
@@ -21,7 +33,7 @@ DEFAULT_GROQ_MODEL: str = "openai/gpt-oss-120b"
 
 # Canonical per-agent completion budget (R7). Single source of truth for the
 # ORM column default, the create schema and the dashboard form seed. The LLM
-# fallback (no agent context) stays settings.groq_max_tokens below.
+# fallback (no agent context) stays the ACTIVE provider's default below.
 DEFAULT_MAX_TOKENS: int = 1024
 
 # Model ids already retired by Groq (verified on console.groq.com/docs/
@@ -85,6 +97,19 @@ class Settings(BaseSettings):
     groq_max_tokens: int = DEFAULT_MAX_TOKENS
     groq_temperature: float = 0.7
     groq_rate_limit_rpm: int = 30
+
+    # ── OpenAI (default active provider) ──────────────────────────────────
+    # LLM_PROVIDER selects the ACTIVE provider (openai|groq). Everything the
+    # provider layer reads is a settings field — no provider-specific value
+    # is hardcoded in code (env-overridable). All defaults below match the
+    # canonical values in the llm-configuration spec.
+    llm_provider: str = "openai"
+    openai_api_key: str = ""
+    openai_model: str = DEFAULT_LLM_MODEL
+    openai_temperature: float = 0.7
+    openai_max_tokens: int = DEFAULT_MAX_TOKENS
+    openai_rate_limit_rpm: int = 500
+    llm_history_token_budget: int = 2000
 
     # ── Auth ─────────────────────────────────────────────────────────────
     jwt_secret: str = ""

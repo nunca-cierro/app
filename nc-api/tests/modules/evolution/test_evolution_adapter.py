@@ -97,7 +97,7 @@ class TestEvolutionHandlerPassesFullJid:
         ) as mock_send:
             mock_send.return_value = {"key": {"id": "mock-evo-id"}}
             with patch(
-                "app.modules.evolution.handler.groq_client.generate",
+                "app.modules.evolution.handler.llm_client.generate",
                 new_callable=AsyncMock,
             ) as mock_groq:
                 mock_groq.return_value = "¡Hola! ¿En qué puedo ayudarte?"
@@ -177,7 +177,7 @@ class TestEvolutionHandlerPassesFullJid:
         ) as mock_send:
             mock_send.return_value = {"key": {"id": "mock-evo-id"}}
             with patch(
-                "app.modules.evolution.handler.groq_client.generate",
+                "app.modules.evolution.handler.llm_client.generate",
                 new_callable=AsyncMock,
             ) as mock_groq:
                 mock_groq.return_value = "¡Hola! ¿En qué puedo ayudarte?"
@@ -268,7 +268,7 @@ class TestEmptyLlmResponseGuard:
         ) as mock_send:
             mock_send.return_value = {"key": {"id": "mock-evo-id"}}
             with patch(
-                "app.modules.evolution.handler.groq_client.generate",
+                "app.modules.evolution.handler.llm_client.generate",
                 new_callable=AsyncMock,
             ) as mock_groq:
                 # LLM returns blank content — the real production failure

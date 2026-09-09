@@ -30,7 +30,7 @@ from app.modules.agents.schemas import (
 )
 from app.modules.agents.template_models import AgentTemplate
 from app.modules.agents.templates import PlaceholderResolver
-from app.core.config import DEFAULT_GROQ_MODEL, DEFAULT_MAX_TOKENS
+from app.core.config import DEFAULT_LLM_MODEL, DEFAULT_MAX_TOKENS
 from app.modules.tenants.models import Tenant
 
 router = APIRouter(prefix="/agents", tags=["agents"])
@@ -83,8 +83,8 @@ async def create_agent_from_template(
         tenant_id=target_tenant_id,
         name=body.name or template.name,
         business_config=resolved_content,
-        provider="groq",
-        model=DEFAULT_GROQ_MODEL,
+        provider="openai",
+        model=DEFAULT_LLM_MODEL,
         temperature=0,
         max_tokens=DEFAULT_MAX_TOKENS,
     )

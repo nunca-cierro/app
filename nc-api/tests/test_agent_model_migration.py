@@ -120,19 +120,19 @@ class TestRuntimeDefense:
     """provider.generate() routes deprecated model ids to the default."""
 
     async def _generate(self, model):
-        from app.modules.integrations.llm.provider import groq_client
+        from app.modules.integrations.llm.provider import llm_client
 
         mock_client = MagicMock()
         mock_client.chat.completions.create = AsyncMock(return_value=_FakeCompletion())
-        with patch.object(groq_client, "_client", mock_client):
-            await groq_client.generate("sys", "user", model=model)
+        with patch.object(llm_client, "_client", mock_client):
+            await llm_client.generate("sys", "user", model=model)
         return mock_client.chat.completions.create.call_args.kwargs["model"]
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("deprecated", DEPRECATED_GROQ_MODELS)
     async def test_every_deprecated_model_routed_to_default(self, deprecated) -> None:
         used = await self._generate(deprecated)
-        assert used == settings.groq_model  # the configured default
+        assert used == settings.openai_model  # the active provider's default
 
     @pytest.mark.asyncio
     async def test_custom_model_passes_through(self) -> None:
@@ -142,4 +142,4 @@ class TestRuntimeDefense:
     @pytest.mark.asyncio
     async def test_none_model_uses_default(self) -> None:
         used = await self._generate(None)
-        assert used == settings.groq_model
+        assert used == settings.openai_model
