@@ -22,7 +22,7 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const { brand, mobileMenu } = headerData;
 
-  const isLanding = pathname === "/" || pathname === "/inicio" || pathname === "/pagina-web";
+  const isLanding = pathname === "/" || pathname === "/inicio";
   const navItems = isLanding ? landingNav : automationNav;
   const whatsappUrl = isLanding ? siteWhatsAppMessages.landingUrl : siteWhatsAppMessages.automationUrl;
 

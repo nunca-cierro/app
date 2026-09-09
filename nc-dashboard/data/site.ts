@@ -1,6 +1,3 @@
-// Nombre de la marca
-export const companyName = "NuncaCierro";
-
 export const siteMetadata = {
   lang: "es",
   title: "NuncaCierro | Automatización WhatsApp para negocios en Colombia",
@@ -59,13 +56,6 @@ export const headerData = {
     name: "NuncaCierro",
     accent: ".",
     href: "/",
-    logo: {
-      src: "/Logonobg.png",
-      alt: "NuncaCierro Logo",
-      width: 112,
-      height: 112,
-      sizes: "112px",
-    },
   },
   navItems: [
     { name: "Planes", href: "#planes" },
@@ -125,134 +115,6 @@ export const footerData = {
         { label: "Datos y cumplimiento", href: "/legal#datos" },
       ],
   },
-};
-
-// Examples section data
-export const siteExamples = {
-  sectionId: "ejemplos",
-  label: "Ejemplos",
-  title: "Así funciona con cada negocio",
-  subtitle:
-    "Cada demo incluye sitio web profesional + automatización por WhatsApp.",
-  secondarySubtitle:
-    "Combinamos diseño web con automatización inteligente para que cada negocio atienda 24/7 y nunca pierda un cliente.",
-  imageAltPrefix: "Demo",
-  whatsappMessageTemplate:
-    "Hola, quiero un sitio + automatización similar al demo {demoName}. Quiero que mi negocio atienda 24/7.",
-  buttons: {
-    viewDemo: "Ver Demo",
-    quoteSimilar: "Quiero una así",
-    openDemo: "Abrir demo",
-    quoteWhatsapp: "Cotizar por WhatsApp",
-  },
-  modal: {
-    closeLabel: "Cerrar detalle",
-    closeText: "Cerrar",
-  },
-  cta: {
-    title: "¿Quieres una solución como estas?",
-    description:
-      "Te diseñamos un sitio con automatización WhatsApp a medida, con estructura de venta y branding sólido para que tu negocio nunca cierre.",
-    buttonLabel: "Cotizar por WhatsApp",
-  },
-  demos: [
-    {
-      name: "Restaurante Élite",
-      category: "Restaurante",
-      href: "/demo/restaurant",
-      image:
-        "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1400&q=80",
-      shortDescription:
-        "Landing premium + bot para reservas y pedidos directos por WhatsApp 24/7.",
-      longDescription:
-        "Restaurante que atiende reservas automáticamente por WhatsApp, muestra el menú con solo pedirlo y capta clientes incluso cuando está cerrado.",
-      features: [
-        "Bot de reservas 24/7",
-        "Menú automático por WhatsApp",
-        "Página web profesional",
-      ],
-    },
-    {
-      name: "Spa Serenity",
-      category: "Spa",
-      href: "/demo/spa",
-      image:
-        "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1400&q=80",
-      shortDescription:
-        "Web elegante + bot que agenda citas y hace seguimiento automático de clientes.",
-      longDescription:
-        "Spa que agenda citas sin que la dueña esté pendiente, envía recordatorios automáticos y recupera clientes que preguntaron y no volvieron.",
-      features: [
-        "Agenda automática por WhatsApp",
-        "Recordatorios de citas",
-        "Página web elegante",
-      ],
-    },
-    {
-      name: "Gym Performance",
-      category: "Gimnasio",
-      href: "/demo/gym",
-      image:
-        "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1400&q=80",
-      shortDescription:
-        "Sitio de alto impacto + bot que capta clientes y responde planes automáticamente.",
-      longDescription:
-        "Gimnasio que responde automáticamente precios y horarios, capta clientes fuera de horario y agenda visitas de prueba sin intervención.",
-      features: [
-        "Captación de clientes 24/7",
-        "Planes automáticos por WhatsApp",
-        "Aparece en Google",
-      ],
-    },
-    {
-      name: "Barbería Clásica",
-      category: "Barbería",
-      href: "/demo/barberia",
-      image:
-        "https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=1400&q=80",
-      shortDescription:
-        "Imagen sólida de marca + bot que agenda turnos y recuerda citas automáticamente.",
-      longDescription:
-        "Barbería que agenda turnos por WhatsApp sin que el barbero tenga que dejar de trabajar, envía recordatorios y recupera clientes perdidos.",
-      features: [
-        "Agenda de turnos automática",
-        "Recordatorios por WhatsApp",
-        "Página web de marca",
-      ],
-    },
-    {
-      name: "Beauty Studio",
-      category: "Belleza",
-      href: "/demo/beauty",
-      image:
-        "https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?auto=format&fit=crop&w=1400&q=80",
-      shortDescription:
-        "Diseño aspiracional + bot que califica clientes y agenda citas automáticamente.",
-      longDescription:
-        "Salón de belleza que califica clientes automáticamente, agenda citas y envía promociones sin que la dueña tenga que estar al teléfono.",
-      features: [
-        "Clasificación automática de clientes",
-        "Agenda inteligente",
-        "Página web profesional",
-      ],
-    },
-    {
-      name: "Clínica Dental Pro",
-      category: "Dental",
-      href: "/demo/dental",
-      image:
-        "https://images.unsplash.com/photo-1606811971618-4486d14f3f99?auto=format&fit=crop&w=1400&q=80",
-      shortDescription:
-        "Web confiable + bot que agenda citas y hace seguimiento post-consulta.",
-      longDescription:
-        "Clínica dental que agenda citas automáticamente, envía recordatorios y hace seguimiento post-consulta para mejorar la experiencia del paciente.",
-      features: [
-        "Agenda de citas automática",
-        "Seguimiento después de la consulta",
-        "Aparece en Google Maps",
-      ],
-    },
-  ],
 };
 
 // Plans section data
@@ -516,3 +378,4 @@ export const siteUi = {
   listBullet: "•",
   sheetCloseLabel: "Cerrar",
 };
+
