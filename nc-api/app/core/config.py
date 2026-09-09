@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import json
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -52,7 +50,6 @@ class Settings(BaseSettings):
     app_port: int = 8000
     app_host: str = "0.0.0.0"
     log_level: str = "INFO"
-    debug: bool = False
 
     # ── Internal tenant ──────────────────────────────────────────────────
     # Slug of the platform's OWN tenant, exempt from payment enforcement
@@ -69,7 +66,7 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def ensure_async_driver(self) -> "Settings":
-        """Railway inyecta DATABASE_URL sin +asyncpg — lo agregamos."""
+        """Normalize DATABASE_URL to use the +asyncpg driver if missing."""
         url = self.database_url
         if url.startswith("postgresql://") and "+asyncpg" not in url:
             self.database_url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
@@ -77,7 +74,6 @@ class Settings(BaseSettings):
 
     # ── Meta WhatsApp Cloud API ──────────────────────────────────────────
     whatsapp_token: str = ""
-    whatsapp_phone_number_id: str = ""
     whatsapp_verify_token: str = ""
     whatsapp_app_secret: str = ""  # Meta App Secret (X-Hub-Signature-256 verification)
     whatsapp_api_version: str = "v22.0"
@@ -165,9 +161,6 @@ class Settings(BaseSettings):
     payment_breb_number: str = ""
     payment_account_holder: str = ""
     payment_dashboard_url: str = "https://nuncacierro.com/dashboard"
-
-    # ── Paths ────────────────────────────────────────────────────────────
-    businesses_dir: Path = Path("businesses")
 
 
 settings = Settings()
