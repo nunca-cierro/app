@@ -111,6 +111,35 @@ class Settings(BaseSettings):
     openai_rate_limit_rpm: int = 500
     llm_history_token_budget: int = 2000
 
+    @model_validator(mode="after")
+    def require_active_llm_provider_key(self) -> "Settings":
+        """Fail-fast at boot: the ACTIVE provider's key must be present.
+
+        Mirrors the ``jwt_secret`` validator. Only the provider selected by
+        ``LLM_PROVIDER`` is required — the inactive provider's block is fully
+        optional. The error names the EXACT env var to set. Provider set and
+        key resolution are data-driven from the settings fields (env), never
+        hardcoded key material.
+        """
+        supported = set(PROVIDER_BASE_URLS)
+        if self.llm_provider not in supported:
+            raise ValueError(
+                "LLM_PROVIDER debe ser uno de: " + ", ".join(sorted(supported))
+            )
+        key_env_var = {
+            "openai": "OPENAI_API_KEY",
+            "groq": "GROQ_API_KEY",
+        }[self.llm_provider]
+        key_field = {
+            "openai": "openai_api_key",
+            "groq": "groq_api_key",
+        }[self.llm_provider]
+        if not getattr(self, key_field):
+            raise ValueError(
+                f"{key_env_var} es obligatorio cuando LLM_PROVIDER={self.llm_provider}"
+            )
+        return self
+
     # ── Auth ─────────────────────────────────────────────────────────────
     jwt_secret: str = ""
 

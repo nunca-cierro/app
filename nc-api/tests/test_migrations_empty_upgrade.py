@@ -29,8 +29,9 @@ from alembic.config import Config
 from app.core.config import settings
 
 ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
-# Single head — keep in sync with `alembic heads` output.
-HEAD_REVISION = "d5e6f7a8b9c0"
+# Single head — keep in sync with `alembic heads` output. c0d1e2f3a4b5 is the
+# llm-multi-provider data migration (rewrites legacy Groq defaults to OpenAI).
+HEAD_REVISION = "c0d1e2f3a4b5"
 # Revision right before the drop_agent_role data migration.
 PRE_DROP_AGENT_REVISION = "c2d3e4f5a6b7"
 
