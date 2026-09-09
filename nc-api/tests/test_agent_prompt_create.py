@@ -40,8 +40,8 @@ def _create_agent_row(db_session: AsyncSession, tenant_id: uuid.UUID) -> AiAgent
         tenant_id=tenant_id,
         name="Prompt Agent",
         business_config={"instructions": "test"},
-        provider="groq",
-        model="openai/gpt-oss-120b",
+        provider="openai",
+        model="gpt-4o-mini",
         temperature=0,
         max_tokens=512,
     )

@@ -44,8 +44,8 @@ def _create_agent(db_session: AsyncSession, tenant_id: uuid.UUID, name: str = "T
         tenant_id=tenant_id,
         name=name,
         business_config={"instructions": "test"},
-        provider="groq",
-        model="openai/gpt-oss-120b",
+        provider="openai",
+        model="gpt-4o-mini",
         temperature=0,
         max_tokens=512,
     )
@@ -309,7 +309,7 @@ class TestPatchValidation:
             ({"max_tokens": 0}, {"max_tokens": 512}),
             ({"max_tokens": 32}, {"max_tokens": 512}),  # below the shared floor (64)
             ({"temperature": 2.5}, {"temperature": 0}),
-            ({"provider": "made-up"}, {"provider": "groq"}),
+            ({"provider": "made-up"}, {"provider": "openai"}),
         ],
     )
     async def test_invalid_patch_values_rejected_422(
@@ -400,8 +400,8 @@ class TestBusinessConfigMerge:
             tenant_id=tenant.id,
             name="Merge Agent",
             business_config={"instructions": "keep-me", "faq": "old-faq"},
-            provider="groq",
-            model="openai/gpt-oss-120b",
+            provider="openai",
+            model="gpt-4o-mini",
             temperature=0,
             max_tokens=512,
         )
@@ -436,6 +436,24 @@ class TestCanonicalMaxTokens:
 
         assert response.status_code == 201
         assert response.json()["max_tokens"] == 1024
+
+    @pytest.mark.asyncio
+    async def test_create_agent_defaults_openai_provider_and_model(
+        self, superadmin_client: AsyncClient, db_session: AsyncSession
+    ):
+        """New agents default to provider=openai / model=gpt-4o-mini (multi-provider)."""
+        tenant = _create_tenant(db_session, "Provider Default Tenant", "provider-default")
+        await db_session.commit()
+
+        response = await superadmin_client.post(
+            "/api/v1/agents",
+            json={"tenant_id": str(tenant.id), "name": "Provider Default Agent"},
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["provider"] == "openai"
+        assert data["model"] == "gpt-4o-mini"
 
     @pytest.mark.asyncio
     async def test_create_agent_from_template_defaults_max_tokens_1024(

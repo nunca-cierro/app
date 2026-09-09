@@ -106,6 +106,31 @@ async def _capture_system_prompt(
             return mock_groq.call_args.kwargs["system_prompt"]
 
 
+async def _capture_user_message(
+    db_session: AsyncSession,
+    connection,
+    text: str = "Hola",
+) -> str:
+    """Run the handler on *text* and return the user_message sent to the LLM."""
+    with patch(
+        "app.modules.evolution.handler.EvolutionAdapter.send_message",
+        new_callable=AsyncMock,
+    ) as mock_send:
+        mock_send.return_value = {"key": {"id": "mock-evo-id"}}
+        with patch(
+            "app.modules.evolution.handler.llm_client.generate",
+            new_callable=AsyncMock,
+        ) as mock_groq:
+            mock_groq.return_value = "Respuesta."
+            await handle_evolution_incoming(
+                event=_make_event(text),
+                connection=connection,
+                session=db_session,
+            )
+            assert mock_groq.await_count == 1
+            return mock_groq.call_args.kwargs["user_message"]
+
+
 class TestNaturalTonePrompt:
     """System prompt wiring: business instructions first, universal fallbacks last."""
 
@@ -148,3 +173,19 @@ class TestNaturalTonePrompt:
 
         assert prompt.strip().endswith(universal_format_block())
         assert "Si las instrucciones del negocio no indican otra cosa" in prompt
+
+    @pytest.mark.asyncio
+    async def test_user_message_wrapped_exactly_once(self, db_session: AsyncSession) -> None:
+        """Evolution wraps the user text in <user_query> — never double-wraps."""
+        _, connection = await _make_tenant_agent_connection(db_session, {})
+
+        user_message = await _capture_user_message(
+            db_session, connection, text="Hola, ¿tienen arepas?"
+        )
+
+        assert (
+            user_message
+            == "<user_query>\nHola, ¿tienen arepas?\n</user_query>"
+        )
+        assert user_message.count("<user_query>") == 1
+        assert user_message.count("</user_query>") == 1

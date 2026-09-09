@@ -266,3 +266,99 @@ class TestHandleIncoming:
             to="573001234567",
             text="AI response from mocked Groq",
         )
+
+    @pytest.mark.asyncio
+    async def test_meta_user_message_wrapped_in_user_query(self, db_session) -> None:
+        """Meta Cloud API path wraps the incoming text in <user_query> tags.
+
+        The user message sent to ``llm_client.generate`` MUST be delimited
+        exactly once — the raw body becomes
+        ``<user_query>\\n…\\n</user_query>`` (llm-client-routing spec).
+        """
+        from app.modules.integrations.webhook import handle_incoming
+        from app.modules.tenants.models import Tenant
+        from app.modules.platform_connections.models import PlatformConnection
+        from app.core.encryption import encrypt
+        from app.core.tenancy import TenantResolution
+
+        tenant = Tenant(
+            id=__import__("uuid").uuid4(),
+            name="Meta Wrap",
+            slug="meta-wrap",
+            status="active",
+            plan="basic",
+            timezone="UTC",
+            locale="en",
+        )
+        db_session.add(tenant)
+        await db_session.flush()
+
+        creds = {"phone_number_id": "555111", "token": "test-token"}
+        conn = PlatformConnection(
+            id=__import__("uuid").uuid4(),
+            tenant_id=tenant.id,
+            platform_type="whatsapp",
+            display_name="Meta Wrap Conn",
+            credentials=encrypt(creds),
+            status="active",
+        )
+        db_session.add(conn)
+        await db_session.commit()
+
+        async def fake_resolver(platform: str, credentials: dict) -> TenantResolution:
+            return TenantResolution(
+                tenant=tenant,
+                agent=None,
+                prompts=[],
+                platform_connection=conn,
+                whatsapp_number=None,
+            )
+
+        payload = {
+            "object": "whatsapp_business_account",
+            "entry": [{
+                "changes": [{
+                    "value": {
+                        "messaging_product": "whatsapp",
+                        "metadata": {"phone_number_id": "555111"},
+                        "messages": [{
+                            "from": "573001234567",
+                            "id": "wamid.wrap",
+                            "type": "text",
+                            "text": {"body": "Hola, quiero info"},
+                        }],
+                    },
+                }],
+            }],
+        }
+
+        with (
+            patch(
+                "app.modules.integrations.webhook.WhatsAppAdapter"
+            ) as MockAdapter,
+            patch(
+                "app.modules.integrations.webhook.llm_client.generate",
+                new=AsyncMock(return_value="AI response"),
+            ) as mock_generate,
+        ):
+            mock_adapter = MagicMock()
+            mock_adapter.send_message = AsyncMock(
+                return_value={"messages": [{"id": "wamid.sent"}]}
+            )
+            MockAdapter.return_value = mock_adapter
+
+            await handle_incoming(
+                payload,
+                db_session,
+                resolver=fake_resolver,
+                resolver_kwargs={
+                    "platform": "whatsapp",
+                    "credentials": {"phone_number_id": "555111"},
+                },
+            )
+
+        mock_generate.assert_awaited_once()
+        user_message = mock_generate.call_args.kwargs["user_message"]
+        assert user_message == "<user_query>\nHola, quiero info\n</user_query>"
+        assert user_message.count("<user_query>") == 1
+        assert user_message.count("</user_query>") == 1

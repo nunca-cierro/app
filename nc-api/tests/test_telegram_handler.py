@@ -138,6 +138,76 @@ class TestHandleTelegramIncoming:
         # No crash = success (handler should return early for non-message updates)
 
     @pytest.mark.asyncio
+    async def test_user_message_wrapped_exactly_once(self, db_session) -> None:
+        """Telegram wraps the user text in <user_query> — never double-wraps."""
+        from app.modules.telegram.handler import handle_telegram_incoming
+
+        # ── Setup ────────────────────────────────────────────────────────
+        from app.core.encryption import encrypt
+        from app.modules.platform_connections.models import PlatformConnection
+        from app.modules.tenants.models import Tenant
+
+        tenant = Tenant(
+            id=__import__("uuid").uuid4(),
+            name="Wrap Telegram Tenant",
+            slug="wrap-tg-tenant",
+            status="active",
+            plan="professional",
+            timezone="UTC",
+            locale="en",
+        )
+        db_session.add(tenant)
+        await db_session.flush()
+
+        creds = {"bot_token": "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"}
+        conn = PlatformConnection(
+            id=__import__("uuid").uuid4(),
+            tenant_id=tenant.id,
+            platform_type="telegram",
+            display_name="Wrap Bot",
+            credentials=encrypt(creds),
+            status="active",
+        )
+        db_session.add(conn)
+        await db_session.commit()
+
+        update = {
+            "update_id": 300,
+            "message": {
+                "message_id": 7,
+                "from": {"id": 56789, "is_bot": False, "first_name": "Alice"},
+                "chat": {"id": 56789, "type": "private"},
+                "date": 1700000000,
+                "text": "¿Tienen horario de noche?",
+            },
+        }
+
+        # ── Execute ──────────────────────────────────────────────────────
+        with (
+            patch("app.modules.telegram.handler.TelegramAdapter") as MockAdapter,
+            patch(
+                "app.modules.telegram.handler.llm_client.generate",
+                new=AsyncMock(return_value="AI response"),
+            ) as mock_generate,
+        ):
+            mock_adapter = MagicMock()
+            mock_adapter.send_message = AsyncMock(
+                return_value={"ok": True, "result": {"message_id": 101}}
+            )
+            MockAdapter.return_value = mock_adapter
+
+            await handle_telegram_incoming(update, conn, db_session)
+
+        mock_generate.assert_awaited_once()
+        user_message = mock_generate.call_args.kwargs["user_message"]
+        assert (
+            user_message
+            == "<user_query>\n¿Tienen horario de noche?\n</user_query>"
+        )
+        assert user_message.count("<user_query>") == 1
+        assert user_message.count("</user_query>") == 1
+
+    @pytest.mark.asyncio
     async def test_empty_payload_no_crash(self, db_session) -> None:
         """An empty update dict does not crash."""
         from app.modules.telegram.handler import handle_telegram_incoming

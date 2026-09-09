@@ -37,8 +37,8 @@ describe("updateAgent payload validation", () => {
   it("accepts valid edit payload without tenant_id", () => {
     const valid: AgentEditFormValues = {
       name: "Updated",
-      provider: "groq",
-      model: "openai/gpt-oss-120b",
+      provider: "openai",
+      model: "gpt-4o-mini",
       temperature: 0,
       max_tokens: 512,
     };
@@ -49,8 +49,8 @@ describe("updateAgent payload validation", () => {
   it("rejects invalid temperature in edit mode", () => {
     const result = agentEditFormSchema.safeParse({
       name: "X",
-      provider: "groq",
-      model: "openai/gpt-oss-120b",
+      provider: "openai",
+      model: "gpt-4o-mini",
       temperature: 5, // out of range
       max_tokens: 512,
     });
@@ -60,8 +60,8 @@ describe("updateAgent payload validation", () => {
   it("rejects empty name in edit mode", () => {
     const result = agentEditFormSchema.safeParse({
       name: "",
-      provider: "groq",
-      model: "openai/gpt-oss-120b",
+      provider: "openai",
+      model: "gpt-4o-mini",
       temperature: 0,
       max_tokens: 512,
     });

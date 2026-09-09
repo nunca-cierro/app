@@ -10,7 +10,7 @@ export const agentFormSchema = z.object({
     .string()
     .min(2, "El nombre debe tener al menos 2 caracteres")
     .max(100, "El nombre no puede exceder 100 caracteres"),
-  provider: z.enum(["groq"], {
+  provider: z.enum(["openai", "groq"], {
     message: "Proveedor no disponible",
   }),
   model: z.string().min(1, "Selecciona un modelo"),
@@ -52,15 +52,15 @@ export type PromptFormValues = z.infer<typeof promptFormSchema>;
 export const defaultAgentValues: AgentFormValues = {
   tenant_id: "",
   name: "",
-  provider: "groq",
-  model: "openai/gpt-oss-120b",
+  provider: "openai",
+  model: "gpt-4o-mini",
   temperature: 0,
   max_tokens: 1024,
 };
 
-/** Models disponibles por proveedor — solo modelos vigentes (Groq deprecó
+/** Models disponibles por proveedor — solo modelos vigentes. Groq deprecó
  *  llama-3.3-70b-versatile, llama-3.1-8b-instant, mixtral-8x7b-32768 y
- *  gemma2-9b-it). Fuente: console.groq.com/docs/deprecations */
+ *  gemma2-9b-it. Fuente: console.groq.com/docs/deprecations */
 export const MODELS_BY_PROVIDER: Record<string, string[]> = {
   groq: [
     "openai/gpt-oss-120b",
@@ -68,5 +68,4 @@ export const MODELS_BY_PROVIDER: Record<string, string[]> = {
     "qwen/qwen3.6-27b",
   ],
   openai: ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"],
-  anthropic: ["claude-sonnet-4-20250514", "claude-haiku-3-5-20241022"],
 };
