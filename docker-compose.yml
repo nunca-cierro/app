@@ -57,6 +57,8 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
       OPENAI_MAX_TOKENS: ${OPENAI_MAX_TOKENS:-1024}
+      OPENAI_TEMPERATURE: ${OPENAI_TEMPERATURE:-0.7}
+      OPENAI_RATE_LIMIT_RPM: ${OPENAI_RATE_LIMIT_RPM:-500}
       LOG_LEVEL: ${LOG_LEVEL:-info}
 
       # ── Runtime config (CORS + datos de pago mostrados al tenant) ───

@@ -28,19 +28,19 @@ Note: `conftest.py` dummy keys move from Slice 3 → Slice 1 (hard dependency: p
 
 ## Phase 1: Backend core (Slice 1 — PR 1)
 
-- [ ] 1.1 Rewrite `nc-api/app/modules/integrations/llm/provider.py`: `GroqClient`→`LLMClient` on `AsyncOpenAI`, add `provider` param, active-resolution + deprecated fallback (`DEPRECATED_GROQ_MODELS`), token-budget trim (`tokens ≈ len//3`, budget `settings.llm_history_token_budget`), `is not None` knobs, per-active-provider rate tracker; `llm_client` singleton replaces `groq_client`; drop `CONTEXT_WINDOW_SIZE`
-- [ ] 1.2 `nc-api/app/modules/agents/models.py`: ORM defaults `provider="openai"`, `model=DEFAULT_LLM_MODEL` (temperature stays 0)
-- [ ] 1.3 `nc-api/app/modules/agents/schemas.py`: `SUPPORTED_PROVIDERS={"openai","groq"}`, `_AgentParams.provider="openai"`, `AiAgentCreate.model=DEFAULT_LLM_MODEL`
-- [ ] 1.4 `nc-api/app/api/v1/agents.py` from-template: `provider="openai"`, `model=DEFAULT_LLM_MODEL`
-- [ ] 1.5 `nc-api/app/modules/evolution/handler.py`: `groq_client`→`llm_client`, pass `provider=agent.provider`, history `.limit(30)` (keep `<user_query>` wrap)
-- [ ] 1.6 `nc-api/app/modules/telegram/handler.py`: same rename + `provider` + `.limit(30)` (keep wrap)
-- [ ] 1.7 `nc-api/app/modules/integrations/webhook.py`: same rename + `provider` + `.limit(30)`; wrap `msg["text"]` in `<user_query>` (line ~249)
-- [ ] 1.8 `nc-api/tests/conftest.py`: `setdefault("LLM_PROVIDER","openai")` + dummy `OPENAI_API_KEY` before app import (moved from Slice 3 — dependency)
-- [ ] 1.9 Create `nc-api/tests/test_llm_provider.py`: unit tests — provider mismatch fallback + warning, deprecated-model fallback, matching provider/model pass-through, temp 0 preserved / None→0.7, max_tokens None→1024, history trimmed to budget / short untouched (patch `llm_client._client` with `AsyncMock`, mirror `test_agent_model_migration.py`); update `test_agent_model_migration.py` runtime-defense to `llm_client` + `settings.openai_model`
-- [ ] 1.10 Update handler tests asserting `provider=` kwarg, `.limit(30)`, Meta `<user_query>` wrap, evo/tg wrap unchanged (`test_webhook_handler.py`, `test_telegram_handler.py`, `test_evolution_webhook_auth.py`, `test_agent_connection_link.py`)
-- [ ] 1.11 Mechanical mock renames `groq_client`→`llm_client` in: `test_webhook_routing.py`, `test_agent_connection_integration.py`, `test_evolution_keywords.py`, `test_message_dedup.py`, `test_programmed_responses.py`, `tests/modules/evolution/test_natural_tone_prompt.py`, `test_handler_spam.py`, `test_evolution_adapter.py`
-- [ ] 1.12 Update agent-default seeds/asserts to `openai`/`gpt-4o-mini`: `test_agent_crud.py` (`_create_agent`, patch `{"provider":"made-up"}` expects `openai`), `test_agent_prompt_create.py`, `test_agent_max_tokens_migration.py`, `test_agent_templates.py` (from-template)
-- [ ] 1.13 Verify: `cd nc-api && uv run pytest` — all green (no config.py changes yet; `.env.example` still has `GROQ_API_KEY` so settings boot)
+- [x] 1.1 Rewrite `nc-api/app/modules/integrations/llm/provider.py`: `GroqClient`→`LLMClient` on `AsyncOpenAI`, add `provider` param, active-resolution + deprecated fallback (`DEPRECATED_GROQ_MODELS`), token-budget trim (`tokens ≈ len//3`, budget `settings.llm_history_token_budget`), `is not None` knobs, per-active-provider rate tracker; `llm_client` singleton replaces `groq_client`; drop `CONTEXT_WINDOW_SIZE`
+- [x] 1.2 `nc-api/app/modules/agents/models.py`: ORM defaults `provider="openai"`, `model=DEFAULT_LLM_MODEL` (temperature stays 0)
+- [x] 1.3 `nc-api/app/modules/agents/schemas.py`: `SUPPORTED_PROVIDERS={"openai","groq"}`, `_AgentParams.provider="openai"`, `AiAgentCreate.model=DEFAULT_LLM_MODEL`
+- [x] 1.4 `nc-api/app/api/v1/agents.py` from-template: `provider="openai"`, `model=DEFAULT_LLM_MODEL`
+- [x] 1.5 `nc-api/app/modules/evolution/handler.py`: `groq_client`→`llm_client`, pass `provider=agent.provider`, history `.limit(30)` (keep `<user_query>` wrap)
+- [x] 1.6 `nc-api/app/modules/telegram/handler.py`: same rename + `provider` + `.limit(30)` (keep wrap)
+- [x] 1.7 `nc-api/app/modules/integrations/webhook.py`: same rename + `provider` + `.limit(30)`; wrap `msg["text"]` in `<user_query>` (line ~249)
+- [x] 1.8 `nc-api/tests/conftest.py`: `setdefault("LLM_PROVIDER","openai")` + dummy `OPENAI_API_KEY` before app import (moved from Slice 3 — dependency)
+- [x] 1.9 Create `nc-api/tests/test_llm_provider.py`: unit tests — provider mismatch fallback + warning, deprecated-model fallback, matching provider/model pass-through, temp 0 preserved / None→0.7, max_tokens None→1024, history trimmed to budget / short untouched (patch `llm_client._client` with `AsyncMock`, mirror `test_agent_model_migration.py`); update `test_agent_model_migration.py` runtime-defense to `llm_client` + `settings.openai_model`
+- [x] 1.10 Update handler tests asserting `provider=` kwarg, `.limit(30)`, Meta `<user_query>` wrap, evo/tg wrap unchanged (`test_webhook_handler.py`, `test_telegram_handler.py`, `test_evolution_webhook_auth.py`, `test_agent_connection_link.py`)
+- [x] 1.11 Mechanical mock renames `groq_client`→`llm_client` in: `test_webhook_routing.py`, `test_agent_connection_integration.py`, `test_evolution_keywords.py`, `test_message_dedup.py`, `test_programmed_responses.py`, `tests/modules/evolution/test_natural_tone_prompt.py`, `test_handler_spam.py`, `test_evolution_adapter.py`
+- [x] 1.12 Update agent-default seeds/asserts to `openai`/`gpt-4o-mini`: `test_agent_crud.py` (`_create_agent`, patch `{"provider":"made-up"}` expects `openai`), `test_agent_prompt_create.py`, `test_agent_max_tokens_migration.py`, `test_agent_templates.py` (from-template)
+- [x] 1.13 Verify: `cd nc-api && uv run pytest` — all green (no config.py changes yet; `.env.example` still has `GROQ_API_KEY` so settings boot)
 
 ## Phase 2: Config/deploy + migration (Slice 2 — PR 2)
 
@@ -54,9 +54,9 @@ Note: `conftest.py` dummy keys move from Slice 3 → Slice 1 (hard dependency: p
 
 ## Phase 3: Frontend sync + dependency swap + full coverage (Slice 3 — PR 3)
 
-- [ ] 3.1 `nc-dashboard/lib/schemas/agent.ts`: `z.enum(["openai","groq"])`, `defaultAgentValues` → `openai`/`gpt-4o-mini`, prune `anthropic` from `MODELS_BY_PROVIDER`
-- [ ] 3.2 `nc-dashboard/lib/schemas/agent.test.ts`: update fixtures to new defaults; add both-provider acceptance + defaults parity tests
-- [ ] 3.3 `nc-dashboard/app/dashboard/agents/components/agent-form.tsx`: provider/model UI + hidden inputs to `openai`/`gpt-4o-mini`
-- [ ] 3.4 `nc-dashboard/app/dashboard/agents/[id]/page.tsx`: edit `defaultValues.provider="openai"`
-- [ ] 3.5 `nc-api/pyproject.toml`: remove `groq>=1.2.0`, add `openai`; regenerate `nc-api/uv.lock` (`uv lock`)
-- [ ] 3.6 Remaining test updates + polish: verify `cd nc-api && uv run pytest` full suite; `cd nc-dashboard && npx vitest run` green; README `.env` block (dual providers) parity
+- [x] 3.1 `nc-dashboard/lib/schemas/agent.ts`: `z.enum(["openai","groq"])`, `defaultAgentValues` → `openai`/`gpt-4o-mini`, prune `anthropic` from `MODELS_BY_PROVIDER`
+- [x] 3.2 `nc-dashboard/lib/schemas/agent.test.ts`: update fixtures to new defaults; add both-provider acceptance + defaults parity tests
+- [x] 3.3 `nc-dashboard/app/dashboard/agents/components/agent-form.tsx`: provider/model UI + hidden inputs to `openai`/`gpt-4o-mini`
+- [x] 3.4 `nc-dashboard/app/dashboard/agents/[id]/page.tsx`: edit `defaultValues.provider="openai"`
+- [x] 3.5 `nc-api/pyproject.toml`: remove `groq>=1.2.0`, add `openai`; regenerate `nc-api/uv.lock` (`uv lock`)
+- [x] 3.6 Remaining test updates + polish: verify `cd nc-api && uv run pytest` full suite; `cd nc-dashboard && npx vitest run` green; README `.env` block (dual providers) parity
