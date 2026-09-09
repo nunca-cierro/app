@@ -8,13 +8,16 @@ Plataforma de automatización de atención al cliente multicanal para negocios c
 nunca-cierro/
 ├── nc-api/               ← Backend (FastAPI + PostgreSQL)
 │   ├── app/
-│   ├── tests/            ← 149 tests
-│   └── Procfile          ← Railway deploy
+│   └── tests/            ← 613 tests
 ├── nc-dashboard/          ← Frontend (Next.js 16 + React 19)
 │   ├── app/
 │   ├── components/
-│   ├── tests/            ← 62 tests
+│   ├── tests/
 │   └── package.json
+├── .github/               ← GitHub Actions (deploy)
+├── openspec/              ← Spec-driven development specs (SDD)
+├── docker-compose.yml     ← Stack completo (API, Dashboard, Caddy, Evolution, n8n)
+├── Caddyfile              ← Reverse proxy + SSL (Caddy)
 ├── .gitignore
 └── README.md
 ```
@@ -23,10 +26,10 @@ nunca-cierro/
 
 Un sistema multi-tenant que permite a los negocios:
 
-- **Conectar WhatsApp (vía Meta o Evolution API) y Telegram** como canales
+- **Conectar WhatsApp (vía Evolution API o Meta Cloud API) y Telegram** como canales
 - **Dashboard Wizard**: Flujo guiado para crear Negocio → Agente IA → Conexión
 - **Configurar agentes de IA** con prompts personalizados y versionados por negocio
-- **Recibir y responder mensajes** automáticamente vía Groq (LLaMA 3.3 70B)
+- **Recibir y responder mensajes** automáticamente vía Groq (openai/gpt-oss-120b)
 - **Gestionar todo** desde un dashboard web centralizado con métricas en vivo
 - **Escalar** agregando múltiples negocios y agentes bajo una misma cuenta
 
@@ -36,13 +39,13 @@ Un sistema multi-tenant que permite a los negocios:
 | -------------------- | ---------------------------------------- |
 | **API**              | FastAPI (Python 3.12)                    |
 | **Base de Datos**    | PostgreSQL + SQLAlchemy + Alembic        |
-| **AI**               | Groq — LLaMA 3.3 70B (Versatile)         |
-| **WhatsApp Gateway** | Evolution API v2.x / Meta Cloud API v22  |
+| **AI**               | Groq — openai/gpt-oss-120b (default; override con `GROQ_MODEL`) |
+| **WhatsApp Gateway** | Evolution API v2.x (primario) / Meta Cloud API v22 (alternativa) |
 | **Telegram**         | Bot API                                  |
 | **Dashboard**        | Next.js 16 + React 19 + TypeScript       |
 | **UI**               | shadcn/ui + Tailwind CSS v4              |
-| **Dashboard Deploy** | Vercel                                   |
-| **API Deploy**       | Railway                                  |
+| **API Deploy**       | Hetzner VPS (docker-compose + Caddy, SSH via GitHub Actions) |
+| **Dashboard Deploy** | Mismo VPS (docker-compose + Caddy)       |
 
 ## Inicio Rápido
 
@@ -72,23 +75,24 @@ pnpm run dev
 ## Tests
 
 ```bash
-# Backend (149 tests)
+# Backend (613 tests)
 cd nc-api && uv run pytest
 
-# Frontend (62 tests)
+# Frontend
 cd nc-dashboard && pnpm test
 ```
 
 ## Despliegue
 
-Cada proyecto se despliega de forma independiente desde el mismo repo:
+Ambos servicios se despliegan desde el mismo repo sobre un **VPS en Hetzner** vía
+`docker-compose.yml` (API, Dashboard, Evolution API, n8n y Caddy como reverse proxy
+con SSL automático). El pipeline `deploy.yml` de GitHub Actions conecta por SSH,
+hace pull del repo y levanta el stack:
 
-| Proyecto | Plataforma | Root Directory |
-| -------- | ---------- | -------------- |
-| Backend  | Railway    | `nc-api`       |
-| Frontend | Vercel     | `nc-dashboard` |
-
-> **Vercel:** Al conectar el repo, configura el **Root Directory** como `nc-dashboard` en la sección "Root Directory" del proyecto. Next.js se detecta automáticamente, no necesita `vercel.json`.
+| Proyecto | Plataforma | Despliegue |
+| -------- | ---------- | ---------- |
+| Backend  | Hetzner VPS | `docker compose` + Caddy, SSH vía `.github/workflows/deploy.yml` |
+| Frontend | Hetzner VPS | `docker compose` (servicio `nc-dashboard`) + Caddy |
 
 ## Licencia
 
