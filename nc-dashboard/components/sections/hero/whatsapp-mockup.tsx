@@ -12,7 +12,7 @@ const messages = [
   {
     id: 2,
     type: "outgoing" as const,
-    text: "¡Hola! 👋 Estamos abiertos hasta las 10 pm. ¿En qué más te puedo ayudar?",
+    text: "¡Hola! 👋 Estamos abiertos hasta las 10 pm. ¿En qué más lo puedo ayudar?",
     time: "2:15 PM",
   },
   {
@@ -24,7 +24,7 @@ const messages = [
   {
     id: 4,
     type: "outgoing" as const,
-    text: "Sí, hacemos domicilios en un radio de 2 km. Mínimo $15.000. ¿Quieres hacer un pedido? 🛒",
+    text: "Sí, hacemos domicilios en un radio de 2 km. Mínimo $15.000. ¿Desea hacer un pedido? 🛒",
     time: "2:16 PM",
   },
 ];

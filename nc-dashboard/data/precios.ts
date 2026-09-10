@@ -10,7 +10,7 @@ export const preciosPage = {
   sectionId: "precios",
   hero: {
     label: "Precios",
-    title: "Planes de automatización WhatsApp para tu negocio",
+    title: "Planes de automatización WhatsApp para su negocio",
     subtitle:
       "Tu negocio nunca cierra: el bot responde, agenda citas y vende por WhatsApp las 24 horas, todos los días. Precios mensuales con IVA, sin contratos largos.",
     cta: {
