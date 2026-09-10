@@ -46,12 +46,12 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: Widget Dashboard
 
-- [ ] 3.1 `lib/types/plan.ts` (new): tipo `PlanUsage`
-- [ ] 3.2 `lib/api.ts`: `getPlanUsage()`
-- [ ] 3.3 `hooks/use-plan-usage.ts` (new): fetch por `current_tenant_id`, refetch al switch
-- [ ] 3.4 `plan-usage-widget.tsx` (new): barra `pct`; CTA ≥80%; exceso >100%; enterprise sin barra; error → oculto
-- [ ] 3.5 `dashboard/page.tsx`: widget tras "Plan Actual" (ClientDashboard)
-- [ ] 3.6 Tests: `plan-usage-widget.test.tsx` (24% sin CTA; 105% CTA; switch; error graceful)
+- [x] 3.1 `lib/types/plan.ts` (new): tipo `PlanUsage`
+- [x] 3.2 `lib/api.ts`: `getPlanUsage()`
+- [x] 3.3 `hooks/use-plan-usage.ts` (new): fetch por `current_tenant_id`, refetch al switch
+- [x] 3.4 `plan-usage-widget.tsx` (new): barra `pct`; CTA ≥80%; exceso >100%; enterprise sin barra; error → oculto
+- [x] 3.5 `dashboard/page.tsx`: widget tras "Plan Actual" (ClientDashboard)
+- [x] 3.6 Tests: `plan-usage-widget.test.tsx` (24% sin CTA; 105% CTA; switch; error graceful)
 
 ## Phase 4: Pricing + Landing
 
