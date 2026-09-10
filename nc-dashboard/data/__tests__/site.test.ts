@@ -5,7 +5,7 @@ import { sitePlans } from "@/data/site";
  * Slice 4 — landing coherence (plan-differentiation, task 4.5).
  *
  * The SaaS plan catalog in `data/site.ts` must reflect reality:
- * - Escenario A prices (copy strings, "+ IVA", nothing below $390K)
+ * - Escenario A prices (copy strings, "+ IVA", nothing below $390.000)
  * - the FALSE "Empresarial: Editar + agregar" client-access row is fixed
  *   to "Solo lectura" (clients are read-only on ANY plan, backend
  *   CLIENT_VIEW_ONLY)
@@ -25,9 +25,9 @@ describe("sitePlans comparisonRows", () => {
   it("shows Escenario A prices in the comparison table", () => {
     const row = sitePlans.comparisonRows.find((r) => r.label === "Precio");
     expect(row).toBeDefined();
-    expect(row?.basic).toBe("Desde $390K/mes + IVA");
-    expect(row?.pro).toBe("Desde $790K/mes + IVA");
-    expect(row?.enterprise).toBe("Desde $1.590K/mes + IVA");
+    expect(row?.basic).toBe("Desde $390.000/mes + IVA");
+    expect(row?.pro).toBe("Desde $790.000/mes + IVA");
+    expect(row?.enterprise).toBe("Desde $1.590.000/mes + IVA");
   });
 });
 
@@ -36,15 +36,16 @@ describe("sitePlans packages (Escenario A)", () => {
     const byName = Object.fromEntries(
       sitePlans.packages.map((p) => [p.name, p.price]),
     );
-    expect(byName["Básico"]).toBe("Desde $390K/mes + IVA");
-    expect(byName["Profesional"]).toBe("Desde $790K/mes + IVA");
-    expect(byName["Empresarial"]).toBe("Desde $1.590K/mes + IVA");
+    expect(byName["Básico"]).toBe("Desde $390.000/mes + IVA");
+    expect(byName["Profesional"]).toBe("Desde $790.000/mes + IVA");
+    expect(byName["Empresarial"]).toBe("Desde $1.590.000/mes + IVA");
   });
 
   it("includes the marketing-only Corporativo package labeled 'A cotizar'", () => {
     const corporate = sitePlans.packages.find((p) => p.name === "Corporativo");
     expect(corporate).toBeDefined();
     expect(corporate?.price).toBe("A cotizar");
+    expect(corporate?.features).toContain("Proyectos desde ~$3.500.000/mes + IVA");
   });
 
   it("never drops the '+ IVA' framing on a paid tier", () => {
@@ -90,7 +91,7 @@ describe("sitePlans trialInfo (programmed-only)", () => {
 });
 
 describe("anti-undercut floor (sitePlans)", () => {
-  it("has no SaaS price below $390K in the catalog", () => {
+  it("has no SaaS price below $390.000 in the catalog", () => {
     const priceStrings = sitePlans.packages
       .map((p) => p.price)
       .concat(
@@ -100,11 +101,11 @@ describe("anti-undercut floor (sitePlans)", () => {
       );
     for (const price of priceStrings) {
       if (price === "A cotizar") continue;
-      // "$X" amount in the label must never be below 390 (K units).
-      const match = price.match(/\$(\d[\d.]*)K/);
+      // "$X" amount in the label must never be below 390000 (COP, dot-separated).
+      const match = price.match(/\$(\d[\d.]*)/);
       if (match) {
         const amount = Number(match[1].replace(/\./g, ""));
-        expect(amount).toBeGreaterThanOrEqual(390);
+        expect(amount).toBeGreaterThanOrEqual(390000);
       }
     }
   });

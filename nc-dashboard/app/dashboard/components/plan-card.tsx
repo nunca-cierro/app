@@ -9,9 +9,9 @@ import { siteContactInfo } from "@/data/site";
 /*  Plan configuration — source of truth for features and prices       */
 /*                                                                     */
 /*  Escenario A (owner-validated, plan-differentiation): prices are    */
-/*  pure copy strings ("Desde $X/mes + IVA") — NEVER runtime            */
-/*  arithmetic. Anti-undercut floor: nothing below $390K, and paid      */
-/*  tiers always carry "+ IVA". Corporate is marketing-only:            */
+/*  pure copy strings ("Desde $X.XXX/mes + IVA") — NEVER runtime         */
+/*  arithmetic. Anti-undercut floor: nothing below $390.000, and paid    */
+/*  tiers always carry "+ IVA". Corporate is marketing-only:             */
 /*  "A cotizar" with a quote CTA, no "Activar" (not payable).           */
 /* ------------------------------------------------------------------ */
 
@@ -31,7 +31,7 @@ export const PLANS_CONFIG: Record<
 > = {
   basic: {
     label: "Básico",
-    priceLabel: "Desde $390K/mes + IVA",
+    priceLabel: "Desde $390.000/mes + IVA",
     features: [
       "Respuestas automáticas por palabras clave",
       "Hasta 10 productos en catálogo",
@@ -41,7 +41,7 @@ export const PLANS_CONFIG: Record<
   },
   professional: {
     label: "Profesional",
-    priceLabel: "Desde $790K/mes + IVA",
+    priceLabel: "Desde $790.000/mes + IVA",
     features: [
       "Inteligencia artificial con Groq",
       "Hasta 50 productos en catálogo",
@@ -52,7 +52,7 @@ export const PLANS_CONFIG: Record<
   },
   enterprise: {
     label: "Empresarial",
-    priceLabel: "Desde $1.590K/mes + IVA",
+    priceLabel: "Desde $1.590.000/mes + IVA",
     features: [
       "Todo lo del plan Profesional",
       "Productos, conversaciones y negocios ilimitados",
@@ -66,7 +66,7 @@ export const PLANS_CONFIG: Record<
     quoteOnly: true,
     quoteUrl: CORPORATE_QUOTE_URL,
     features: [
-      "Proyectos desde ~$3.5M/mes + IVA",
+      "Proyectos desde ~$3.500.000/mes + IVA",
       "Múltiples negocios y usuarios",
       "IA personalizada para tu operación",
       "Soporte dedicado y onboarding",

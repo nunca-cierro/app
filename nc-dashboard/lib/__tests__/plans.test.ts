@@ -16,9 +16,9 @@ describe("PLAN_LABELS", () => {
 
 describe("PRICE_LABELS (Escenario A — plan-differentiation)", () => {
   it("uses the exact Escenario A copy for the three paid tiers", () => {
-    expect(PRICE_LABELS.basic).toBe("Desde $390K/mes + IVA");
-    expect(PRICE_LABELS.professional).toBe("Desde $790K/mes + IVA");
-    expect(PRICE_LABELS.enterprise).toBe("Desde $1.590K/mes + IVA");
+    expect(PRICE_LABELS.basic).toBe("Desde $390.000/mes + IVA");
+    expect(PRICE_LABELS.professional).toBe("Desde $790.000/mes + IVA");
+    expect(PRICE_LABELS.enterprise).toBe("Desde $1.590.000/mes + IVA");
   });
 
   it("never drops the '+ IVA' framing on a paid tier", () => {
