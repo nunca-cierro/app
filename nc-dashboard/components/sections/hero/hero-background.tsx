@@ -3,12 +3,12 @@
 import { useEffect, useState, useRef } from "react";
 
 const negociosImages = [
-  "/negocios/restaurante.jpg",
-  "/negocios/barberia.jpg",
-  "/negocios/panaderia.jpg",
-  "/negocios/hamburgueseria.jpg",
-  "/negocios/tienda-barrio.jpg",
-  "/negocios/pasteleria.jpg",
+  "/negocios/boutique-moda.jpg",
+  "/negocios/clinica-estetica.jpg",
+  "/negocios/restaurante-gourmet.jpg",
+  "/negocios/spa-bienestar.jpg",
+  "/negocios/inmobiliaria.jpg",
+  "/negocios/showroom-automotriz.jpg",
 ];
 
 const websitesImages = [

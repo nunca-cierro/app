@@ -10,38 +10,37 @@ interface Business {
   message: string;
 }
 
-// v4 direction: the owner will replace the /negocios/* imagery with premium
-// sources (real premium people + glowing WhatsApp projection). Keep the
-// current image paths working until those assets land — do not invent files.
+// v6 set: one image per card, shared with the hero rotation (daylight-realistic
+// direction). The owner generates these files; old sources move to legacy.
 const businesses: Business[] = [
   {
     name: "Boutique de moda",
-    image: "/negocios/panaderia.jpg",
+    image: "/negocios/boutique-moda.jpg",
     message: "¿Tienen el vestido de la vitrina disponible en talla M?",
   },
   {
     name: "Clínica estética",
-    image: "/negocios/barberia.jpg",
+    image: "/negocios/clinica-estetica.jpg",
     message: "¿Me agendan cita con el especialista para esta semana?",
   },
   {
     name: "Restaurante gourmet",
-    image: "/negocios/restaurante.jpg",
+    image: "/negocios/restaurante-gourmet.jpg",
     message: "¿Hay reserva para hoy a las 8 pm para 4 personas?",
   },
   {
     name: "Spa y bienestar",
-    image: "/negocios/pasteleria.jpg",
+    image: "/negocios/spa-bienestar.jpg",
     message: "¿Qué horarios tienen el sábado para un masaje relajante?",
   },
   {
     name: "Inmobiliaria",
-    image: "/negocios/tienda-barrio.jpg",
+    image: "/negocios/inmobiliaria.jpg",
     message: "¿Puedo visitar el apartamento publicado esta semana?",
   },
   {
     name: "Showroom automotriz",
-    image: "/negocios/hamburgueseria.jpg",
+    image: "/negocios/showroom-automotriz.jpg",
     message: "¿Me agendan una prueba de manejo del modelo 2026?",
   },
 ];
