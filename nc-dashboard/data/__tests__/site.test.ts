@@ -128,6 +128,11 @@ describe("landing desajuste C — guarantee vs 7-day programmed trial", () => {
     expect(sitePlans.guaranteeText).not.toMatch(/primer mes/);
     expect(sitePlans.guaranteeText).not.toMatch(/sin riesgo/);
   });
+
+  it("adds the honest 'sin inteligencia artificial' qualifier (matches /precios trialNote)", () => {
+    expect(sitePlans.guaranteeText).toMatch(/sin inteligencia artificial/);
+    expect(sitePlans.guaranteeText).toMatch(/programadas/);
+  });
 });
 
 describe("landing desajuste D — FAQ claims match plan capabilities", () => {
@@ -262,7 +267,6 @@ describe("siteMetadata — no barrio framing, empresa keywords", () => {
 
 // ── REGISTER — usted (Colombian neutral, NO voseo) ──
 // The audit found a tú/usted mix. Every user-facing string must use usted.
-// guaranteeText is scanned once the P2 qualifier lands.
 
 const userFacingTexts = [
   siteMetadata.description,
@@ -271,6 +275,7 @@ const userFacingTexts = [
   siteHero.subtitle,
   sitePlans.title,
   sitePlans.subtitle,
+  sitePlans.guaranteeText,
   sitePlans.advisoryCta.title,
   sitePlans.advisoryCta.description,
   ...siteFaq.items.flatMap((f) => [f.question, f.answer]),
