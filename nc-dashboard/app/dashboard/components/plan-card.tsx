@@ -3,18 +3,35 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
+import { siteContactInfo } from "@/data/site";
 
 /* ------------------------------------------------------------------ */
 /*  Plan configuration — source of truth for features and prices       */
+/*                                                                     */
+/*  Escenario A (owner-validated, plan-differentiation): prices are    */
+/*  pure copy strings ("Desde $X/mes + IVA") — NEVER runtime            */
+/*  arithmetic. Anti-undercut floor: nothing below $390K, and paid      */
+/*  tiers always carry "+ IVA". Corporate is marketing-only:            */
+/*  "A cotizar" with a quote CTA, no "Activar" (not payable).           */
 /* ------------------------------------------------------------------ */
+
+const CORPORATE_QUOTE_URL = `https://wa.me/${siteContactInfo.whatsappNumber}?text=${encodeURIComponent(
+  "Hola, quiero cotizar el plan Corporativo para mi negocio.",
+)}`;
 
 export const PLANS_CONFIG: Record<
   string,
-  { label: string; price: number; features: string[] }
+  {
+    label: string;
+    priceLabel: string;
+    features: string[];
+    quoteOnly?: boolean;
+    quoteUrl?: string;
+  }
 > = {
   basic: {
     label: "Básico",
-    price: 60000,
+    priceLabel: "Desde $390K/mes + IVA",
     features: [
       "Respuestas automáticas por palabras clave",
       "Hasta 10 productos en catálogo",
@@ -24,7 +41,7 @@ export const PLANS_CONFIG: Record<
   },
   professional: {
     label: "Profesional",
-    price: 120000,
+    priceLabel: "Desde $790K/mes + IVA",
     features: [
       "Inteligencia artificial con Groq",
       "Hasta 50 productos en catálogo",
@@ -35,7 +52,7 @@ export const PLANS_CONFIG: Record<
   },
   enterprise: {
     label: "Empresarial",
-    price: 250000,
+    priceLabel: "Desde $1.590K/mes + IVA",
     features: [
       "Todo lo del plan Profesional",
       "Productos, conversaciones y negocios ilimitados",
@@ -43,11 +60,19 @@ export const PLANS_CONFIG: Record<
       "Onboarding personalizado",
     ],
   },
+  corporate: {
+    label: "Corporativo",
+    priceLabel: "A cotizar",
+    quoteOnly: true,
+    quoteUrl: CORPORATE_QUOTE_URL,
+    features: [
+      "Proyectos desde ~$3.5M/mes + IVA",
+      "Múltiples negocios y usuarios",
+      "IA personalizada para tu operación",
+      "Soporte dedicado y onboarding",
+    ],
+  },
 };
-
-export function formatPrice(price: number): string {
-  return `$${price.toLocaleString("es-CO")}`;
-}
 
 /* ------------------------------------------------------------------ */
 /*  PlanCard component                                                 */
@@ -75,8 +100,7 @@ export function PlanCard({ plan, onSelect, featured = false }: PlanCardProps) {
       <CardHeader>
         <CardTitle className="text-lg">{config.label}</CardTitle>
         <div className="mt-1">
-          <span className="text-3xl font-bold">{formatPrice(config.price)}</span>
-          <span className="text-muted-foreground ml-1 text-sm">/mes</span>
+          <span className="text-3xl font-bold">{config.priceLabel}</span>
         </div>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col">
@@ -89,13 +113,21 @@ export function PlanCard({ plan, onSelect, featured = false }: PlanCardProps) {
           ))}
         </ul>
         <div className="mt-auto pt-6">
-          <Button
-            className="w-full"
-            variant={featured ? "default" : "outline"}
-            onClick={() => onSelect(plan)}
-          >
-            Activar
-          </Button>
+          {config.quoteOnly ? (
+            <Button asChild className="w-full" variant="outline">
+              <a href={config.quoteUrl} target="_blank" rel="noopener noreferrer">
+                Cotizar
+              </a>
+            </Button>
+          ) : (
+            <Button
+              className="w-full"
+              variant={featured ? "default" : "outline"}
+              onClick={() => onSelect(plan)}
+            >
+              Activar
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
