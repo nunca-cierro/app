@@ -29,9 +29,10 @@ from alembic.config import Config
 from app.core.config import settings
 
 ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
-# Single head — keep in sync with `alembic heads` output. c0d1e2f3a4b5 is the
-# llm-multi-provider data migration (rewrites legacy Groq defaults to OpenAI).
-HEAD_REVISION = "c0d1e2f3a4b5"
+# Single head — keep in sync with `alembic heads` output. f1a2b3c4d5e6 recreates
+# the platform_connections.agent_id FK with ON DELETE SET NULL (it supersedes
+# c0d1e2f3a4b5, the llm-multi-provider data migration).
+HEAD_REVISION = "f1a2b3c4d5e6"
 # Revision right before the drop_agent_role data migration.
 PRE_DROP_AGENT_REVISION = "c2d3e4f5a6b7"
 
@@ -106,7 +107,7 @@ def test_upgrade_empty_schema_to_head(monkeypatch: pytest.MonkeyPatch) -> None:
         cfg.set_main_option("sqlalchemy.url", url)
         command.upgrade(cfg, "head")
 
-        async def _verify() -> tuple[str | None, set[str], set[str], set[str]]:
+        async def _verify() -> tuple[str | None, set[str], set[str], set[str], str | None]:
             conn = await asyncpg.connect(database=db_name, **params)
             try:
                 version = await conn.fetchval(
@@ -131,11 +132,17 @@ def test_upgrade_empty_schema_to_head(monkeypatch: pytest.MonkeyPatch) -> None:
                         "WHERE connamespace = 'public'::regnamespace"
                     )
                 }
-                return version, tables, indexes, constraints
+                # confdeltype: 'a'=NO ACTION, 'n'=SET NULL (f1a2b3c4d5e6).
+                # Cast to text — asyncpg returns the raw "char" as bytes.
+                fk_deltype = await conn.fetchval(
+                    "SELECT confdeltype::text FROM pg_constraint "
+                    "WHERE conname = 'fk_platform_connections_agent_id'"
+                )
+                return version, tables, indexes, constraints, fk_deltype
             finally:
                 await conn.close()
 
-        version, tables, indexes, constraints = asyncio.run(_verify())
+        version, tables, indexes, constraints, fk_deltype = asyncio.run(_verify())
 
         # ── e4b0ad82cba2 drop is idempotent — nothing left behind ──
         assert version == HEAD_REVISION
@@ -145,6 +152,14 @@ def test_upgrade_empty_schema_to_head(monkeypatch: pytest.MonkeyPatch) -> None:
         # ── Sanity: schema that must exist at head ──
         assert {"tenants", "users", "ai_agents", "messages", "agent_templates"} <= tables
         assert "uq_messages_conn_external_msg" in constraints
+        # f1a2b3c4d5e6: agent deletion must UNLINK its connections, not fail.
+        # Guard the FK's delete action directly — the metadata-created test DB
+        # emits SET NULL from the model, so a broken migration would otherwise
+        # pass CI while production (Alembic-managed) broke.
+        assert fk_deltype == "n", (
+            "fk_platform_connections_agent_id must be ON DELETE SET NULL "
+            f"(confdeltype='n'), got {fk_deltype!r}"
+        )
     finally:
         asyncio.run(_drop_database(params, db_name))
 

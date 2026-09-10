@@ -31,6 +31,7 @@ from app.modules.agents.schemas import (
 from app.modules.agents.template_models import AgentTemplate
 from app.modules.agents.templates import PlaceholderResolver
 from app.core.config import DEFAULT_LLM_MODEL, DEFAULT_MAX_TOKENS
+from app.modules.platform_connections.models import PlatformConnection
 from app.modules.tenants.models import Tenant
 
 router = APIRouter(prefix="/agents", tags=["agents"])
@@ -249,6 +250,19 @@ async def delete_agent(
     # Delete associated prompts first
     from sqlalchemy import delete as sa_delete
     await session.execute(sa_delete(Prompt).where(Prompt.agent_id == agent_id))
+
+    # Unlink platform connections that reference this agent. The connection
+    # (e.g. a WhatsApp number) belongs to the TENANT, not the agent, so deleting
+    # an agent must unlink it — never delete it. Without this the FK
+    # fk_platform_connections_agent_id blocked the delete with an
+    # IntegrityError (409). The DB constraint is ON DELETE SET NULL too; this
+    # explicit update keeps the behavior deterministic and observable.
+    from sqlalchemy import update as sa_update
+    await session.execute(
+        sa_update(PlatformConnection)
+        .where(PlatformConnection.agent_id == agent_id)
+        .values(agent_id=None)
+    )
 
     await session.delete(agent)
     await session.commit()
