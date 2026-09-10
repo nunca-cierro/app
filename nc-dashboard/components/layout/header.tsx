@@ -8,6 +8,7 @@ import { headerData, siteWhatsAppMessages } from "@/data/site";
 import { cn } from "@/lib/utils";
 
 const navItems = [
+  { name: "Inicio", href: "/" },
   { name: "Precios", href: "/precios" },
   { name: "Sitios web", href: "/inicio" },
   { name: "Contacto", href: "/#contacto" },

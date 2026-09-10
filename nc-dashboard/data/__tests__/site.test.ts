@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { sitePlans, siteFaq } from "@/data/site";
+import {
+  sitePlans,
+  siteFaq,
+  siteHero,
+  siteWebSecondary,
+  headerData,
+  footerData,
+} from "@/data/site";
 
 /**
  * Slice 4 — landing coherence (plan-differentiation, task 4.5).
@@ -179,5 +186,44 @@ describe("anti-barrio tone on the home plans copy", () => {
   it("Básico description drops 'negocios pequeños'", () => {
     const basic = sitePlans.packages.find((p) => p.name === "Básico");
     expect(basic?.description).not.toMatch(/negocios pequeños/);
+  });
+});
+
+// ── HOME SWAP — WhatsApp automation is the PRIMARY offer; web is secondary ──
+
+describe("home swap — nav leads with the automation home", () => {
+  it("header nav has the automation home ('Inicio' → '/') as the primary item", () => {
+    expect(headerData.navItems[0]).toEqual({ name: "Inicio", href: "/" });
+  });
+
+  it("web design appears as a secondary nav item pointing to /inicio", () => {
+    const web = headerData.navItems.find((i) => i.name === "Sitios web");
+    expect(web).toEqual({ name: "Sitios web", href: "/inicio" });
+  });
+
+  it("footer nav also leads with the automation home", () => {
+    expect(footerData.navItems[0]).toEqual({ name: "Inicio", href: "/" });
+  });
+});
+
+describe("home swap — web product is positioned as an add-on", () => {
+  it("the secondary strip links to /inicio with the 'Sitios web' label", () => {
+    expect(siteWebSecondary.label).toBe("Sitios web");
+    expect(siteWebSecondary.href).toBe("/inicio");
+    expect(siteWebSecondary.ctaLabel).toMatch(/sitios web/i);
+  });
+
+  it("describes the web service as separate, one-time, not part of the SaaS", () => {
+    expect(siteWebSecondary.description).toContain("Servicio aparte");
+    expect(siteWebSecondary.description).toContain("Desde $699.900");
+  });
+});
+
+describe("home swap — hero copy leads with automation, not web", () => {
+  it("the home hero is automation-first (WhatsApp, 24/7)", () => {
+    expect(siteHero.title).toMatch(/clientes|atendidos/i);
+    expect(siteHero.subtitle).toMatch(/whatsapp/i);
+    expect(siteHero.subtitle).toMatch(/24\/7/);
+    expect(siteHero.subtitle).not.toMatch(/sitio web|página web/i);
   });
 });
