@@ -8,45 +8,41 @@ interface Business {
   name: string;
   image: string;
   message: string;
-  emoji: string;
 }
 
+// v4 direction: the owner will replace the /negocios/* imagery with premium
+// sources (real premium people + glowing WhatsApp projection). Keep the
+// current image paths working until those assets land — do not invent files.
 const businesses: Business[] = [
   {
-    name: "Restaurante",
-    image: "/negocios/restaurante.jpg",
-    message: "¿Tienen mesa para 4 hoy a las 7pm?",
-    emoji: "🍽️",
-  },
-  {
-    name: "Tienda de barrio",
-    image: "/negocios/tienda-barrio.jpg",
-    message: "¿Cuánto vale el arroz kilo?",
-    emoji: "🛒",
-  },
-  {
-    name: "Panadería",
+    name: "Boutique de moda",
     image: "/negocios/panaderia.jpg",
-    message: "¿A qué hora sacan el pan caliente?",
-    emoji: "🥐",
+    message: "¿Tienen el vestido de la vitrina disponible en talla M?",
   },
   {
-    name: "Hamburguesería",
-    image: "/negocios/hamburgueseria.jpg",
-    message: "Quiero pedir 2 hamburguesas dobles",
-    emoji: "🍔",
-  },
-  {
-    name: "Barbería",
+    name: "Clínica estética",
     image: "/negocios/barberia.jpg",
-    message: "¿Tienen turno para hoy a las 5pm?",
-    emoji: "✂️",
+    message: "¿Me agendan cita con el especialista para esta semana?",
   },
   {
-    name: "Pastelería",
+    name: "Restaurante gourmet",
+    image: "/negocios/restaurante.jpg",
+    message: "¿Hay reserva para hoy a las 8 pm para 4 personas?",
+  },
+  {
+    name: "Spa y bienestar",
     image: "/negocios/pasteleria.jpg",
-    message: "¿Cuánto vale el pastel de tres leches?",
-    emoji: "🎂",
+    message: "¿Qué horarios tienen el sábado para un masaje relajante?",
+  },
+  {
+    name: "Inmobiliaria",
+    image: "/negocios/tienda-barrio.jpg",
+    message: "¿Puedo visitar el apartamento publicado esta semana?",
+  },
+  {
+    name: "Showroom automotriz",
+    image: "/negocios/hamburgueseria.jpg",
+    message: "¿Me agendan una prueba de manejo del modelo 2026?",
   },
 ];
 
@@ -76,7 +72,7 @@ function BusinessCard({ business }: { business: Business }) {
           <div className="bg-[#DCF8C6] text-gray-800 text-xs rounded-lg rounded-tr-sm px-3 py-2 shadow-lg leading-relaxed">
             <span className="font-semibold text-[#075E54]">{business.name}</span>
             <br />
-            {business.message} {business.emoji}
+            {business.message}
           </div>
           {/* Triangle tail */}
           <div className="absolute -top-1 right-0 w-0 h-0 border-l-[6px] border-l-transparent border-b-[8px] border-b-[#DCF8C6]" />
@@ -98,10 +94,10 @@ export function Businesses() {
             Negocios
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance text-stone-100 md:text-4xl">
-            Funciona para tu tipo de negocio
+            Funciona para su tipo de negocio
           </h2>
           <p className="mt-4 text-stone-300/80 leading-relaxed">
-            Tengas 10 o 10.000 clientes, cada consulta por WhatsApp es una venta en potencia.{" "}
+            Tenga 10 o 10.000 clientes, cada consulta por WhatsApp es una venta en potencia.{" "}
             <span className="text-amber-200 font-medium">
               Automatiza la atención al cliente 24/7.
             </span>

@@ -67,3 +67,32 @@ describe("home swap — automation is the PRIMARY offer on the home", () => {
     expect(plansAt).toBeLessThan(webAt);
   });
 });
+
+describe("negocios — premium mid-market cards (anti-barrio)", () => {
+  it("shows the six premium verticals with high-ticket messages", async () => {
+    const html = await renderToHtml(React.createElement(AutomationContent));
+    expect(html).toContain("Boutique de moda");
+    expect(html).toContain("Clínica estética");
+    expect(html).toContain("Restaurante gourmet");
+    expect(html).toContain("Spa y bienestar");
+    expect(html).toContain("Inmobiliaria");
+    expect(html).toContain("Showroom automotriz");
+    expect(html).toContain("¿Tienen el vestido de la vitrina disponible en talla M?");
+    expect(html).toContain("¿Me agendan una prueba de manejo del modelo 2026?");
+  });
+
+  it("drops the low-ticket barrio cards and their emojis", async () => {
+    const html = await renderToHtml(React.createElement(AutomationContent));
+    const negociosHtml = html.slice(
+      html.indexOf('id="negocios"'),
+      html.indexOf('id="planes"'),
+    );
+    expect(negociosHtml).not.toContain("Tienda de barrio");
+    expect(negociosHtml).not.toContain("Panadería");
+    expect(negociosHtml).not.toContain("Hamburguesería");
+    expect(negociosHtml).not.toContain("¿Cuánto vale el arroz kilo?");
+    for (const emoji of ["🛒", "🥐", "🍔", "✂️", "🎂", "🍽️"]) {
+      expect(negociosHtml).not.toContain(emoji);
+    }
+  });
+});
