@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -6,6 +7,9 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "sonner";
 import { siteMetadata } from "@/data/site";
+
+// Google Analytics 4 — inert until NEXT_PUBLIC_GA_ID (G-XXXXXXX) is set.
+const gaId = process.env.NEXT_PUBLIC_GA_ID;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -86,6 +90,21 @@ export default function RootLayout({
         />
       </head>
       <Analytics />
+      {gaId ? (
+        <>
+          <Script
+            async
+            src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+            strategy="afterInteractive"
+          />
+          <Script id="ga4-init" strategy="afterInteractive">
+            {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${gaId}');`}
+          </Script>
+        </>
+      ) : null}
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
