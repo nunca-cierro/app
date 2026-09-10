@@ -14,24 +14,31 @@ import { Button } from "@/components/ui/button";
 import { PaymentStatusBadge } from "@/app/dashboard/tenants/components/payment-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { apiClient, ApiError } from "@/lib/api";
-import { PLAN_LABELS } from "@/lib/plans";
+import { PLAN_LABELS, PRICE_LABELS } from "@/lib/plans";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import type { Tenant } from "@/lib/types";
 
 /* ------------------------------------------------------------------ */
-/*  Plan options                                                        */
+/*  Plan options — Escenario A (plan-differentiation, task 4.3)        */
+/*  Prices are copy strings from PRICE_LABELS (source of truth).       */
+/*  Corporate is deliberately absent: marketing-only, never            */
+/*  activatable from the admin payment confirmation.                   */
 /* ------------------------------------------------------------------ */
 
-const PLAN_OPTIONS = [
-  { value: "basic", label: "Básico", price: 60000 },
-  { value: "professional", label: "Profesional", price: 120000 },
-  { value: "enterprise", label: "Empresarial", price: 250000 },
+export const PLAN_OPTIONS = [
+  { value: "basic", label: PLAN_LABELS.basic, priceLabel: PRICE_LABELS.basic },
+  {
+    value: "professional",
+    label: PLAN_LABELS.professional,
+    priceLabel: PRICE_LABELS.professional,
+  },
+  {
+    value: "enterprise",
+    label: PLAN_LABELS.enterprise,
+    priceLabel: PRICE_LABELS.enterprise,
+  },
 ] as const;
-
-function formatPrice(price: number): string {
-  return `$${price.toLocaleString("es-CO")}`;
-}
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -120,7 +127,7 @@ export function ConfirmPaymentDialog({
           >
             {PLAN_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label} — {formatPrice(option.price)}
+                {option.label} — {option.priceLabel}
               </option>
             ))}
           </select>
