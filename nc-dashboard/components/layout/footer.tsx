@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { footerData } from "@/data/site";
 import { ArrowUp } from "lucide-react";
@@ -90,13 +92,14 @@ export function Footer() {
             <p className="text-xs font-semibold uppercase tracking-widest text-amber-400/70 mb-1">
               Subir
             </p>
-            <a
-              href="#inicio"
+            <button
+              type="button"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               className="w-10 h-10 flex items-center justify-center rounded-full border border-stone-800 text-stone-400 hover:border-amber-400/40 hover:text-amber-300 hover:bg-amber-400/10 transition-all duration-200"
               aria-label="Volver arriba"
             >
               <ArrowUp className="w-4 h-4" />
-            </a>
+            </button>
           </div>
         </div>
 
