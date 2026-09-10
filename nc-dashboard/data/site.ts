@@ -58,8 +58,9 @@ export const headerData = {
     href: "/",
   },
   navItems: [
-    { name: "Planes", href: "#planes" },
-    { name: "Contacto", href: "#contacto" },
+    { name: "Precios", href: "/precios" },
+    { name: "Sitios web", href: "/inicio" },
+    { name: "Contacto", href: "/#contacto" },
   ],
   mobileMenu: {
     openLabel: "Abrir menú",
@@ -80,10 +81,10 @@ export const footerData = {
   },
   description: "Automatización WhatsApp para negocios en Colombia.",
   navItems: [
-    { name: "Inicio", href: "#inicio" },
-    { name: "Planes", href: "#planes" },
-    { name: "FAQ", href: "#faq" },
-    { name: "Contacto", href: "#contacto" },
+    { name: "Inicio", href: "/" },
+    { name: "Precios", href: "/precios" },
+    { name: "Sitios web", href: "/inicio" },
+    { name: "Contacto", href: "/#contacto" },
   ],
   socialLinks: [
     {
@@ -383,6 +384,18 @@ export const siteContact = {
 // ============================================================
 // LANDING PAGE SERVICE DATA (Páginas web con WhatsApp)
 // ============================================================
+
+// Secondary offer (web design) shown on the automation-first home — the web
+// product is a separate, one-time-payment line (data/landing/pricing.ts), NOT
+// part of the monthly SaaS. Price reference kept in sync with landingPricing.
+export const siteWebSecondary = {
+  label: "Sitios web",
+  title: "¿También necesitas una página web profesional?",
+  description:
+    "Servicio aparte, con entrega única: diseñamos tu sitio para que más clientes lleguen por WhatsApp. Desde $699.900.",
+  ctaLabel: "Ver planes de sitios web",
+  href: "/inicio",
+};
 
 export const siteWhatsappFloat = {
   ariaLabel: "Contactar por WhatsApp",

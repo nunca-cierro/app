@@ -1,19 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { headerData, siteWhatsAppMessages } from "@/data/site";
 import { cn } from "@/lib/utils";
 
-const automationNav = [
-  { name: "Planes", href: "/whatsapp#planes" },
-  { name: "Contacto", href: "/whatsapp#contacto" },
-];
-
-const landingNav = [
-  { name: "Precios", href: "/inicio#precios" },
-  { name: "Contacto", href: "/inicio#contacto" },
+const navItems = [
+  { name: "Precios", href: "/precios" },
+  { name: "Sitios web", href: "/inicio" },
+  { name: "Contacto", href: "/#contacto" },
 ];
 
 export function Header() {
@@ -21,29 +18,34 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { brand, mobileMenu } = headerData;
+  const whatsappUrl = siteWhatsAppMessages.automationUrl;
 
-  const isLanding = pathname === "/" || pathname === "/inicio";
-  const navItems = isLanding ? landingNav : automationNav;
-  const whatsappUrl = isLanding ? siteWhatsAppMessages.landingUrl : siteWhatsAppMessages.automationUrl;
+  const isActive = (href: string) => {
+    const [path] = href.split("#");
+    if (!path) return pathname === "/";
+    return pathname === path;
+  };
 
-  // Smooth scroll handler
+  // Smooth scroll handler — same-page anchors scroll; cross-page anchors
+  // fall through to normal navigation (Next Link handles the jump).
   const handleSmoothScroll = (
     e: React.MouseEvent<HTMLAnchorElement>,
     href: string,
   ) => {
-    if (href.includes("#")) {
-      const hash = href.split("#")[1];
-      if (hash) {
-        e.preventDefault();
-        const el = document.getElementById(hash);
-        if (el) {
-          el.scrollIntoView({ behavior: "smooth", block: "start" });
-          const header = document.querySelector("header");
-          const headerHeight = header?.offsetHeight || 80;
-          const yOffset = -(headerHeight + 24);
-          const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
-          window.scrollTo({ top: y, behavior: "smooth" });
-        }
+    const hashIndex = href.indexOf("#");
+    const path = hashIndex >= 0 ? href.slice(0, hashIndex) : href;
+    const hash = hashIndex >= 0 ? href.slice(hashIndex + 1) : "";
+    const isSamePage = !path || path === pathname;
+    if (hash && isSamePage) {
+      e.preventDefault();
+      const el = document.getElementById(hash);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        const header = document.querySelector("header");
+        const headerHeight = header?.offsetHeight || 80;
+        const yOffset = -(headerHeight + 24);
+        const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: "smooth" });
       }
     }
   };
@@ -74,8 +76,8 @@ export function Header() {
         }
       >
         <div className="flex justify-between md:grid md:grid-cols-3 items-center h-20 px-4 sm:px-6">
-          <a
-            href={isLanding ? "/inicio" : "/whatsapp"}
+          <Link
+            href="/"
             className="flex items-center gap-2 px-3 py-1 shrink-0 justify-self-start group"
             style={{ letterSpacing: "0.01em" }}
           >
@@ -86,50 +88,27 @@ export function Header() {
               <span className="text-white">{brand.name}</span>
               <span className="text-amber-400 transition-all duration-300 group-hover:drop-shadow-[0_0_10px_rgba(251,191,36,0.5)]">{brand.accent}</span>
             </span>
-          </a>
+          </Link>
 
-          {/* Segmented Control - Centrado */}
-          <div className="hidden md:flex justify-center">
-            <div className="inline-flex items-center rounded-lg border border-white/15 bg-white/5 p-0.5">
-              <a
-                href="/inicio"
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-200 no-underline",
-                  isLanding
-                    ? "bg-amber-500 text-stone-950 shadow-sm"
-                    : "text-white/70 hover:text-white",
-                )}
-              >
-                Sitio web
-              </a>
-              <a
-                href="/whatsapp"
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-200 no-underline",
-                  !isLanding
-                    ? "bg-amber-500 text-stone-950 shadow-sm"
-                    : "text-white/70 hover:text-white",
-                )}
-              >
-                WhatsApp
-              </a>
-            </div>
-          </div>
-
-          {/* Desktop Nav + Mobile Hamburguesa — misma celda col 3 */}
+          {/* Nav + CTA — misma celda col 3 */}
           <div className="flex items-center gap-4 justify-self-end">
             {/* Desktop */}
-            <nav className="hidden md:flex items-center gap-4">
+            <nav className="hidden md:flex items-center gap-2">
               {navItems.map((item) => (
-                <a
+                <Link
                   key={item.name}
                   href={item.href}
-                  className="text-[0.95rem] text-white/80 hover:text-white transition-colors px-2 py-1"
-                  style={{ letterSpacing: "0.06em" }}
                   onClick={(e) => handleSmoothScroll(e, item.href)}
+                  className={cn(
+                    "text-[0.95rem] px-2 py-1 transition-colors no-underline",
+                    isActive(item.href)
+                      ? "text-amber-400"
+                      : "text-white/80 hover:text-white",
+                  )}
+                  style={{ letterSpacing: "0.06em" }}
                 >
                   {item.name}
-                </a>
+                </Link>
               ))}
 
               <a
@@ -172,46 +151,23 @@ export function Header() {
         {isMenuOpen && (
           <nav className="md:hidden mt-2 px-4 py-6 border-t border-white/10 bg-[rgba(15,15,15,0.85)] backdrop-blur-xl rounded-b-2xl shadow-lg">
             <div className="flex flex-col gap-3">
-              {/* Mobile segmented control */}
-              <div className="flex items-center rounded-lg border border-white/15 bg-white/5 p-0.5 mb-2">
-                <a
-                  href="/inicio"
-                  onClick={() => setIsMenuOpen(false)}
-                  className={cn(
-                    "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 text-center no-underline",
-                    isLanding
-                      ? "bg-amber-500 text-stone-950 shadow-sm"
-                      : "text-white/70 hover:text-white",
-                  )}
-                >
-                  Sitio web
-                </a>
-                <a
-                  href="/whatsapp"
-                  onClick={() => setIsMenuOpen(false)}
-                  className={cn(
-                    "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 text-center no-underline",
-                    !isLanding
-                      ? "bg-amber-500 text-stone-950 shadow-sm"
-                      : "text-white/70 hover:text-white",
-                  )}
-                >
-                  WhatsApp
-                </a>
-              </div>
-
               {navItems.map((item) => (
-                <a
+                <Link
                   key={item.name}
                   href={item.href}
-                  className="text-[0.95rem] text-white/80 hover:text-white transition-colors px-4 py-2 rounded-xl border border-white/10 bg-white/5 no-underline"
+                  className={cn(
+                    "text-[0.95rem] px-4 py-2 rounded-xl border border-white/10 bg-white/5 no-underline",
+                    isActive(item.href)
+                      ? "text-amber-400"
+                      : "text-white/80 hover:text-white",
+                  )}
                   onClick={(e) => {
                     handleSmoothScroll(e, item.href);
                     setIsMenuOpen(false);
                   }}
                 >
                   {item.name}
-                </a>
+                </Link>
               ))}
 
               {/* Escríbenos dentro del menú mobile, al final */}
