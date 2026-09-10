@@ -55,12 +55,12 @@ Chain strategy: stacked-to-main
 
 ## Phase 4: Pricing + Landing
 
-- [ ] 4.1 `lib/plans.ts`: `PRICE_LABELS` "Desde $390K/$790K/$1.590K/mes + IVA" (copy)
-- [ ] 4.2 `plan-card.tsx`: `price:number` → `priceLabel:string`; quitar `formatPrice`; card Corporativo "A cotizar" (sin Activar)
-- [ ] 4.3 `confirm-payment-dialog.tsx`: PRICE_OPTIONS → labels Escenario A
-- [ ] 4.4 `payment-screen.tsx`: sin Corporativo en QR (PLAN_QR_MAP intacto)
-- [ ] 4.5 `data/site.ts`: precios; "Acceso cliente" → "Solo lectura"; `planInfo` sin IA en Básico; `trialInfo` programado
-- [ ] 4.6 Tests: ext. `plan-card.test.ts` + `plans.test.ts` + `payment-screen.test.ts` + `confirm-payment-dialog.test.ts`; nuevo test `site.ts`
+- [x] 4.1 `lib/plans.ts`: `PRICE_LABELS` "Desde $390K/$790K/$1.590K/mes + IVA" (copy)
+- [x] 4.2 `plan-card.tsx`: `price:number` → `priceLabel:string`; quitar `formatPrice`; card Corporativo "A cotizar" (sin Activar)
+- [x] 4.3 `confirm-payment-dialog.tsx`: PRICE_OPTIONS → labels Escenario A
+- [x] 4.4 `payment-screen.tsx`: sin Corporativo en QR (PLAN_QR_MAP intacto)
+- [x] 4.5 `data/site.ts`: precios; "Acceso cliente" → "Solo lectura"; `planInfo` sin IA en Básico; `trialInfo` programado
+- [x] 4.6 Tests: ext. `plan-card.test.ts` + `plans.test.ts` + `payment-screen.test.ts` + `confirm-payment-dialog.test.ts`; nuevo test `site.ts`
 
 ## Phase 5: Docs + Verificación
 
