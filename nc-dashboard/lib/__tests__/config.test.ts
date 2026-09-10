@@ -8,7 +8,7 @@ describe("INTERNAL_TENANT_SLUG", () => {
   });
 
   it("defaults to the current internal tenant slug", () => {
-    expect(INTERNAL_TENANT_SLUG).toBe("nuncacierro");
+    expect(INTERNAL_TENANT_SLUG).toBe("nunca-cierro");
   });
 
   it("respects NEXT_PUBLIC_INTERNAL_TENANT_SLUG override", async () => {
