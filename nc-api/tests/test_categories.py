@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from app.modules.agents.categories import (
     BUSINESS_CATEGORIES,
+    INTERNAL_TEMPLATE_CATEGORIES,
     TEMPLATE_CATEGORIES,
     canonicalize_category,
     category_label,
@@ -23,6 +24,7 @@ class TestCategoryRegistry:
         assert BUSINESS_CATEGORIES["hamburgueseria"] == "Hamburguesería"
         assert BUSINESS_CATEGORIES["barberia"] == "Barbería"
         assert BUSINESS_CATEGORIES["clinica"] == "Clínica"
+        assert BUSINESS_CATEGORIES["nuncacierro"] == "NuncaCierro"
 
     def test_template_categories_are_subset_of_registry(self) -> None:
         for slug in TEMPLATE_CATEGORIES:
@@ -37,6 +39,23 @@ class TestCategoryRegistry:
         # Categories shipped by the landing demos (display labels) all map to a slug.
         for label in ["Restaurante", "Barbería", "Belleza", "Dental", "Gimnasio", "Spa"]:
             assert is_known_category(canonicalize_category(label))
+
+
+class TestInternalTemplateCategories:
+    """Internal categories ship system templates but are superadmin-only."""
+
+    def test_nuncacierro_is_not_in_client_gallery(self) -> None:
+        assert "nuncacierro" not in TEMPLATE_CATEGORIES
+
+    def test_internal_categories_include_nuncacierro(self) -> None:
+        assert "nuncacierro" in INTERNAL_TEMPLATE_CATEGORIES
+
+    def test_internal_categories_are_registered(self) -> None:
+        for slug in INTERNAL_TEMPLATE_CATEGORIES:
+            assert slug in BUSINESS_CATEGORIES
+
+    def test_internal_and_public_categories_do_not_overlap(self) -> None:
+        assert not set(INTERNAL_TEMPLATE_CATEGORIES) & set(TEMPLATE_CATEGORIES)
 
 
 class TestCanonicalizeCategory:

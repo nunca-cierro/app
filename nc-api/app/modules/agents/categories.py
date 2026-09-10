@@ -27,6 +27,7 @@ BUSINESS_CATEGORIES: dict[str, str] = {
     "hamburgueseria": "Hamburguesería",
     "barberia": "Barbería",
     "clinica": "Clínica",
+    "nuncacierro": "NuncaCierro",
     "belleza": "Belleza",
     "gimnasio": "Gimnasio",
     "spa": "Spa",
@@ -34,6 +35,8 @@ BUSINESS_CATEGORIES: dict[str, str] = {
 
 # Categories that ship system templates in SEED_TEMPLATES (used by the
 # dashboard template selector to show only categories with ready templates).
+# This is the CLIENT-FACING gallery: internal categories are intentionally
+# absent here (see INTERNAL_TEMPLATE_CATEGORIES).
 TEMPLATE_CATEGORIES: tuple[str, ...] = (
     "restaurante",
     "panaderia",
@@ -41,6 +44,10 @@ TEMPLATE_CATEGORIES: tuple[str, ...] = (
     "barberia",
     "clinica",
 )
+
+# Categories whose system templates are internal (superadmin-only) and must be
+# hidden from the client gallery.
+INTERNAL_TEMPLATE_CATEGORIES: tuple[str, ...] = ("nuncacierro",)
 
 # ── Aliases ───────────────────────────────────────────────────────────────────
 # Legacy demo keys, english slugs and display labels -> canonical slug.

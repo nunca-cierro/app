@@ -18,7 +18,10 @@ from app.modules.agents.template_schemas import (
     AgentTemplateUpdate,
     AgentTemplateResponse,
 )
-from app.modules.agents.categories import canonicalize_category
+from app.modules.agents.categories import (
+    INTERNAL_TEMPLATE_CATEGORIES,
+    canonicalize_category,
+)
 
 router = APIRouter(prefix="/agent-templates", tags=["agent-templates"])
 
@@ -35,6 +38,16 @@ async def list_templates(
     query = select(AgentTemplate).order_by(AgentTemplate.category, AgentTemplate.name)
     result = await session.execute(query)
     templates = list(result.scalars().all())
+
+    # Internal system templates (superadmin-only) are hidden from every other
+    # role. Filter before the category filter so both compose cleanly.
+    if current_user.current_role != UserRole.SUPERADMIN:
+        templates = [
+            template
+            for template in templates
+            if canonicalize_category(template.category)
+            not in INTERNAL_TEMPLATE_CATEGORIES
+        ]
 
     if category:
         # Legacy template categories remain stored as-is. Compare their
@@ -58,6 +71,13 @@ async def get_template(
     """Get a single agent template by ID."""
     template = await session.get(AgentTemplate, template_id)
     if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    # Internal system templates are superadmin-only — 404 (not 403) so their
+    # existence is never leaked to clients.
+    if (
+        canonicalize_category(template.category) in INTERNAL_TEMPLATE_CATEGORIES
+        and current_user.current_role != UserRole.SUPERADMIN
+    ):
         raise HTTPException(status_code=404, detail="Template not found")
     return template
 

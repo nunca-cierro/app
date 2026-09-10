@@ -12,7 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.agents.template_models import AgentTemplate
 from app.modules.agents.templates import SEED_TEMPLATES
-from app.modules.auth.models import UserRole
+from app.modules.auth.deps import get_current_user
+from app.modules.auth.models import User, UserRole
+from app.modules.tenants.models import Tenant
+from app.main import app
 
 
 # ── Fixtures ────────────────────────────────────────────────────────────────
@@ -82,6 +85,62 @@ async def seed_test_tenant_empty_profile(db_session: AsyncSession) -> uuid.UUID:
     await db_session.commit()
     await db_session.refresh(tenant)
     return tenant.id
+
+
+@pytest_asyncio.fixture
+async def internal_template(db_session: AsyncSession) -> AgentTemplate:
+    """Create a system template for an INTERNAL (superadmin-only) category."""
+    template = AgentTemplate(
+        category="nuncacierro",
+        name="NuncaCierro 💼",
+        description="Internal B2B sales template",
+        content={
+            "instructions": "Eres Nicolás, asesor de {{business_name}}.",
+            "business_info": {"name": "{{business_name}}"},
+            "products_services": [],
+            "faq": [],
+            "tone": "profesional",
+        },
+        is_system=True,
+    )
+    db_session.add(template)
+    await db_session.commit()
+    await db_session.refresh(template)
+    return template
+
+
+async def _create_tenant_user(
+    db_session: AsyncSession,
+    role: UserRole,
+    plan: str = "professional",
+) -> User:
+    """Create a tenant + user with role/tenant context for auth overrides."""
+    tenant = Tenant(
+        id=uuid.uuid4(),
+        name="B2B Tenant",
+        slug=f"b2b-tenant-{uuid.uuid4().hex[:8]}",
+        status="active",
+        plan=plan,
+        timezone="UTC",
+        locale="es",
+    )
+    db_session.add(tenant)
+    await db_session.flush()
+
+    user = User(
+        id=uuid.uuid4(),
+        email=f"{role.value}-{uuid.uuid4().hex[:8]}@test.com",
+        password_hash="not-a-real-hash",
+        name="B2B User",
+        role=role,
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    user.current_role = role
+    user.current_tenant_id = tenant.id
+    await db_session.commit()
+    return user
 
 
 # ── Template CRUD Tests ────────────────────────────────────────────────────
@@ -342,6 +401,140 @@ class TestAgentFromTemplate:
         assert resp.status_code == 404
 
 
+# ── Internal (superadmin-only) templates ────────────────────────────────────
+# The company's own B2B sales template ("nuncacierro") is internal: visible and
+# usable ONLY by superadmin. Non-superadmin callers must not even know it exists
+# (404, never 403 — no existence leak).
+
+
+class TestInternalTemplateVisibility:
+    @pytest.mark.asyncio
+    async def test_non_superadmin_does_not_see_internal_template(
+        self, client: AsyncClient, db_session: AsyncSession, internal_template: AgentTemplate
+    ):
+        """ADMIN listing templates does NOT include the internal category."""
+        user = await _create_tenant_user(db_session, UserRole.ADMIN)
+
+        async def override_auth() -> User:
+            return user
+
+        app.dependency_overrides[get_current_user] = override_auth
+
+        resp = await client.get("/api/v1/agent-templates")
+        assert resp.status_code == 200
+        names = [t["name"] for t in resp.json()]
+        assert internal_template.name not in names
+
+    @pytest.mark.asyncio
+    async def test_superadmin_sees_internal_template(
+        self, client: AsyncClient, internal_template: AgentTemplate
+    ):
+        """SUPERADMIN (default test client) DOES see the internal template."""
+        resp = await client.get("/api/v1/agent-templates")
+        assert resp.status_code == 200
+        names = [t["name"] for t in resp.json()]
+        assert internal_template.name in names
+
+    @pytest.mark.asyncio
+    async def test_non_superadmin_category_filter_hides_internal(
+        self, client: AsyncClient, db_session: AsyncSession, internal_template: AgentTemplate
+    ):
+        """Even an explicit category filter must not reveal internal templates."""
+        user = await _create_tenant_user(db_session, UserRole.ADMIN)
+
+        async def override_auth() -> User:
+            return user
+
+        app.dependency_overrides[get_current_user] = override_auth
+
+        resp = await client.get("/api/v1/agent-templates?category=nuncacierro")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    @pytest.mark.asyncio
+    async def test_non_superadmin_from_template_internal_returns_404(
+        self, client: AsyncClient, db_session: AsyncSession, internal_template: AgentTemplate
+    ):
+        """ADMIN creating an agent from the internal template gets 404."""
+        user = await _create_tenant_user(db_session, UserRole.ADMIN)
+
+        async def override_auth() -> User:
+            return user
+
+        app.dependency_overrides[get_current_user] = override_auth
+
+        resp = await client.post(
+            "/api/v1/agents/from-template",
+            json={
+                "tenant_id": str(user.current_tenant_id),
+                "template_id": str(internal_template.id),
+            },
+        )
+        assert resp.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_non_superadmin_get_by_id_internal_returns_404(
+        self, client: AsyncClient, db_session: AsyncSession, internal_template: AgentTemplate
+    ):
+        """ADMIN fetching the internal template by id gets 404 (no existence leak)."""
+        user = await _create_tenant_user(db_session, UserRole.ADMIN)
+
+        async def override_auth() -> User:
+            return user
+
+        app.dependency_overrides[get_current_user] = override_auth
+
+        resp = await client.get(f"/api/v1/agent-templates/{internal_template.id}")
+        assert resp.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_superadmin_get_by_id_internal_returns_200(
+        self, client: AsyncClient, internal_template: AgentTemplate
+    ):
+        """SUPERADMIN can fetch the internal template by id."""
+        resp = await client.get(f"/api/v1/agent-templates/{internal_template.id}")
+        assert resp.status_code == 200
+        assert resp.json()["name"] == internal_template.name
+
+    @pytest.mark.asyncio
+    async def test_non_superadmin_get_public_template_returns_200(
+        self, client: AsyncClient, db_session: AsyncSession, seed_test_template: AgentTemplate
+    ):
+        """ADMIN can still GET a PUBLIC template by id — only internal is hidden."""
+        user = await _create_tenant_user(db_session, UserRole.ADMIN)
+
+        async def override_auth() -> User:
+            return user
+
+        app.dependency_overrides[get_current_user] = override_auth
+
+        resp = await client.get(f"/api/v1/agent-templates/{seed_test_template.id}")
+        assert resp.status_code == 200
+
+    @pytest.mark.asyncio
+    async def test_superadmin_from_template_internal_returns_201(
+        self, client: AsyncClient, db_session: AsyncSession, internal_template: AgentTemplate
+    ):
+        """SUPERADMIN can create an agent from the internal template."""
+        tenant = Tenant(
+            id=uuid.uuid4(),
+            name="Internal Co",
+            slug=f"internal-co-{uuid.uuid4().hex[:8]}",
+            status="active",
+            plan="professional",
+            timezone="UTC",
+            locale="es",
+        )
+        db_session.add(tenant)
+        await db_session.commit()
+
+        resp = await client.post(
+            "/api/v1/agents/from-template",
+            json={"tenant_id": str(tenant.id), "template_id": str(internal_template.id)},
+        )
+        assert resp.status_code == 201, resp.text
+
+
 # ── Seed Shape ───────────────────────────────────────────────────────────────
 
 
@@ -354,8 +547,8 @@ class TestSeedTemplateShape:
         counts = Counter(t["category"] for t in SEED_TEMPLATES)
         assert all(count == 1 for count in counts.values()), counts
 
-    def test_seed_has_five_templates(self):
-        assert len(SEED_TEMPLATES) == 5
+    def test_seed_has_six_templates(self):
+        assert len(SEED_TEMPLATES) == 6
 
     def test_seed_names_are_unique(self):
         names = [t["name"] for t in SEED_TEMPLATES]
@@ -511,7 +704,7 @@ class TestSeedPrune:
         second = await run_flow()
 
         assert first == second
-        # Exactly the 5 canonical templates remain (stale variants gone)
+        # Exactly the canonical templates remain (stale variants gone)
         assert len(first) == len(SEED_TEMPLATES)
         assert "Restaurante" not in first
 
