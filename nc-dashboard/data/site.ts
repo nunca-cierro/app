@@ -140,7 +140,7 @@ export const sitePlans = {
   // 2026-09 audit (C): the guarantee must match the REAL trial (7 días,
   // programado, sin IA) — no "primer mes sin riesgo" promise.
   guaranteeText:
-    "7 días de prueba gratis con tu negocio real. Si no te convence, lo desactivamos y no pagas nada.",
+    "7 días de prueba gratis con su negocio real. Si no le convence, lo desactivamos y no paga nada. Durante la prueba, las respuestas son programadas (sin inteligencia artificial).",
   packages: [
     {
       name: "Básico",
