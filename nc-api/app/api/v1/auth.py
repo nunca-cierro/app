@@ -375,7 +375,12 @@ async def me(
     # AS-3: cookie sessions re-issue the session cookie so it reflects the
     # CURRENT role/tenant (current_role comes from the DB, so a role change
     # since login is picked up here). Bearer-only callers (tools) get no
-    # cookie; nc_csrf is NOT rotated on this read.
+    # cookie. nc_access_token can outlive a lost nc_csrf (cookie eviction/
+    # clearing), so restore must self-heal the CSRF cookie — otherwise every
+    # mutation 403s with no recovery short of re-login. Re-emit it ONLY when
+    # missing: rotating on every /me would race in-flight mutations (the
+    # frontend snapshots document.cookie before dispatching), and the token is
+    # stateless, so healing the missing case is sufficient.
     if request.cookies.get(ACCESS_TOKEN_COOKIE):
         token = create_access_token(
             str(current_user.id),
@@ -383,7 +388,8 @@ async def me(
             role=getattr(current_user, "current_role", current_user.role),
             tenant_id=str(current_tid) if current_tid else None,
         )
-        _set_auth_cookies(response, token)
+        csrf = None if request.cookies.get(CSRF_COOKIE) else secrets.token_hex(32)
+        _set_auth_cookies(response, token, csrf)
 
     response_model = MeResponse.model_validate(current_user)
     response_model.current_plan = current_plan
