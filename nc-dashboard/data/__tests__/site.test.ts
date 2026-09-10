@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sitePlans } from "@/data/site";
+import { sitePlans, siteFaq } from "@/data/site";
 
 /**
  * Slice 4 — landing coherence (plan-differentiation, task 4.5).
@@ -108,5 +108,76 @@ describe("anti-undercut floor (sitePlans)", () => {
         expect(amount).toBeGreaterThanOrEqual(390000);
       }
     }
+  });
+});
+
+// ── 2026-09 audit desajustes (landing swap follow-up) ──
+
+describe("landing desajuste C — guarantee vs 7-day programmed trial", () => {
+  it("aligns the guarantee to the real trial (7 días programado, sin IA)", () => {
+    expect(sitePlans.guaranteeText).toContain("7 días");
+    expect(sitePlans.guaranteeText).not.toMatch(/primer mes/);
+    expect(sitePlans.guaranteeText).not.toMatch(/sin riesgo/);
+  });
+});
+
+describe("landing desajuste D — FAQ claims match plan capabilities", () => {
+  it("gates IA to Profesional+ in the FAQ (no AI on all plans)", () => {
+    const faq = siteFaq.items.find((f) =>
+      f.question.includes("¿El bot entiende lo que los clientes preguntan?"),
+    );
+    expect(faq).toBeDefined();
+    expect(faq?.answer).toMatch(
+      /A partir del plan Profesional[^.]*inteligencia artificial/,
+    );
+  });
+
+  it("says weekly metrics exist on every plan and live dashboard from Profesional", () => {
+    const faq = siteFaq.items.find((f) =>
+      f.question.includes("¿Cómo sé cuántos clientes me contactaron?"),
+    );
+    expect(faq).toBeDefined();
+    expect(faq?.answer).toContain("Todos los planes incluyen métricas semanales");
+    expect(faq?.answer).toContain("A partir del plan Profesional");
+  });
+
+  it("removes the stale 'sitio web' reference from the setup-time answer", () => {
+    const faq = siteFaq.items.find((f) =>
+      f.question.includes("¿Cuánto tiempo toma tenerlo listo?"),
+    );
+    expect(faq).toBeDefined();
+    expect(faq?.answer).not.toMatch(/sitio web/i);
+  });
+});
+
+describe("landing desajuste E — no unbacked enterprise promises", () => {
+  it("Empresarial no longer promises a response-time SLA", () => {
+    const enterprise = sitePlans.packages.find((p) => p.name === "Empresarial");
+    const joined = enterprise?.features.join(" ");
+    expect(joined).not.toMatch(/garantizad|garantía/i);
+    expect(joined).not.toMatch(/tiempo de respuesta/i);
+  });
+
+  it("softens integrations to an advisory phrasing", () => {
+    const enterprise = sitePlans.packages.find((p) => p.name === "Empresarial");
+    const joined = enterprise?.features.join(" ");
+    expect(joined).toContain("Asesoría para conectar con tus sistemas");
+    expect(joined).not.toMatch(/integrar con tus sistemas/i);
+  });
+});
+
+describe("landing desajuste F — no 'API oficial de Meta' claim", () => {
+  it("does not claim the official Meta API anywhere in the FAQ", () => {
+    const allAnswers = siteFaq.items.map((f) => f.answer).join(" ");
+    expect(allAnswers).not.toMatch(/API oficial/i);
+    expect(allAnswers).not.toMatch(/Cloud API/i);
+    expect(allAnswers).not.toMatch(/API de Meta/i);
+  });
+});
+
+describe("anti-barrio tone on the home plans copy", () => {
+  it("Básico description drops 'negocios pequeños'", () => {
+    const basic = sitePlans.packages.find((p) => p.name === "Básico");
+    expect(basic?.description).not.toMatch(/negocios pequeños/);
   });
 });

@@ -135,15 +135,17 @@ export const sitePlans = {
   },
   footerText:
     "Todos los planes se facturan mensualmente. Sin contratos largos, cancela cuando quieras.",
+  // 2026-09 audit (C): the guarantee must match the REAL trial (7 días,
+  // programado, sin IA) — no "primer mes sin riesgo" promise.
   guaranteeText:
-    "Prueba el primer mes sin riesgo. Si no te gusta, lo cancelas y listo.",
+    "7 días de prueba gratis con tu negocio real. Si no te convence, lo desactivamos y no pagas nada.",
   packages: [
     {
       name: "Básico",
       type: "Básico",
       price: "Desde $390.000/mes + IVA",
       description:
-        "Automatiza las preguntas frecuentes de tus clientes. Ideal para negocios pequeños que empiezan.",
+        "Automatiza las preguntas frecuentes de tus clientes. Ideal para negocios que están empezando a automatizar su atención.",
       features: [
         "Respuestas automáticas programadas por palabras clave",
         "Atiende clientes fuera de horario",
@@ -186,9 +188,11 @@ export const sitePlans = {
         "Productos/servicios ilimitados en catálogo",
         "Conversaciones ilimitadas",
         "Negocios ilimitados",
-        "Conexión personalizada para integrar con tus sistemas",
+        // 2026-09 audit (E): integrations/SLA promises softened to what the
+        // code backs — "asesoría para conectar" escalates to a human, no
+        // guaranteed response times nor unconfirmed connectors.
+        "Asesoría para conectar con tus sistemas (a la medida)",
         "Soporte prioritario 24/7",
-        "Tiempo de respuesta garantizado",
       ],
       featured: false,
     },
@@ -283,6 +287,9 @@ export const siteFaq = {
   title: "Todo lo que necesitas saber antes de empezar",
   subtitle:
     "Respondemos tus dudas para que tomes la mejor decisión sin vueltas.",
+  // 2026-09 audit (F): the landing does NOT claim the "API oficial de Meta".
+  // The real path is an Evolution API session (WhatsApp Web) — the FAQ below
+  // describes it honestly and intentionally avoids any Meta Cloud API claim.
   items: [
     {
       question:
@@ -293,7 +300,7 @@ export const siteFaq = {
     {
       question: "¿El bot entiende lo que los clientes preguntan?",
       answer:
-        "Sí, configuramos respuestas inteligentes para las preguntas más comunes de tu negocio: horarios, precios, ubicación, disponibilidad. Si alguien pregunta algo que el bot no sabe, te lo reenvía a ti.",
+        "Sí, en todos los planes el bot responde automáticamente las preguntas más comunes de tu negocio: horarios, precios, ubicación, disponibilidad. A partir del plan Profesional, además entiende las preguntas en contexto con inteligencia artificial. Si algo queda fuera de su alcance, te lo reenvía para que lo resuelvas.",
     },
     {
       question: "¿Puedo personalizar las respuestas?",
@@ -303,7 +310,7 @@ export const siteFaq = {
     {
       question: "¿Cuánto tiempo toma tenerlo listo?",
       answer:
-        "El Bot WhatsApp lo configuramos en 2 horas hábiles. Los planes más avanzados pueden tomar hasta una semana, dependiendo del sitio web.",
+        "El bot de WhatsApp lo configuramos en 2 horas hábiles. Los planes más avanzados pueden tomar más tiempo según la complejidad de tu negocio.",
     },
     {
       question: "¿Necesito conocimientos técnicos para usarlo?",
@@ -318,7 +325,7 @@ export const siteFaq = {
     {
       question: "¿Cómo sé cuántos clientes me contactaron?",
       answer:
-        "A partir del plan Profesional recibes estadísticas semanales con el número de consultas, horarios más activos y tipos de preguntas. En el plan Empresarial sumamos un panel en vivo con estadísticas detalladas.",
+        "Todos los planes incluyen métricas semanales con el número de consultas, los horarios más activos y los tipos de preguntas. A partir del plan Profesional sumamos un panel en vivo con estadísticas detalladas.",
     },
     {
       question: "¿Funciona para cualquier tipo de negocio?",
