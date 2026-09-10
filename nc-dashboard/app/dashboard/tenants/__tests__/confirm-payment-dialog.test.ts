@@ -63,16 +63,16 @@ describe("PLAN_OPTIONS (Escenario A)", () => {
 
   it("shows the exact Escenario A price labels", () => {
     expect(PLAN_OPTIONS).toEqual([
-      { value: "basic", label: "Básico", priceLabel: "Desde $390K/mes + IVA" },
+      { value: "basic", label: "Básico", priceLabel: "Desde $390.000/mes + IVA" },
       {
         value: "professional",
         label: "Profesional",
-        priceLabel: "Desde $790K/mes + IVA",
+        priceLabel: "Desde $790.000/mes + IVA",
       },
       {
         value: "enterprise",
         label: "Empresarial",
-        priceLabel: "Desde $1.590K/mes + IVA",
+        priceLabel: "Desde $1.590.000/mes + IVA",
       },
     ]);
   });

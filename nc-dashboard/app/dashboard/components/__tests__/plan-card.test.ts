@@ -63,9 +63,9 @@ describe("PLANS_CONFIG (Escenario A)", () => {
   });
 
   it("shows the exact Escenario A price labels (copy, not arithmetic)", () => {
-    expect(PLANS_CONFIG.basic.priceLabel).toBe("Desde $390K/mes + IVA");
-    expect(PLANS_CONFIG.professional.priceLabel).toBe("Desde $790K/mes + IVA");
-    expect(PLANS_CONFIG.enterprise.priceLabel).toBe("Desde $1.590K/mes + IVA");
+    expect(PLANS_CONFIG.basic.priceLabel).toBe("Desde $390.000/mes + IVA");
+    expect(PLANS_CONFIG.professional.priceLabel).toBe("Desde $790.000/mes + IVA");
+    expect(PLANS_CONFIG.enterprise.priceLabel).toBe("Desde $1.590.000/mes + IVA");
   });
 
   it("never drops the '+ IVA' framing on a paid tier", () => {
@@ -85,6 +85,13 @@ describe("PLANS_CONFIG (Escenario A)", () => {
     expect(PLANS_CONFIG.corporate.priceLabel).toBe("A cotizar");
     expect(PLANS_CONFIG.corporate.quoteOnly).toBe(true);
     expect(PLANS_CONFIG.corporate.quoteUrl).toMatch(/^https:\/\/wa\.me\//);
+  });
+
+  it("quotes the corporate reference in the canonized format (~$3.500.000)", () => {
+    expect(PLANS_CONFIG.corporate.features).toContain(
+      "Proyectos desde ~$3.500.000/mes + IVA",
+    );
+    expect(PLANS_CONFIG.corporate.features.join(" ")).not.toContain("~$3.5M");
   });
 
   it("keeps features for every card including corporate", () => {
@@ -119,7 +126,7 @@ describe("PlanCard render (SSR)", () => {
   it("renders the Básico card with Escenario A price and Activar button", async () => {
     const html = await renderCard("basic");
     expect(html).toContain("Básico");
-    expect(html).toContain("Desde $390K/mes + IVA");
+    expect(html).toContain("Desde $390.000/mes + IVA");
     expect(html).toContain("Activar");
     expect(html).not.toContain("$60.000");
   });
@@ -127,7 +134,7 @@ describe("PlanCard render (SSR)", () => {
   it("renders the Empresarial card with Escenario A price", async () => {
     const html = await renderCard("enterprise");
     expect(html).toContain("Empresarial");
-    expect(html).toContain("Desde $1.590K/mes + IVA");
+    expect(html).toContain("Desde $1.590.000/mes + IVA");
     expect(html).toContain("Activar");
   });
 

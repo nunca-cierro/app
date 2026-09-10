@@ -140,7 +140,7 @@ export const sitePlans = {
     {
       name: "Básico",
       type: "Básico",
-      price: "Desde $390K/mes + IVA",
+      price: "Desde $390.000/mes + IVA",
       description:
         "Automatiza las preguntas frecuentes de tus clientes. Ideal para negocios pequeños que empiezan.",
       features: [
@@ -159,7 +159,7 @@ export const sitePlans = {
     {
       name: "Profesional",
       type: "Profesional",
-      price: "Desde $790K/mes + IVA",
+      price: "Desde $790.000/mes + IVA",
       description:
         "Inteligencia artificial que entiende lo que preguntan tus clientes. Para negocios con volumen constante.",
       features: [
@@ -177,7 +177,7 @@ export const sitePlans = {
     {
       name: "Empresarial",
       type: "Empresarial",
-      price: "Desde $1.590K/mes + IVA",
+      price: "Desde $1.590.000/mes + IVA",
       description:
         "Todo incluido: inteligencia artificial, panel de control avanzado y múltiples negocios.",
       features: [
@@ -198,7 +198,7 @@ export const sitePlans = {
       description:
         "Soluciones a la medida para operaciones grandes: múltiples negocios, IA personalizada y soporte dedicado.",
       features: [
-        "Proyectos desde ~$3.5M/mes + IVA",
+        "Proyectos desde ~$3.500.000/mes + IVA",
         "Múltiples negocios y usuarios",
         "IA personalizada para tu operación",
         "Soporte dedicado y onboarding",
@@ -208,7 +208,7 @@ export const sitePlans = {
   ],
   // Comparison table rows (prices: Escenario A, copy strings)
   comparisonRows: [
-    { label: "Precio", basic: "Desde $390K/mes + IVA", pro: "Desde $790K/mes + IVA", enterprise: "Desde $1.590K/mes + IVA" },
+    { label: "Precio", basic: "Desde $390.000/mes + IVA", pro: "Desde $790.000/mes + IVA", enterprise: "Desde $1.590.000/mes + IVA" },
     { label: "Tipo de respuestas", basic: "Programadas", pro: "IA", enterprise: "IA" },
     { label: "Productos/Servicios", basic: "Hasta 10", pro: "Hasta 50", enterprise: "Ilimitado" },
     { label: "Conversaciones al mes", basic: "500", pro: "5.000", enterprise: "Ilimitadas" },

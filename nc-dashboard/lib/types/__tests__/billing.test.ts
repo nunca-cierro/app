@@ -30,7 +30,7 @@ describe("billing types", () => {
       key: "basic",
       label: "Básico",
       price: 390000,
-      priceLabel: "Desde $390K/mes + IVA",
+      priceLabel: "Desde $390.000/mes + IVA",
       features: ["Feature 1"],
     };
     expect(plan.key).toBe("basic");
