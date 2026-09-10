@@ -35,22 +35,22 @@ describe("friendlyErrorMessage (T6 — no raw JSON to users)", () => {
   it("maps the raw 403 'Operation not permitted' to a friendly message", () => {
     expect(
       friendlyErrorMessage(403, '{"detail":"Operation not permitted"}'),
-    ).toBe("No tenés permisos para esta acción");
+    ).toBe("No tienes permisos para esta acción");
   });
 
   it("maps 'Forbidden' to the same friendly permission message", () => {
     expect(friendlyErrorMessage(403, '{"detail":"Forbidden"}')).toBe(
-      "No tenés permisos para esta acción",
+      "No tienes permisos para esta acción",
     );
   });
 
   it("maps auth-failure details to a re-login message", () => {
     expect(friendlyErrorMessage(401, '{"detail":"Not authenticated"}')).toBe(
-      "Tu sesión expiró. Volvé a iniciar sesión.",
+      "Tu sesión expiró. Vuelve a iniciar sesión.",
     );
     expect(
       friendlyErrorMessage(401, '{"detail":"Invalid or expired token"}'),
-    ).toBe("Tu sesión expiró. Volvé a iniciar sesión.");
+    ).toBe("Tu sesión expiró. Vuelve a iniciar sesión.");
   });
 
   it("keeps readable server details (e.g. 409 slug conflict)", () => {

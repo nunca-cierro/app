@@ -58,7 +58,7 @@ vi.mock("sonner", () => ({
 
 import NewTenantPage from "@/app/dashboard/tenants/new/page";
 
-const NO_ACCESS = "No tenés permisos para esta acción";
+const NO_ACCESS = "No tienes permisos para esta acción";
 
 function renderToHtml(element: React.ReactElement): Promise<string> {
   return new Promise((resolve, reject) => {
