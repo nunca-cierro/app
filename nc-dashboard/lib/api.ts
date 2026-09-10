@@ -14,6 +14,7 @@
 /* ------------------------------------------------------------------ */
 
 import type { AuthUser, LoginResponse, Tenant } from "@/lib/types";
+import type { PlanUsage } from "@/lib/types/plan";
 import {
   clearSignedInCookie,
   setSignedInCookie,
@@ -149,6 +150,19 @@ export async function updatePaymentStatus(
     method: "PATCH",
     body: JSON.stringify({ payment_status: status }),
   });
+}
+
+/* ------------------------------------------------------------------ */
+/*  Plan endpoints                                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Consumo del plan del tenant ACTIVO (JWT-scoped) — solo lectura
+ * (plan-differentiation). El widget del dashboard lo consume para
+ * mostrar la barra de uso; nunca bloquea ni cobra (límites soft).
+ */
+export async function getPlanUsage(): Promise<PlanUsage> {
+  return apiClient<PlanUsage>("/api/v1/plans/usage");
 }
 
 /* ------------------------------------------------------------------ */
