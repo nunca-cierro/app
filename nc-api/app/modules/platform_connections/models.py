@@ -9,7 +9,14 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -20,6 +27,20 @@ class PlatformConnection(Base):
     """A single platform connection owned by a tenant."""
 
     __tablename__ = "platform_connections"
+
+    # The FK is named explicitly so the metadata-created schema (tests/dev via
+    # ``Base.metadata.create_all``) and the Alembic migration chain (prod)
+    # agree on the constraint name. Migration f1a2b3c4d5e6 drops and recreates
+    # it by name, so an unnamed (DB-assigned ``..._fkey``) constraint would
+    # break ``alembic upgrade`` on a create_all-bootstrapped database.
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["agent_id"],
+            ["ai_agents.id"],
+            name="fk_platform_connections_agent_id",
+            ondelete="SET NULL",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
@@ -46,7 +67,7 @@ class PlatformConnection(Base):
         Boolean, default=False
     )
     agent_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("ai_agents.id"), nullable=True, index=True
+        UUID(as_uuid=True), nullable=True, index=True
     )
 
     created_at: Mapped[datetime] = mapped_column(

@@ -1,7 +1,9 @@
-"""Tests for Agent CRUD — PATCH /api/v1/agents/{id}.
+"""Tests for Agent CRUD — PATCH and DELETE /api/v1/agents/{id}.
 
 Covers the gap that let the agent save button bug reach production:
-the PATCH endpoint was completely untested.
+the PATCH endpoint was completely untested. DELETE coverage guards the
+platform-connection FK regression (deleting a linked agent used to fail
+with an IntegrityError because the connection was never unlinked).
 """
 
 from __future__ import annotations
@@ -18,6 +20,7 @@ from app.modules.agents.models import AiAgent
 from app.modules.agents.template_models import AgentTemplate
 from app.modules.auth.deps import get_current_user
 from app.modules.auth.models import User, UserRole
+from app.modules.platform_connections.models import PlatformConnection
 from app.modules.tenants.models import Tenant
 from app.db.session import get_session
 
@@ -477,3 +480,118 @@ class TestCanonicalMaxTokens:
 
         assert response.status_code == 201
         assert response.json()["max_tokens"] == 1024
+
+
+# ── DELETE /api/v1/agents/{id} ───────────────────────────────────────────────
+# Regression (2026-09-09): deleting an agent linked to a platform connection
+# raised an IntegrityError — the FK fk_platform_connections_agent_id had no
+# delete action and the handler never unlinked. The connection must SURVIVE and
+# be unassigned: it belongs to the tenant (e.g. a WhatsApp number), not the
+# agent, so deleting the agent must never delete the number.
+
+
+class TestDeleteAgent:
+    """DELETE /api/v1/agents/{id} — unlink platform connections, keep them."""
+
+    @pytest.mark.asyncio
+    async def test_delete_agent_with_linked_connection_succeeds_and_unlinks(
+        self, superadmin_client: AsyncClient, db_session: AsyncSession
+    ):
+        """Deleting a linked agent returns 204; the connection survives unlinked."""
+        tenant = _create_tenant(db_session, "Delete Tenant", "delete-tenant")
+        await db_session.flush()
+        agent = _create_agent(db_session, tenant.id, name="Agent With Conn")
+        await db_session.flush()
+
+        conn = PlatformConnection(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            platform_type="evolution",
+            display_name="Evolution Conn",
+            credentials="encrypted",
+            status="active",
+            agent_id=agent.id,
+        )
+        db_session.add(conn)
+        await db_session.commit()
+
+        response = await superadmin_client.delete(f"/api/v1/agents/{agent.id}")
+
+        assert response.status_code == 204, response.text
+        # Agent is gone
+        assert await db_session.get(AiAgent, agent.id) is None
+        # Connection survives and is unlinked
+        await db_session.refresh(conn)
+        assert conn.agent_id is None
+
+    @pytest.mark.asyncio
+    async def test_delete_agent_without_connections_still_works(
+        self, superadmin_client: AsyncClient, db_session: AsyncSession
+    ):
+        """Deleting an agent with no linked connections still returns 204."""
+        tenant = _create_tenant(db_session, "Plain Delete Tenant", "plain-delete")
+        await db_session.flush()
+        agent = _create_agent(db_session, tenant.id, name="Plain Agent")
+        await db_session.commit()
+
+        response = await superadmin_client.delete(f"/api/v1/agents/{agent.id}")
+
+        assert response.status_code == 204, response.text
+        assert await db_session.get(AiAgent, agent.id) is None
+
+    @pytest.mark.asyncio
+    async def test_delete_agent_only_unlinks_its_own_connection(
+        self, superadmin_client: AsyncClient, db_session: AsyncSession
+    ):
+        """Unlink is scoped to the deleted agent — a sibling's link is untouched."""
+        tenant = _create_tenant(db_session, "Scoped Tenant", "scoped-tenant")
+        await db_session.flush()
+        agent_a = _create_agent(db_session, tenant.id, name="Agent A")
+        agent_b = _create_agent(db_session, tenant.id, name="Agent B")
+        await db_session.flush()
+
+        conn_a = PlatformConnection(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            platform_type="evolution",
+            display_name="Conn A",
+            credentials="encrypted",
+            status="active",
+            agent_id=agent_a.id,
+        )
+        conn_b = PlatformConnection(
+            id=uuid.uuid4(),
+            tenant_id=tenant.id,
+            platform_type="evolution",
+            display_name="Conn B",
+            credentials="encrypted",
+            status="active",
+            agent_id=agent_b.id,
+        )
+        db_session.add_all([conn_a, conn_b])
+        await db_session.commit()
+
+        response = await superadmin_client.delete(f"/api/v1/agents/{agent_a.id}")
+
+        assert response.status_code == 204, response.text
+        await db_session.refresh(conn_a)
+        await db_session.refresh(conn_b)
+        assert conn_a.agent_id is None
+        assert conn_b.agent_id == agent_b.id  # sibling link untouched
+
+    @pytest.mark.asyncio
+    async def test_admin_cannot_delete_other_tenants_agent(
+        self, admin_client_factory, db_session: AsyncSession
+    ):
+        """ADMIN of tenant A deleting tenant B's agent → 404 (tenant isolation)."""
+        client_a, _tenant_a = await admin_client_factory("professional")
+        tenant_b = _create_tenant(db_session, "Other Tenant", "other-tenant")
+        await db_session.flush()
+        agent_b = _create_agent(db_session, tenant_b.id, name="Other Tenant Agent")
+        await db_session.commit()
+
+        response = await client_a.delete(f"/api/v1/agents/{agent_b.id}")
+
+        assert response.status_code == 404
+        # Agent B survives untouched
+        assert await db_session.get(AiAgent, agent_b.id) is not None
