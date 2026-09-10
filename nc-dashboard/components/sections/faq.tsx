@@ -18,12 +18,29 @@ export function Faq() {
       item.answer.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: siteFaq.items.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.answer,
+      },
+    })),
+  };
+
   return (
     <Section
       id={siteFaq.sectionId}
       className="border-stone-700/60 bg-stone-800 text-stone-100"
       containerClassName="max-w-4xl px-3 sm:px-4 lg:px-6"
     >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <AnimatedWrapper direction="up" duration={0.6}>
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-medium uppercase tracking-wider text-amber-300">

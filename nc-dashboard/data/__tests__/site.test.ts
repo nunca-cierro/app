@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  siteMetadata,
   sitePlans,
   siteFaq,
   siteHero,
@@ -225,5 +226,35 @@ describe("home swap — hero copy leads with automation, not web", () => {
     expect(siteHero.subtitle).toMatch(/whatsapp/i);
     expect(siteHero.subtitle).toMatch(/24\/7/);
     expect(siteHero.subtitle).not.toMatch(/sitio web|página web/i);
+  });
+});
+
+// ── HERO SEO (2026-09 audit) ──
+
+describe("hero SEO — keyword-strong H1 with brand eyebrow", () => {
+  it("sets the keyword-strong H1 on WhatsApp 24/7 for clientes", () => {
+    expect(siteHero.title).toMatch(/WhatsApp 24\/7/);
+    expect(siteHero.title).toMatch(/clientes/i);
+  });
+
+  it("moves the brand line 'nunca cierra' to the eyebrow kicker", () => {
+    expect(siteHero.eyebrow).toBe("Su negocio nunca cierra");
+    expect(siteHero.title).not.toMatch(/nunca cierra/i);
+  });
+});
+
+describe("siteMetadata — no barrio framing, empresa keywords", () => {
+  it("describes the 24/7 bot for empresas with the 7-day free trial", () => {
+    expect(siteMetadata.description).toContain("empresas en Colombia");
+    expect(siteMetadata.description).toContain("24/7");
+    expect(siteMetadata.description).toContain("7 días de prueba gratis");
+    expect(siteMetadata.description).not.toMatch(/barberías|tiendas/i);
+    expect(siteMetadata.description).not.toMatch(/pequeña empresa/i);
+  });
+
+  it("keywords target empresas (not pequeña empresa)", () => {
+    expect(siteMetadata.keywords).toContain("bot WhatsApp empresas Colombia");
+    expect(siteMetadata.keywords).toContain("IA WhatsApp negocio");
+    expect(siteMetadata.keywords).not.toMatch(/pequeña empresa/i);
   });
 });

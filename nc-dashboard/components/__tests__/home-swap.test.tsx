@@ -43,9 +43,10 @@ function renderToHtml(element: React.ReactElement): Promise<string> {
 }
 
 describe("home swap — automation is the PRIMARY offer on the home", () => {
-  it("leads with the WhatsApp automation hero and SaaS plan pricing", async () => {
+  it("leads with the keyword-strong WhatsApp automation hero and SaaS plan pricing", async () => {
     const html = await renderToHtml(React.createElement(AutomationContent));
-    expect(html).toContain("Clientes atendidos todo el tiempo.");
+    expect(html).toContain("Atienda a sus clientes por WhatsApp 24/7");
+    expect(html).toContain("Su negocio nunca cierra");
     expect(html).toContain("Desde $390.000/mes + IVA");
     expect(html).toContain("Desde $1.590.000/mes + IVA");
   });
@@ -65,6 +66,19 @@ describe("home swap — automation is the PRIMARY offer on the home", () => {
     expect(plansAt).toBeGreaterThan(-1);
     expect(webAt).toBeGreaterThan(-1);
     expect(plansAt).toBeLessThan(webAt);
+  });
+});
+
+describe("FAQ — FAQPage JSON-LD is server-built from the FAQ data", () => {
+  it("emits a valid application/ld+json FAQPage script in the section", async () => {
+    const html = await renderToHtml(React.createElement(AutomationContent));
+    const faqStart = html.indexOf('id="faq"');
+    const faqHtml = html.slice(faqStart, html.indexOf('id="contacto"'));
+    expect(faqHtml).toContain('type="application/ld+json"');
+    expect(faqHtml).toContain('"@type":"FAQPage"');
+    expect(faqHtml).toContain('"@type":"Question"');
+    expect(faqHtml).toContain('"name":"¿Qué pasa con mi WhatsApp cuando configuran el bot? ¿Dejo de recibir mensajes?"');
+    expect(faqHtml).toContain('"@type":"Answer"');
   });
 });
 
