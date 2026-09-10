@@ -6,21 +6,21 @@ import { motion, useScroll, useTransform } from "framer-motion";
 const slides = [
   {
     number: "01",
-    title: "Nos cuentas cómo funciona tu negocio",
+    title: "Cuéntenos cómo funciona su negocio",
     description:
-      "Te hacemos unas preguntas simples. Sin formularios largos ni jerga técnica.",
+      "Le hacemos unas preguntas simples. Sin formularios largos ni jerga técnica.",
     visual: "chat",
   },
   {
     number: "02",
-    title: "Configuramos tu WhatsApp en 2 horas",
+    title: "Configuramos su WhatsApp en 2 horas hábiles",
     description:
-      "Personalizamos cada respuesta con el tono de tu negocio. Tú apruebas antes de activar.",
+      "Personalizamos cada respuesta con el tono de su negocio. Usted aprueba antes de activar.",
     visual: "gear",
   },
   {
     number: "03",
-    title: "Tu negocio responde solo mientras tú descansas",
+    title: "Su negocio responde solo mientras usted descansa",
     description:
       "Sin perder ventas. Sin estar pendiente del celular. Las 24 horas.",
     visual: "clock",

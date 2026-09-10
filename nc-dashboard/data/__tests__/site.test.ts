@@ -4,6 +4,7 @@ import {
   sitePlans,
   siteFaq,
   siteHero,
+  siteContact,
   siteWebSecondary,
   headerData,
   footerData,
@@ -256,5 +257,43 @@ describe("siteMetadata — no barrio framing, empresa keywords", () => {
     expect(siteMetadata.keywords).toContain("bot WhatsApp empresas Colombia");
     expect(siteMetadata.keywords).toContain("IA WhatsApp negocio");
     expect(siteMetadata.keywords).not.toMatch(/pequeña empresa/i);
+  });
+});
+
+// ── REGISTER — usted (Colombian neutral, NO voseo) ──
+// The audit found a tú/usted mix. Every user-facing string must use usted.
+// guaranteeText is scanned once the P2 qualifier lands.
+
+const userFacingTexts = [
+  siteMetadata.description,
+  siteHero.eyebrow,
+  siteHero.title,
+  siteHero.subtitle,
+  sitePlans.title,
+  sitePlans.subtitle,
+  sitePlans.advisoryCta.title,
+  sitePlans.advisoryCta.description,
+  ...siteFaq.items.flatMap((f) => [f.question, f.answer]),
+  siteContact.title,
+  siteContact.subtitle,
+  siteContact.quickResponseText,
+  siteContact.confidenceText,
+  ...siteContact.quoteChecklist.items.map((i) => i.text),
+];
+
+describe("register — no tú/vos pronouns in user-facing copy", () => {
+  it("uses usted forms everywhere in data/site.ts", () => {
+    for (const text of userFacingTexts) {
+      expect(text).not.toMatch(/\b(tú|tus|tu|te|ti|contigo|tuyo|tuya)\b/i);
+    }
+  });
+
+  it("FAQ #8 lists premium verticals first", () => {
+    const faq = siteFaq.items.find((f) =>
+      f.question.includes("¿Funciona para cualquier tipo de negocio?"),
+    );
+    expect(faq).toBeDefined();
+    expect(faq?.answer).toContain("restaurantes, clínicas, concesionarios, inmobiliarias, hoteles, gimnasios y spas");
+    expect(faq?.answer).not.toMatch(/barberías, tiendas/);
   });
 });

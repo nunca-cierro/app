@@ -82,6 +82,30 @@ describe("FAQ — FAQPage JSON-LD is server-built from the FAQ data", () => {
   });
 });
 
+describe("register — usted across the home sections (no voseo mix)", () => {
+  it("renders how-it-works, contact, FAQ and mockup copy in usted", async () => {
+    const html = await renderToHtml(React.createElement(AutomationContent));
+    expect(html).toContain("Cuéntenos cómo funciona su negocio");
+    expect(html).toContain("Usted aprueba antes de activar");
+    expect(html).toContain("Su negocio responde solo mientras usted descansa");
+    expect(html).toContain("¿A qué se dedica su negocio?");
+    expect(html).toContain("Si no sabe qué plan elegir, le orientamos sin compromiso");
+    expect(html).toContain("¿En qué más lo puedo ayudar?");
+    for (const voseoPhrase of [
+      "Nos cuentas cómo funciona tu negocio",
+      "Tú apruebas antes de activar",
+      "mientras tú descansas",
+      "¿En qué ciudad estás?",
+      "¿Qué preguntas recibes",
+      "Escribe tu duda",
+      "te leemos al instante",
+      "Hablemos de tu negocio",
+    ]) {
+      expect(html).not.toContain(voseoPhrase);
+    }
+  });
+});
+
 describe("negocios — premium mid-market cards (anti-barrio)", () => {
   it("shows the six premium verticals with high-ticket messages", async () => {
     const html = await renderToHtml(React.createElement(AutomationContent));

@@ -46,9 +46,9 @@ function ContactChatMockup() {
             </p>
             <div className="mt-1.5 space-y-1">
               {[
-                "🏪 ¿A qué se dedica tu negocio?",
-                "📍 ¿En qué ciudad estás?",
-                "⭐ ¿Qué preguntas recibes siempre?",
+                "🏪 ¿A qué se dedica su negocio?",
+                "📍 ¿En qué ciudad está?",
+                "⭐ ¿Qué preguntas recibe siempre?",
                 "📅 ¿Agenda, catálogo o seguimiento?",
               ].map((item) => (
                 <p
@@ -215,7 +215,7 @@ export function Contact() {
 
       {/* Privacy notice */}
       <p className="mt-12 text-center text-xs text-stone-400">
-        Al contactarnos, confirmas que aceptas nuestra{" "}
+        Al contactarnos, confirma que acepta nuestra{" "}
         <a href="/legal#privacidad" className="text-amber-600 hover:text-amber-700 underline underline-offset-2">
           política de privacidad
         </a>

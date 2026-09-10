@@ -124,7 +124,7 @@ export const footerData = {
 export const sitePlans = {
   sectionId: "planes",
   label: "Planes",
-  title: "Elige el plan según lo que necesite tu negocio",
+  title: "Elija el plan según lo que necesite su negocio",
   subtitle:
     "Todos incluyen configuración completa y soporte. Sin contratos largos. Cancela cuando quieras.",
   whatsappBaseUrl: "https://wa.me/573219615338?text=",
@@ -273,9 +273,9 @@ export const sitePlans = {
     type: "programmed",
   },
   advisoryCta: {
-    title: "¿No sabes qué plan elegir? Te orientamos sin compromiso.",
+    title: "¿No sabe qué plan elegir? Le orientamos sin compromiso.",
     description:
-      "Te mostramos cómo funciona cada plan y te recomendamos el ideal para tu negocio.",
+      "Le mostramos cómo funciona cada plan y le recomendamos el ideal para su negocio.",
     buttonText: "Agendar asesoría gratis",
     whatsappText:
       "Hola, quiero agendar una asesoría gratis para saber qué plan de automatización me conviene para mi negocio.",
@@ -297,32 +297,32 @@ export const siteFaq = {
       question:
         "¿Qué pasa con mi WhatsApp cuando configuran el bot? ¿Dejo de recibir mensajes?",
       answer:
-        "No, todo lo contrario. Sigues recibiendo mensajes normal. El bot responde automáticamente preguntas frecuentes y lo que no sabe te lo reenvía. Si un cliente necesita algo específico, lo deriva a tu WhatsApp para que tú lo resuelvas.",
+        "No, todo lo contrario. Sigue recibiendo mensajes normal. El bot responde automáticamente preguntas frecuentes y lo que no sabe se lo reenvía. Si un cliente necesita algo específico, lo deriva a su WhatsApp para que usted lo resuelva.",
     },
     {
       question: "¿El bot entiende lo que los clientes preguntan?",
       answer:
-        "Sí, en todos los planes el bot responde automáticamente las preguntas más comunes de tu negocio: horarios, precios, ubicación, disponibilidad. A partir del plan Profesional, además entiende las preguntas en contexto con inteligencia artificial. Si algo queda fuera de su alcance, te lo reenvía para que lo resuelvas.",
+        "Sí, en todos los planes el bot responde automáticamente las preguntas más comunes de su negocio: horarios, precios, ubicación, disponibilidad. A partir del plan Profesional, además entiende las preguntas en contexto con inteligencia artificial. Si algo queda fuera de su alcance, se lo reenvía para que lo resuelva.",
     },
     {
       question: "¿Puedo personalizar las respuestas?",
       answer:
-        "Sí, tú defines los mensajes. Te damos una base y la ajustamos contigo hasta que suene exactamente como quieres. Con el tiempo puedes cambiarlas cuando quieras.",
+        "Sí, usted define los mensajes. Le damos una base y la ajustamos con usted hasta que suene exactamente como quiera. Con el tiempo puede cambiarlas cuando quiera.",
     },
     {
       question: "¿Cuánto tiempo toma tenerlo listo?",
       answer:
-        "El bot de WhatsApp lo configuramos en 2 horas hábiles. Los planes más avanzados pueden tomar más tiempo según la complejidad de tu negocio.",
+        "El bot de WhatsApp lo configuramos en 2 horas hábiles. Los planes más avanzados pueden tomar más tiempo según la complejidad de su negocio.",
     },
     {
       question: "¿Necesito conocimientos técnicos para usarlo?",
       answer:
-        "Para nada. Nosotros configuramos todo. Tú solo tienes que revisar los mensajes que te lleguen. Si necesitas cambiar algo, nos avisas y lo ajustamos.",
+        "Para nada. Nosotros configuramos todo. Usted solo tiene que revisar los mensajes que le lleguen. Si necesita cambiar algo, nos avisa y lo ajustamos.",
     },
     {
       question: "¿Puedo cancelar cuando quiera?",
       answer:
-        "Sí, no hay contratos largos. Cancelas cuando quieras sin penalización. Obviamente esperamos que te quedes porque los resultados hablan solos.",
+        "Sí, no hay contratos largos. Cancela cuando quiera sin penalización. Obviamente esperamos que se quede porque los resultados hablan solos.",
     },
     {
       question: "¿Cómo sé cuántos clientes me contactaron?",
@@ -332,12 +332,12 @@ export const siteFaq = {
     {
       question: "¿Funciona para cualquier tipo de negocio?",
       answer:
-        "Funciona para cualquier negocio que reciba consultas por WhatsApp: restaurantes, clínicas, barberías, tiendas, talleres, gimnasios, spas, dentistas. Si tu negocio recibe mensajes, te sirve.",
+        "Funciona para cualquier negocio que reciba consultas por WhatsApp: restaurantes, clínicas, concesionarios, inmobiliarias, hoteles, gimnasios y spas. Si su negocio recibe mensajes, le sirve.",
     },
     {
       question: "¿Necesito WhatsApp Business o un número exclusivo para usarlo?",
       answer:
-        "No, funciona con cualquier WhatsApp, incluso si es tu número personal. El bot se conecta como una sesión adicional de WhatsApp Web — tú sigues usando tu WhatsApp normal en el celular para hablar con amigos y familia sin problema. El bot responde automáticamente a los clientes, y si alguien pregunta algo que el bot no sabe, te lo reenvía a tu WhatsApp para que lo resuelvas. Si prefieres tener todo separado, puedes usar un chip prepago exclusivo para el negocio, pero no es obligatorio.",
+        "No, funciona con cualquier WhatsApp, incluso si es su número personal. El bot se conecta como una sesión adicional de WhatsApp Web — usted sigue usando su WhatsApp normal en el celular para hablar con amigos y familia sin problema. El bot responde automáticamente a los clientes, y si alguien pregunta algo que el bot no sabe, se lo reenvía a su WhatsApp para que lo resuelva. Si prefiere tener todo separado, puede usar un chip prepago exclusivo para el negocio, pero no es obligatorio.",
     },
   ],
 };
@@ -346,9 +346,9 @@ export const siteFaq = {
 export const siteContact = {
   sectionId: "contacto",
   label: "Contacto",
-  title: "Hablemos de tu negocio",
+  title: "Hablemos de su negocio",
   subtitle:
-    "Cuéntanos qué necesitas y te mostramos cómo la automatización puede ayudarte a no perder más clientes.",
+    "Cuéntenos qué necesita y le mostramos cómo la automatización puede ayudarle a no perder más clientes.",
   contacts: [
     {
       icon: "Mail",
@@ -363,31 +363,31 @@ export const siteContact = {
       text: "+57 3219615338",
     },
   ],
-  quickResponseText: "Respuesta inmediata — te leemos al instante",
+  quickResponseText: "Respuesta inmediata — leemos su mensaje al instante",
   quoteChecklist: {
     icon: "🤖",
-    title: "Para ayudarte más rápido, cuéntanos:",
+    title: "Para ayudarle más rápido, cuéntenos:",
     items: [
       {
         icon: "FaRegBuilding",
-        text: "¿A qué se dedica tu negocio?",
+        text: "¿A qué se dedica su negocio?",
       },
       {
         icon: "FaMapMarkerAlt",
-        text: "¿En qué ciudad estás?",
+        text: "¿En qué ciudad está?",
       },
       {
         icon: "FaRegStar",
-        text: "¿Qué preguntas recibes siempre por WhatsApp?",
+        text: "¿Qué preguntas recibe siempre por WhatsApp?",
       },
       {
         icon: "FaRegCalendarCheck",
-        text: "¿Quieres agenda automática, catálogo o seguimiento?",
+        text: "¿Quiere agenda automática, catálogo o seguimiento?",
       },
     ],
   },
-  footerText: "Te respondemos de lunes a viernes, de 9:00 a 18:00.",
-  confidenceText: "Si no sabes qué plan elegir, te orientamos sin compromiso.",
+  footerText: "Le respondemos de lunes a viernes, de 9:00 a 18:00.",
+  confidenceText: "Si no sabe qué plan elegir, le orientamos sin compromiso.",
 };
 
 // ============================================================
