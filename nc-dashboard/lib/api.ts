@@ -19,9 +19,10 @@ import {
   setSignedInCookie,
   shouldRedirectOn401,
 } from "@/lib/route-guard";
-import { friendlyErrorMessage } from "@/lib/api-errors";
+import { extractErrorDetail, friendlyErrorMessage } from "@/lib/api-errors";
 
 const CSRF_COOKIE = "nc_csrf";
+const CSRF_DETAIL = "CSRF token missing/mismatch";
 const CSRF_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 export class ApiError extends Error {
@@ -198,6 +199,34 @@ export async function apiClient<T = unknown>(
 
   if (!response.ok) {
     const text = await response.text();
+
+    // CSRF self-heal (backend b549c7a): a 403 with the CSRF detail means the
+    // nc_csrf cookie was lost (eviction/clearing) while the session cookie
+    // survived. GET /auth/me re-emits nc_csrf on restore, so refresh the token
+    // and retry the mutation ONCE. If /auth/me also fails (session dead),
+    // there is nothing to retry with and we surface the friendly error.
+    if (
+      response.status === 403 &&
+      CSRF_METHODS.has(method) &&
+      extractErrorDetail(text) === CSRF_DETAIL
+    ) {
+      console.error(
+        `[apiClient] 403 CSRF on ${endpoint} — refreshing token and retrying once`,
+      );
+      const refreshed = await getProfile().catch(() => null);
+      const retryCsrf = refreshed ? getCsrfToken() : null;
+      if (retryCsrf) {
+        const retry = await fetch(endpoint, {
+          ...options,
+          headers: { ...headers, "X-CSRF-Token": retryCsrf },
+          credentials: "include",
+        });
+        if (retry.ok) {
+          return retry.status === 204 ? (undefined as T) : retry.json();
+        }
+      }
+    }
+
     // T6 — never leak raw backend JSON to users; keep it in the console for
     // debugging instead.
     console.error(

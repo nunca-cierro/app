@@ -19,6 +19,10 @@ const KNOWN_DETAILS: Record<string, string> = {
   "Invalid or expired token": "Tu sesión expiró. Volvé a iniciar sesión.",
   "Invalid token": "Tu sesión expiró. Volvé a iniciar sesión.",
   "User not found": "Tu sesión expiró. Volvé a iniciar sesión.",
+  // CSRF double-submit failure — the session cookie survived but nc_csrf was
+  // lost; apiClient retries once after /auth/me re-emits it (b549c7a). If it
+  // still fails, the session is unusable → re-login.
+  "CSRF token missing/mismatch": "Tu sesión no pudo validarse. Volvé a iniciar sesión.",
   // generic server errors → generic user message
   "Internal Server Error": "Ocurrió un error. Intenta de nuevo.",
 };
