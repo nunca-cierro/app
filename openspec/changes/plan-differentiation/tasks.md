@@ -64,5 +64,5 @@ Chain strategy: stacked-to-main
 
 ## Phase 5: Docs + Verificación
 
-- [ ] 5.1 `docs/strategy/plan-de-negocio.md`: Escenario A + Corporativo "A cotizar" (manual)
-- [ ] 5.2 Suite pytest + Vitest verde; grep sin <$390K ni omitir "+ IVA"; `SUPPORTED_PLANS`/regex/`CAP_AI` intactos
+- [x] 5.1 `docs/strategy/plan-de-negocio.md`: Escenario A + Corporativo "A cotizar" (manual)
+- [x] 5.2 Suite pytest + Vitest verde; grep sin <$390K ni omitir "+ IVA"; `SUPPORTED_PLANS`/regex/`CAP_AI` intactos
