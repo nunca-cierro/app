@@ -8,6 +8,8 @@ import { useMetrics } from "@/hooks/use-metrics";
 import { useConversations } from "@/hooks/use-conversations";
 import { useAgents } from "@/hooks/use-agents";
 import { useAgent } from "@/hooks/use-agent";
+import { usePlanUsage } from "@/hooks/use-plan-usage";
+import { PlanUsageWidget } from "@/app/dashboard/components/plan-usage-widget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -397,6 +399,13 @@ function ClientDashboard() {
 
   // Business config hooks (must be before early return for React hooks rules)
   const { updateBusinessConfig } = useAgent(myAgent?.id ?? "");
+  // Plan usage del tenant activo — refetchea al cambiar de tenant; ante
+  // fallo degrada y el widget se oculta (Slice 3, spec WidgetApiErrorGraceful).
+  const {
+    data: planUsage,
+    isLoading: usageLoading,
+    error: usageError,
+  } = usePlanUsage(tid);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
@@ -530,6 +539,15 @@ function ClientDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Plan usage widget — informativo, tras "Plan Actual" (Slice 3).
+          CTA a upgrade abre el payment-screen; nunca bloquea. */}
+      <PlanUsageWidget
+        data={planUsage}
+        isLoading={usageLoading}
+        error={usageError}
+        onUpgrade={() => setShowPayment(true)}
+      />
 
       {/* Business info */}
       {myTenant && (
