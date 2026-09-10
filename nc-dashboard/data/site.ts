@@ -2,9 +2,9 @@ export const siteMetadata = {
   lang: "es",
   title: "NuncaCierro | Automatización WhatsApp para negocios en Colombia",
   description:
-    "Automatizamos tu WhatsApp para que respondas, agendes citas y vendas 24/7. Tu negocio nunca cierra. Ideal para restaurantes, clínicas, barberías, tiendas y más.",
+    "Bot de WhatsApp para empresas en Colombia: automatización 24/7 que responde, agenda citas y vende mientras usted no está. 7 días de prueba gratis.",
   keywords:
-    "automatización WhatsApp Colombia, chatbot WhatsApp negocio, atender WhatsApp automáticamente, bot WhatsApp pequeña empresa, agendar citas WhatsApp, clientes potenciales WhatsApp, nunca perder clientes WhatsApp, responder WhatsApp sin estar pendiente",
+    "bot WhatsApp empresas Colombia, automatización WhatsApp Colombia, atención al cliente 24/7 WhatsApp, agenda de citas WhatsApp, IA WhatsApp negocio",
   preconnectUrls: ["https://images.unsplash.com"],
 };
 
@@ -36,9 +36,10 @@ export const siteWhatsAppMessages = {
 // Hero section data
 export const siteHero = {
   sectionId: "inicio",
-  title: "Clientes atendidos todo el tiempo.",
+  eyebrow: "Su negocio nunca cierra",
+  title: "Atienda a sus clientes por WhatsApp 24/7",
   subtitle:
-    "Automatizamos tu WhatsApp para que tu negocio responda 24/7, tome pedidos, agende citas y nunca pierda ventas. Sin configuraciones técnicas.",
+    "Automatizamos su WhatsApp para que su negocio responda 24/7, tome pedidos, agende citas y nunca pierda ventas. Sin configuraciones técnicas.",
 };
 
 export const siteDevicePreview = {

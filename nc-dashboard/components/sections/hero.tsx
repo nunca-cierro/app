@@ -19,6 +19,12 @@ export function Hero() {
       <div className="relative z-10 grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:min-h-[72vh] lg:items-end mt-8 md:mt-10">
         {/* Left: Title, subtitle, QR and social proof */}
         <div className="max-w-xl lg:self-start space-y-6 mt-5">
+          <p
+            className="hero-fade text-sm font-medium uppercase tracking-wider text-amber-300/90"
+            style={{ animationDelay: "0s" }}
+          >
+            {siteHero.eyebrow}
+          </p>
           <h1
             className="hero-fade text-4xl md:text-6xl lg:text-7xl font-bold leading-[1.05] text-white/95 neon-glow"
             style={{ animationDelay: "0.05s" }}
