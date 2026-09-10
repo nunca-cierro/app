@@ -126,7 +126,7 @@ import PlatformsWhatsAppPage from "@/app/dashboard/platforms/whatsapp/page";
 import PlatformsWhatsAppDetailPage from "@/app/dashboard/platforms/whatsapp/[id]/page";
 import PlatformsNewWhatsAppPage from "@/app/dashboard/platforms/whatsapp/new/page";
 
-const NO_ACCESS = "No tenés permisos para esta acción";
+const NO_ACCESS = "No tienes permisos para esta acción";
 
 function renderToHtml(element: React.ReactElement): Promise<string> {
   return new Promise((resolve, reject) => {

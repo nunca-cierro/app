@@ -287,7 +287,7 @@ describe("apiClient CSRF self-heal", () => {
         403,
         JSON.stringify({ detail: "CSRF token missing/mismatch" }),
       ),
-    ).toBe("Tu sesión no pudo validarse. Volvé a iniciar sesión.");
+    ).toBe("Tu sesión no pudo validarse. Vuelve a iniciar sesión.");
   });
 });
 
