@@ -30,6 +30,10 @@ from app.modules.agents.schemas import (
 )
 from app.modules.agents.template_models import AgentTemplate
 from app.modules.agents.templates import PlaceholderResolver
+from app.modules.agents.categories import (
+    INTERNAL_TEMPLATE_CATEGORIES,
+    canonicalize_category,
+)
 from app.core.config import DEFAULT_LLM_MODEL, DEFAULT_MAX_TOKENS
 from app.modules.platform_connections.models import PlatformConnection
 from app.modules.tenants.models import Tenant
@@ -54,6 +58,16 @@ async def create_agent_from_template(
     # Load template
     template = await session.get(AgentTemplate, body.template_id)
     if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    # Internal system templates are superadmin-only. Return 404 (not 403) so
+    # their existence is never leaked to clients. NOTE: the agents_manage
+    # capability gate runs BEFORE this endpoint, so a caller whose plan lacks
+    # agents.manage gets a 403 first (plan-based, unrelated to the template).
+    if (
+        canonicalize_category(template.category) in INTERNAL_TEMPLATE_CATEGORIES
+        and current_user.current_role != UserRole.SUPERADMIN
+    ):
         raise HTTPException(status_code=404, detail="Template not found")
 
     # Tenant isolation: non-superadmin users can only create agents in their own tenant
