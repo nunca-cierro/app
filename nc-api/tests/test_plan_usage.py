@@ -12,8 +12,20 @@ file only locks the data contract both sides serialize to.
 
 from __future__ import annotations
 
+import uuid
+from datetime import UTC, datetime, timedelta
+
+import pytest
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.main import app
+from app.modules.auth.deps import get_current_user
+from app.modules.auth.models import User, UserRole
+from app.modules.auth.user_tenant import UserTenant
 from app.modules.plans.capabilities import get_plan_limits
 from app.modules.plans.schemas import PlanLimits, PlanUsage, PlanUsageResponse
+from app.modules.tenants.models import Tenant
 
 
 class TestPlanLimitsSchema:
@@ -98,3 +110,359 @@ class TestPlanUsageResponseSchema:
         )
         assert response.pct is None
         assert response.over_limit is False
+
+
+# ── Phase 2: GET /api/v1/plans/usage endpoint ─────────────────────────────────
+# Design D1/D3: per-tenant meter scoped by the JWT (current_tenant_id); pct = %
+# of AI responses vs max_conversations_per_month (PRIMARY metric); over_limit =
+# True when ANY usage metric exceeds its limit; enterprise → pct null. Soft
+# limits — the endpoint only reports, never blocks or bills.
+
+
+class TestUsageDerivedMetrics:
+    """Pure helpers of the endpoint module (design D1: pct/over_limit/month)."""
+
+    def test_pct_is_percent_of_primary_metric(self) -> None:
+        from app.api.v1.plans import compute_pct
+
+        assert compute_pct(1200, 5000) == 24
+        assert compute_pct(5100, 5000) == 102
+        assert compute_pct(0, 500) == 0
+
+    def test_pct_none_when_limit_unlimited(self) -> None:
+        from app.api.v1.plans import compute_pct
+
+        assert compute_pct(9999, None) is None
+
+    def test_over_limit_true_when_any_metric_exceeds(self) -> None:
+        from app.api.v1.plans import compute_over_limit
+
+        limits = PlanLimits(**get_plan_limits("professional"))
+        # Each metric independently triggers over_limit when above its limit.
+        assert (
+            compute_over_limit(
+                PlanUsage(ai_responses=5100, products=1, businesses=1), limits
+            )
+            is True
+        )
+        assert (
+            compute_over_limit(
+                PlanUsage(ai_responses=100, products=51, businesses=1), limits
+            )
+            is True
+        )
+        assert (
+            compute_over_limit(
+                PlanUsage(ai_responses=100, products=1, businesses=4), limits
+            )
+            is True
+        )
+        # At the limit exactly → NOT over.
+        assert (
+            compute_over_limit(
+                PlanUsage(ai_responses=5000, products=50, businesses=3), limits
+            )
+            is False
+        )
+
+    def test_over_limit_false_when_limits_unlimited(self) -> None:
+        from app.api.v1.plans import compute_over_limit
+
+        limits = PlanLimits(**get_plan_limits("enterprise"))
+        assert (
+            compute_over_limit(
+                PlanUsage(ai_responses=9999, products=999, businesses=9), limits
+            )
+            is False
+        )
+
+    def test_month_start_is_first_instant_of_utc_month(self) -> None:
+        from app.api.v1.plans import current_month_start
+
+        now = datetime(2026, 9, 10, 15, 30, 45, tzinfo=UTC)
+        assert current_month_start(now) == datetime(2026, 9, 1, 0, 0, 0, tzinfo=UTC)
+
+
+async def _seed_usage_tenant(
+    db_session: AsyncSession,
+    *,
+    plan: str,
+    slug: str,
+    ai_messages: int = 0,
+    products: int = 0,
+    programmed: int = 0,
+    escalation: int = 0,
+    last_month_ai: int = 0,
+) -> Tenant:
+    """Tenant + conversation + outbound messages (+ optional agent/products)."""
+    from app.modules.agents.models import AiAgent
+    from app.modules.conversations.models import Conversation, Message
+
+    tenant = Tenant(
+        id=uuid.uuid4(), name="Usage Co", slug=slug, status="active",
+        plan=plan, timezone="UTC", locale="es",
+    )
+    db_session.add(tenant)
+    await db_session.flush()
+
+    conv = Conversation(
+        tenant_id=tenant.id, external_user_id="573001234567", status="open",
+    )
+    db_session.add(conv)
+    await db_session.flush()
+
+    now = datetime.now(UTC)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    def _msg(origin: str | None, content: str, created_at: datetime | None = None) -> Message:
+        return Message(
+            tenant_id=tenant.id, conversation_id=conv.id, direction="out",
+            origin=origin, content=content, status="sent",
+            created_at=created_at or now,
+        )
+
+    rows = (
+        [_msg("ai", f"ai-{i}") for i in range(ai_messages)]
+        + [_msg("programmed", f"prog-{i}") for i in range(programmed)]
+        + [_msg("escalation", f"esc-{i}") for i in range(escalation)]
+        + [
+            _msg("ai", f"old-{i}", created_at=month_start - timedelta(days=1))
+            for i in range(last_month_ai)
+        ]
+    )
+    db_session.add_all(rows)
+
+    if products:
+        db_session.add(
+            AiAgent(
+                tenant_id=tenant.id, name="Agent", enabled=True,
+                business_config={
+                    "products_services": [{"name": f"P{i}"} for i in range(products)]
+                },
+            )
+        )
+    await db_session.commit()
+    return tenant
+
+
+def _auth_as(db_session: AsyncSession, *, tenant_id: uuid.UUID | None) -> User:
+    """Register a user override with the given JWT-scoped tenant context."""
+    user = User(
+        id=uuid.uuid4(), email="usage@test.com", name="Usage User",
+        password_hash="hash",
+    )
+    db_session.add(user)
+    setattr(user, "current_role", UserRole.ADMIN)
+    setattr(user, "current_tenant_id", tenant_id)
+
+    async def mock_get_current_user() -> User:
+        return user
+
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+    return user
+
+
+class TestPlanUsageEndpoint:
+    @pytest.mark.asyncio
+    async def test_happy_path_professional(
+        self, client: AsyncClient, db_session: AsyncSession,
+    ) -> None:
+        """HappyPathUsage: 1200 AI responses + 12 products → pct=24, not over."""
+        tenant = await _seed_usage_tenant(
+            db_session, plan="professional", slug="happy-pro",
+            ai_messages=1200, products=12, last_month_ai=1,
+        )
+        user = _auth_as(db_session, tenant_id=tenant.id)
+        # businesses = the user's memberships (design D1: COUNT UserTenant).
+        db_session.add(UserTenant(user_id=user.id, tenant_id=tenant.id, role=UserRole.ADMIN, is_primary=True))
+        await db_session.commit()
+
+        response = await client.get("/api/v1/plans/usage")
+
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data == {
+            "plan": "professional",
+            "limits": {
+                "max_agents": 5,
+                "max_products": 50,
+                "max_conversations_per_month": 5000,
+                "max_businesses": 3,
+            },
+            "usage": {"ai_responses": 1200, "products": 12, "businesses": 1},
+            "pct": 24,
+            "over_limit": False,
+        }
+
+    @pytest.mark.asyncio
+    async def test_over_limit_soft_returns_200(
+        self, client: AsyncClient, db_session: AsyncSession,
+    ) -> None:
+        """OverLimitSoft: 5100/5000 → 200 with pct=102, over_limit=true."""
+        tenant = await _seed_usage_tenant(
+            db_session, plan="professional", slug="over-pro", ai_messages=5100,
+        )
+        _auth_as(db_session, tenant_id=tenant.id)
+        await db_session.commit()
+
+        response = await client.get("/api/v1/plans/usage")
+
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["usage"]["ai_responses"] == 5100
+        assert data["limits"]["max_conversations_per_month"] == 5000
+        assert data["pct"] == 102
+        assert data["over_limit"] is True
+
+    @pytest.mark.asyncio
+    async def test_non_ai_outbounds_not_counted(
+        self, client: AsyncClient, db_session: AsyncSession,
+    ) -> None:
+        """NonAiNotCounted: programmed/escalation never increment ai_responses."""
+        tenant = await _seed_usage_tenant(
+            db_session, plan="basic", slug="non-ai",
+            ai_messages=3, programmed=10, escalation=5,
+        )
+        _auth_as(db_session, tenant_id=tenant.id)
+        await db_session.commit()
+
+        response = await client.get("/api/v1/plans/usage")
+
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["usage"]["ai_responses"] == 3
+        assert data["pct"] == 1  # round(3 * 100 / 500)
+
+    @pytest.mark.asyncio
+    async def test_tenant_isolation_active_tenant_only(
+        self, client: AsyncClient, db_session: AsyncSession,
+    ) -> None:
+        """TenantIsolation: data of tenant B never leaks into tenant A's meter."""
+        tenant_a = await _seed_usage_tenant(
+            db_session, plan="professional", slug="iso-a",
+            ai_messages=300, products=5,
+        )
+        tenant_b = await _seed_usage_tenant(
+            db_session, plan="professional", slug="iso-b",
+            ai_messages=700, products=20,
+        )
+        user = _auth_as(db_session, tenant_id=tenant_a.id)
+        db_session.add(UserTenant(user_id=user.id, tenant_id=tenant_a.id, role=UserRole.ADMIN, is_primary=True))
+        db_session.add(UserTenant(user_id=user.id, tenant_id=tenant_b.id, role=UserRole.CLIENT, is_primary=False))
+        await db_session.commit()
+
+        response = await client.get("/api/v1/plans/usage")
+
+        assert response.status_code == 200, response.text
+        data = response.json()
+        # Only tenant A's counters (B has 700 AI responses + 20 products).
+        assert data["usage"]["ai_responses"] == 300
+        assert data["usage"]["products"] == 5
+        # businesses counts the user's memberships (A + B), per design D1.
+        assert data["usage"]["businesses"] == 2
+        assert data["pct"] == 6  # round(300 * 100 / 5000)
+
+    @pytest.mark.asyncio
+    async def test_unknown_plan_falls_back_to_basic_limits(
+        self, client: AsyncClient, db_session: AsyncSession,
+    ) -> None:
+        """UnknownPlanFallsBackToBasic: limits = basic; pct vs 500."""
+        tenant = await _seed_usage_tenant(
+            db_session, plan="legacy-plan", slug="legacy",
+            ai_messages=100, products=2,
+        )
+        _auth_as(db_session, tenant_id=tenant.id)
+        await db_session.commit()
+
+        response = await client.get("/api/v1/plans/usage")
+
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["plan"] == "legacy-plan"
+        assert data["limits"] == {
+            "max_agents": 1,
+            "max_products": 10,
+            "max_conversations_per_month": 500,
+            "max_businesses": 1,
+        }
+        assert data["pct"] == 20  # round(100 * 100 / 500)
+        assert data["over_limit"] is False
+
+    @pytest.mark.asyncio
+    async def test_enterprise_pct_null_and_never_over(
+        self, client: AsyncClient, db_session: AsyncSession,
+    ) -> None:
+        """Enterprise → pct null; unlimited limits never report over_limit."""
+        tenant = await _seed_usage_tenant(
+            db_session, plan="enterprise", slug="enterprise-co",
+            ai_messages=60, products=25,  # 25 > basic 10 → proves None limits
+        )
+        _auth_as(db_session, tenant_id=tenant.id)
+        await db_session.commit()
+
+        response = await client.get("/api/v1/plans/usage")
+
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["limits"] == {
+            "max_agents": None,
+            "max_products": None,
+            "max_conversations_per_month": None,
+            "max_businesses": None,
+        }
+        assert data["pct"] is None
+        assert data["over_limit"] is False
+
+    @pytest.mark.asyncio
+    async def test_downgrade_preserves_data_and_reflects_excess(
+        self, client: AsyncClient, db_session: AsyncSession,
+    ) -> None:
+        """DowngradePreservesData: 3000 AI responses survive a professional→basic
+        downgrade; the meter keeps counting them and reports over_limit (soft)."""
+        tenant = await _seed_usage_tenant(
+            db_session, plan="professional", slug="downgrade-co",
+            ai_messages=3000, products=9,
+        )
+        _auth_as(db_session, tenant_id=tenant.id)
+        await db_session.commit()
+
+        # Downgrade to basic (limit 500) — nothing is deleted or migrated.
+        tenant.plan = "basic"
+        await db_session.commit()
+
+        response = await client.get("/api/v1/plans/usage")
+
+        assert response.status_code == 200, response.text
+        data = response.json()
+        assert data["plan"] == "basic"
+        assert data["limits"]["max_conversations_per_month"] == 500
+        assert data["usage"]["ai_responses"] == 3000  # data fully preserved
+        assert data["pct"] == 600  # round(3000 * 100 / 500)
+        assert data["over_limit"] is True
+
+    @pytest.mark.asyncio
+    async def test_unauthenticated_returns_401(
+        self, client: AsyncClient, db_session: AsyncSession,
+    ) -> None:
+        """UnauthenticatedRejected: no valid token → 401."""
+        async def deny() -> User:
+            from fastapi import HTTPException, status
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+
+        app.dependency_overrides[get_current_user] = deny
+        try:
+            response = await client.get("/api/v1/plans/usage")
+            assert response.status_code == 401
+        finally:
+            app.dependency_overrides.clear()
+
+    @pytest.mark.asyncio
+    async def test_no_active_tenant_returns_404(
+        self, client: AsyncClient, db_session: AsyncSession,
+    ) -> None:
+        """D3: superadmin/user without current_tenant_id → 404 'No active tenant'."""
+        # The default client fixture authenticates a superadmin with
+        # current_tenant_id=None — exactly the tenantless case.
+        response = await client.get("/api/v1/plans/usage")
+        assert response.status_code == 404
+        assert "No active tenant" in response.json()["detail"]

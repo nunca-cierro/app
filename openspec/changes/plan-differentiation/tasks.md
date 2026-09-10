@@ -37,12 +37,12 @@ Chain strategy: stacked-to-main
 
 ## Phase 2: Core (Handler + Endpoint)
 
-- [ ] 2.1 handler.py L841 (FAQ) → `"programmed"`; L949 (escalación) → `"escalation"`
-- [ ] 2.2 handler.py L1030 (LLM) → `"ai"`; L702 (pago) sin `origin`
-- [ ] 2.3 Tests RED→GREEN: `test_message_origin.py` (3 caminos; inbound/admin/histórico NULL)
-- [ ] 2.4 `api/v1/plans.py` (new): `GET /plans/usage` — COUNT IA mes + Σ products + COUNT UserTenant; tenant JWT; 404 sin tenant; enterprise `pct=null`
-- [ ] 2.5 `api/v1/router.py`: include `plans_router` con admin_deps
-- [ ] 2.6 Tests: `test_plan_usage.py` (1200/5000/pct=24; 5100/102 soft; aislamiento; 401; no-IA; downgrade)
+- [x] 2.1 handler.py L841 (FAQ) → `"programmed"`; L949 (escalación) → `"escalation"`
+- [x] 2.2 handler.py L1030 (LLM) → `"ai"`; L702 (pago) sin `origin`
+- [x] 2.3 Tests RED→GREEN: `test_message_origin.py` (3 caminos; inbound/admin/histórico NULL)
+- [x] 2.4 `api/v1/plans.py` (new): `GET /plans/usage` — COUNT IA mes + Σ products + COUNT UserTenant; tenant JWT; 404 sin tenant; enterprise `pct=null`
+- [x] 2.5 `api/v1/router.py`: include `plans_router` con admin_deps
+- [x] 2.6 Tests: `test_plan_usage.py` (1200/5000/pct=24; 5100/102 soft; aislamiento; 401; no-IA; downgrade)
 
 ## Phase 3: Widget Dashboard
 
