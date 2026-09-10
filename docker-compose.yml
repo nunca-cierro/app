@@ -94,6 +94,7 @@ services:
       context: ./nc-dashboard
       args:
         NEXT_PUBLIC_API_URL: "http://nc-api:8000"
+        NEXT_PUBLIC_GA_ID: "${NEXT_PUBLIC_GA_ID:-}"
     restart: unless-stopped
     depends_on:
       nc-api:
