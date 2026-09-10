@@ -12,11 +12,14 @@ The three outbound HANDLER paths that SET the value land in Phase 2
 from __future__ import annotations
 
 import uuid
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from sqlalchemy import String, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.conversations.models import Conversation, Message
+from app.modules.evolution.handler import handle_evolution_incoming
 from app.modules.tenants.models import Tenant
 
 ORIGIN_TAGS = ("ai", "programmed", "escalation")
@@ -121,3 +124,207 @@ class TestOriginPersistence:
         )).scalars().all()
         assert len(rows) == 1
         assert rows[0].origin is None
+
+
+# ── Phase 2: handler-level origin tagging ─────────────────────────────────────
+# The three tenant outbound paths of handle_evolution_incoming persist the tag:
+# programmed (FAQ/keywords), escalation (fallback), ai (LLM). Inbound and
+# admin from_me messages stay NULL (they are NOT tenant AI usage).
+
+
+async def _seed_origin_tenant_agent_connection(
+    db_session: AsyncSession, *, plan: str, business_config: dict | None = None,
+) -> tuple[Tenant, object]:
+    """Tenant + enabled agent (business_config) + linked Evolution connection."""
+    from app.modules.agents.models import AiAgent
+    from app.modules.platform_connections.models import PlatformConnection
+
+    tenant = Tenant(
+        id=uuid.uuid4(),
+        name="Origin Co",
+        slug=f"origin-{uuid.uuid4().hex[:6]}",
+        status="active",
+        plan=plan,
+        timezone="UTC",
+        locale="es",
+    )
+    db_session.add(tenant)
+    await db_session.flush()
+
+    agent = AiAgent(
+        id=uuid.uuid4(),
+        tenant_id=tenant.id,
+        name="Origin Agent",
+        model="llama3-70b",
+        enabled=True,
+        business_config=business_config or {},
+    )
+    db_session.add(agent)
+    await db_session.flush()
+
+    connection = PlatformConnection(
+        tenant_id=tenant.id,
+        agent_id=agent.id,
+        platform_type="evolution",
+        display_name="Origin Evo",
+        credentials="{}",
+        status="active",
+        is_primary=True,
+    )
+    db_session.add(connection)
+    await db_session.commit()
+    return tenant, connection
+
+
+def _make_origin_event(text: str, *, from_me: bool = False) -> dict:
+    """Realistic Evolution API webhook event (messages.upsert)."""
+    return {
+        "event": "messages.upsert",
+        "instance": "test-instance",
+        "data": {
+            "key": {
+                "remoteJid": "573001234567@s.whatsapp.net",
+                "fromMe": from_me,
+                "id": f"test-msg-{uuid.uuid4().hex[:8]}",
+            },
+            "pushName": "Test User",
+            "message": {"conversation": text},
+            "messageType": "conversation",
+        },
+    }
+
+
+class TestOriginHandlerPaths:
+    """Design D2 — FAQ→programmed, escalación→escalation, LLM→ai; NULL elsewhere."""
+
+    async def _outbound_rows(self, db_session: AsyncSession) -> list[Message]:
+        rows = (await db_session.execute(
+            select(Message).where(Message.direction == "out")
+        )).scalars().all()
+        return list(rows)
+
+    @pytest.mark.asyncio
+    async def test_faq_programmed_outbound_tagged_inbound_null(
+        self, db_session: AsyncSession,
+    ) -> None:
+        """ProgrammedOriginTagged: basic tenant FAQ answer → origin='programmed'.
+
+        Also locks the inbound counterpart: the SAME pipeline persists the
+        customer message with origin=NULL (never counted as AI).
+        """
+        tenant, connection = await _seed_origin_tenant_agent_connection(
+            db_session,
+            plan="basic",
+            business_config={
+                "faq": [
+                    {
+                        "question": "¿Cuál es el horario de atención?",
+                        "answer": "Atendemos de 9 a 6.",
+                    }
+                ]
+            },
+        )
+        with patch(
+            "app.modules.evolution.handler.EvolutionAdapter.send_message",
+            new_callable=AsyncMock,
+        ) as mock_send, patch(
+            "app.modules.evolution.handler.llm_client.generate",
+            new_callable=AsyncMock,
+        ) as mock_groq:
+            mock_send.return_value = {"key": {"id": "mock-evo-id"}}
+            await handle_evolution_incoming(
+                event=_make_origin_event("atencion"),
+                connection=connection,
+                session=db_session,
+            )
+
+        mock_groq.assert_not_awaited()
+        outbound = await self._outbound_rows(db_session)
+        assert len(outbound) == 1
+        assert outbound[0].origin == "programmed"
+
+        inbound = (await db_session.execute(
+            select(Message).where(Message.direction == "in")
+        )).scalars().all()
+        assert len(inbound) == 1
+        assert inbound[0].origin is None
+
+    @pytest.mark.asyncio
+    async def test_escalation_outbound_tagged(self, db_session: AsyncSession) -> None:
+        """EscalationOriginTagged: professional fallback → origin='escalation'."""
+        tenant, connection = await _seed_origin_tenant_agent_connection(
+            db_session,
+            plan="professional",
+            business_config={
+                "keywords_to_escalate": ["hablar con asesor"],
+                "fallback_message": "Un asesor te contactará en breve.",
+            },
+        )
+        with patch(
+            "app.modules.evolution.handler.EvolutionAdapter.send_message",
+            new_callable=AsyncMock,
+        ) as mock_send, patch(
+            "app.modules.evolution.handler.llm_client.generate",
+            new_callable=AsyncMock,
+        ) as mock_groq:
+            mock_send.return_value = {"key": {"id": "mock-evo-id"}}
+            await handle_evolution_incoming(
+                event=_make_origin_event("quiero hablar un asesor"),
+                connection=connection,
+                session=db_session,
+            )
+
+        # Escalation short-circuits the AI — only the fallback is persisted.
+        mock_groq.assert_not_awaited()
+        outbound = await self._outbound_rows(db_session)
+        assert len(outbound) == 1
+        assert outbound[0].origin == "escalation"
+        assert outbound[0].content == "Un asesor te contactará en breve."
+
+    @pytest.mark.asyncio
+    async def test_llm_outbound_tagged(self, db_session: AsyncSession) -> None:
+        """AiOriginTagged: professional tenant answered via LLM → origin='ai'."""
+        tenant, connection = await _seed_origin_tenant_agent_connection(
+            db_session,
+            plan="professional",
+            business_config={},
+        )
+        with patch(
+            "app.modules.evolution.handler.EvolutionAdapter.send_message",
+            new_callable=AsyncMock,
+        ) as mock_send, patch(
+            "app.modules.evolution.handler.llm_client.generate",
+            new_callable=AsyncMock,
+        ) as mock_groq:
+            mock_send.return_value = {"key": {"id": "mock-evo-id"}}
+            mock_groq.return_value = "Respuesta generada por IA"
+            await handle_evolution_incoming(
+                event=_make_origin_event("¿cuánto cuesta?"),
+                connection=connection,
+                session=db_session,
+            )
+
+        mock_groq.assert_awaited_once()
+        outbound = await self._outbound_rows(db_session)
+        assert len(outbound) == 1
+        assert outbound[0].origin == "ai"
+        assert outbound[0].content == "Respuesta generada por IA"
+
+    @pytest.mark.asyncio
+    async def test_admin_from_me_outbound_origin_null(
+        self, db_session: AsyncSession,
+    ) -> None:
+        """Admin outbound (from_me) stays NULL — it is NOT tenant AI usage."""
+        tenant, connection = await _seed_origin_tenant_agent_connection(
+            db_session, plan="professional",
+        )
+        await handle_evolution_incoming(
+            event=_make_origin_event("hola, escribo desde el negocio", from_me=True),
+            connection=connection,
+            session=db_session,
+        )
+
+        outbound = await self._outbound_rows(db_session)
+        assert len(outbound) == 1
+        assert (outbound[0].payload or {}).get("source") == "admin"
+        assert outbound[0].origin is None

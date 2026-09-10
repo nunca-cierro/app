@@ -849,6 +849,7 @@ async def handle_evolution_incoming(
             message_type="text",
             content=matched_answer,
             status=outbound_status,
+            origin="programmed",  # FAQ/keyword answer — not an AI response
         )
         session.add(outbound_msg)
 
@@ -957,6 +958,7 @@ async def handle_evolution_incoming(
                 message_type="text",
                 content=fallback,
                 status=outbound_status,
+                origin="escalation",  # human-handoff fallback — not an AI response
             )
             session.add(outbound_msg)
 
@@ -1038,6 +1040,7 @@ async def handle_evolution_incoming(
         message_type="text",
         content=response,
         status=outbound_status,
+        origin="ai",  # LLM response — the primary usage-meter metric (D1)
     )
     session.add(outbound_msg)
 
