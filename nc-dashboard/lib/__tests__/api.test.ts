@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { friendlyErrorMessage } from "@/lib/api-errors";
 import {
   apiClient,
   getCsrfToken,
@@ -216,6 +217,77 @@ describe("apiClient", () => {
     stubFetch(new Response("Unauthorized", { status: 401 }));
     await expect(apiClient("/api/v1/tenants")).rejects.toThrow("Unauthorized");
     expect(landing.location.href).toBe("");
+  });
+});
+
+describe("apiClient CSRF self-heal", () => {
+  it("retries once with a refreshed token after a 403 CSRF failure", async () => {
+    stubDocumentCookie("");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: "CSRF token missing/mismatch" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockImplementation(
+        async (url: string | URL | Request, _init?: RequestInit) => {
+          // GET /auth/me (restore probe) re-emits nc_csrf — simulate it.
+          if (String(url).includes("/auth/me")) {
+            stubDocumentCookie("nc_csrf=new-csrf");
+            return new Response(
+              JSON.stringify({ user_id: "u1", role: "superadmin" }),
+              { status: 200, headers: { "Content-Type": "application/json" } },
+            );
+          }
+          return new Response(
+            JSON.stringify({ ok: true }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        },
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await apiClient("/api/v1/tenants", {
+      method: "POST",
+      body: "{}",
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const retryInit = fetchMock.mock.calls[2][1] as RequestInit;
+    const retryHeaders = retryInit.headers as Record<string, string>;
+    expect(retryHeaders["X-CSRF-Token"]).toBe("new-csrf");
+  });
+
+  it("surfaces a friendly re-login error when the session cannot refresh", async () => {
+    stubBrowserGlobals("/dashboard/agents");
+    stubDocumentCookie("");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ detail: "CSRF token missing/mismatch" }), {
+          status: 403,
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(new Response("Unauthorized", { status: 401 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      apiClient("/api/v1/tenants", { method: "POST" }),
+    ).rejects.toThrow("Tu sesión no pudo validarse");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("maps the CSRF detail to a friendly message", () => {
+    expect(
+      friendlyErrorMessage(
+        403,
+        JSON.stringify({ detail: "CSRF token missing/mismatch" }),
+      ),
+    ).toBe("Tu sesión no pudo validarse. Volvé a iniciar sesión.");
   });
 });
 
