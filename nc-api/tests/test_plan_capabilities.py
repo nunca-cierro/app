@@ -31,8 +31,10 @@ from app.modules.plans.capabilities import (
     CAP_CONVERSATIONS_VIEW,
     CAP_DASHBOARD_VIEW,
     PLAN_CAPABILITIES,
+    PLAN_LIMITS,
     effective_capabilities,
     get_plan_capabilities,
+    get_plan_limits,
     plan_has_capability,
 )
 from app.modules.tenants.models import Tenant
@@ -147,6 +149,69 @@ class TestCapabilityMatrix:
         pro_caps = effective_capabilities(UserRole.ADMIN, "professional")
         assert CAP_BUSINESS_EDIT in pro_caps
         assert CAP_AGENTS_MANAGE in pro_caps
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Plan limits (plan-differentiation) — consumable limits + fallback
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TestPlanLimits:
+    """PLAN_LIMITS values + get_plan_limits fallback (spec plan-usage-metering).
+
+    ``max_conversations_per_month`` = AI responses (outbound ``origin='ai'``)
+    per tenant per month. These are approval tests: the values pre-exist; they
+    lock the contract the usage endpoint consumes (Slice 3).
+    """
+
+    LIMIT_KEYS = (
+        "max_agents",
+        "max_products",
+        "max_conversations_per_month",
+        "max_businesses",
+    )
+
+    def test_every_plan_exposes_the_full_limit_contract(self) -> None:
+        """All supported plans define the 4 limit keys (no missing/extra)."""
+        for plan in PLAN_LIMITS:
+            assert set(PLAN_LIMITS[plan]) == set(self.LIMIT_KEYS)
+
+    def test_professional_limits(self) -> None:
+        """Scenario LimitsByKnownPlan: professional → 5/50/5000/3."""
+        limits = get_plan_limits("professional")
+        assert limits == {
+            "max_agents": 5,
+            "max_products": 50,
+            "max_conversations_per_month": 5000,
+            "max_businesses": 3,
+        }
+
+    def test_trial_and_basic_limits(self) -> None:
+        """trial/basic share agent/product/business caps; conv differs."""
+        assert get_plan_limits("trial")["max_conversations_per_month"] == 100
+        assert get_plan_limits("basic")["max_conversations_per_month"] == 500
+        for plan in ("trial", "basic"):
+            limits = get_plan_limits(plan)
+            assert limits["max_agents"] == 1
+            assert limits["max_products"] == 10
+            assert limits["max_businesses"] == 1
+
+    def test_enterprise_limits_unlimited(self) -> None:
+        """enterprise → all limits None (unlimited, pct not applicable)."""
+        assert get_plan_limits("enterprise") == {
+            "max_agents": None,
+            "max_products": None,
+            "max_conversations_per_month": None,
+            "max_businesses": None,
+        }
+
+    def test_unknown_plan_falls_back_to_basic(self) -> None:
+        """Scenario UnknownPlanFallsBackToBasic: unknown plan → basic limits."""
+        assert get_plan_limits("mystery-plan") == get_plan_limits("basic")
+
+    def test_none_plan_falls_back_to_basic(self) -> None:
+        """A tenant without a plan (None) → basic limits."""
+        assert get_plan_limits(None) == get_plan_limits("basic")
 
 
 # ═══════════════════════════════════════════════════════════════════════════

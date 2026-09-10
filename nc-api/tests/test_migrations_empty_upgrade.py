@@ -29,10 +29,10 @@ from alembic.config import Config
 from app.core.config import settings
 
 ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
-# Single head — keep in sync with `alembic heads` output. f1a2b3c4d5e6 recreates
-# the platform_connections.agent_id FK with ON DELETE SET NULL (it supersedes
-# c0d1e2f3a4b5, the llm-multi-provider data migration).
-HEAD_REVISION = "f1a2b3c4d5e6"
+# Single head — keep in sync with `alembic heads` output. e3f4a5b6c7d8 adds the
+# nullable messages.origin column (plan-differentiation) on top of f1a2b3c4d5e6
+# (platform_connections.agent_id FK ON DELETE SET NULL).
+HEAD_REVISION = "e3f4a5b6c7d8"
 # Revision right before the drop_agent_role data migration.
 PRE_DROP_AGENT_REVISION = "c2d3e4f5a6b7"
 
@@ -159,6 +159,32 @@ def test_upgrade_empty_schema_to_head(monkeypatch: pytest.MonkeyPatch) -> None:
         assert fk_deltype == "n", (
             "fk_platform_connections_agent_id must be ON DELETE SET NULL "
             f"(confdeltype='n'), got {fk_deltype!r}"
+        )
+
+        # ── e3f4a5b6c7d8: messages.origin exists, nullable, no server default ──
+        # HistoricalMessagesNull: rows written before this migration stay NULL.
+        async def _verify_origin_column() -> tuple[str | None, str | None]:
+            conn = await asyncpg.connect(database=db_name, **params)
+            try:
+                row = await conn.fetchrow(
+                    "SELECT is_nullable, column_default "
+                    "FROM information_schema.columns "
+                    "WHERE table_name = 'messages' AND column_name = 'origin'"
+                )
+                if row is None:
+                    return None, None
+                return row["is_nullable"], row["column_default"]
+            finally:
+                await conn.close()
+
+        origin_nullable, origin_default = asyncio.run(_verify_origin_column())
+        assert origin_nullable == "YES", (
+            "messages.origin must be nullable at head, got "
+            f"is_nullable={origin_nullable!r}"
+        )
+        assert origin_default is None, (
+            "messages.origin must have NO server default (no backfill), "
+            f"got column_default={origin_default!r}"
         )
     finally:
         asyncio.run(_drop_database(params, db_name))

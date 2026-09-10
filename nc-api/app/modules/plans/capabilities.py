@@ -7,6 +7,12 @@ scattered string literals in handlers, routers, or the frontend.
 Plans (current): ``trial``, ``basic``, ``professional``, ``enterprise``.
 Prices intentionally live ONLY in the marketing/frontend layer — this module
 never defines monetary values.
+
+Limits semantics (plan-differentiation): ``max_conversations_per_month`` counts
+**AI responses** — outbound messages persisted with ``origin='ai'`` — per tenant
+per month (NOT raw conversations; programmed FAQ and escalations do not count).
+Limits are informative/consumable (soft): nothing in this module enforces or
+bills against them. ``None`` = unlimited (enterprise).
 """
 
 from __future__ import annotations
@@ -71,6 +77,9 @@ PLAN_CAPABILITIES: Final[dict[str, frozenset[str]]] = {
 }
 
 # ── Limits per plan (None = unlimited) ──────────────────────────────────────
+# max_conversations_per_month = AI responses (origin='ai') per tenant per month.
+# Soft limits: consumed by GET /plans/usage for the dashboard meter; they never
+# block or bill (no enforcement in this slice).
 PLAN_LIMITS: Final[dict[str, dict[str, int | None]]] = {
     "trial": {
         "max_agents": 1,
