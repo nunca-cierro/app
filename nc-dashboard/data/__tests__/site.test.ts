@@ -192,8 +192,8 @@ describe("anti-barrio tone on the home plans copy", () => {
 // ── HOME SWAP — WhatsApp automation is the PRIMARY offer; web is secondary ──
 
 describe("home swap — nav leads with the automation home", () => {
-  it("header nav has the automation home ('Inicio' → '/') as the primary item", () => {
-    expect(headerData.navItems[0]).toEqual({ name: "Inicio", href: "/" });
+  it("header nav has the automation home ('WhatsApp' → '/') as the primary item", () => {
+    expect(headerData.navItems[0]).toEqual({ name: "WhatsApp", href: "/" });
   });
 
   it("web design appears as a secondary nav item pointing to /inicio", () => {
@@ -202,7 +202,7 @@ describe("home swap — nav leads with the automation home", () => {
   });
 
   it("footer nav also leads with the automation home", () => {
-    expect(footerData.navItems[0]).toEqual({ name: "Inicio", href: "/" });
+    expect(footerData.navItems[0]).toEqual({ name: "WhatsApp", href: "/" });
   });
 });
 

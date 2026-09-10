@@ -58,7 +58,7 @@ export const headerData = {
     href: "/",
   },
   navItems: [
-    { name: "Inicio", href: "/" },
+    { name: "WhatsApp", href: "/" },
     { name: "Precios", href: "/precios" },
     { name: "Sitios web", href: "/inicio" },
     { name: "Contacto", href: "/#contacto" },
@@ -82,7 +82,7 @@ export const footerData = {
   },
   description: "Automatización WhatsApp para negocios en Colombia.",
   navItems: [
-    { name: "Inicio", href: "/" },
+    { name: "WhatsApp", href: "/" },
     { name: "Precios", href: "/precios" },
     { name: "Sitios web", href: "/inicio" },
     { name: "Contacto", href: "/#contacto" },
