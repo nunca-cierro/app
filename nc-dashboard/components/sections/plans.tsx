@@ -137,6 +137,15 @@ export function Plans() {
         </p>
       </div>
 
+      <div className="mt-6 text-center">
+        <Link
+          href="/precios"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-amber-700 underline underline-offset-4 hover:text-amber-800"
+        >
+          Ver todos los planes y precios en detalle
+        </Link>
+      </div>
+
       <div className="mt-10 rounded-lg border border-amber-300 bg-white p-7 text-center shadow-lg">
         <p className="text-lg font-semibold text-stone-800">
           {sitePlans.advisoryCta.title}

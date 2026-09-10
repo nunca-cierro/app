@@ -2,6 +2,7 @@ import { Hero } from "@/components/sections/hero";
 import { HowItWorks } from "@/components/sections/how-it-works";
 import { Businesses } from "@/components/sections/businesses";
 import { Plans } from "@/components/sections/plans";
+import { WebSecondary } from "@/components/sections/web-secondary";
 import { Faq } from "@/components/sections/faq";
 import { Contact } from "@/components/sections/contact";
 
@@ -12,6 +13,7 @@ export function AutomationContent() {
       <HowItWorks />
       <Businesses />
       <Plans />
+      <WebSecondary />
       <Faq />
       <Contact />
     </>

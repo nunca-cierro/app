@@ -1,7 +1,14 @@
+import type { Metadata } from "next";
 import { WhatsappFloat } from "@/components/ui/whatsapp-float";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { LandingContent } from "@/components/landing-content";
+
+export const metadata: Metadata = {
+  title: "Sitios web profesionales para negocios",
+  description:
+    "Diseñamos sitios web profesionales para negocios en Colombia, optimizados para recibir más clientes por WhatsApp. Entrega única, sin mensualidades.",
+};
 
 export default function PaginaWebPage() {
   return (
