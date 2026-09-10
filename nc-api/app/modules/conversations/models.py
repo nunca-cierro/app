@@ -180,6 +180,13 @@ class Message(Base):
     direction: Mapped[str] = mapped_column(
         String(10), nullable=False
     )  # 'in' or 'out'
+    # Outbound-response origin tag (plan-differentiation): 'ai' (LLM),
+    # 'programmed' (FAQ/keywords), 'escalation' (fallback). Nullable, NO
+    # backfill — inbound, admin and pre-migration messages stay NULL and are
+    # never counted as AI responses by the usage meter. Pattern: ``direction``.
+    origin: Mapped[str | None] = mapped_column(
+        String(20), nullable=True
+    )
     message_type: Mapped[str] = mapped_column(
         String(30), nullable=False, default="text"
     )
