@@ -29,11 +29,11 @@ describe("billing types", () => {
     const plan: PlanInfo = {
       key: "basic",
       label: "Básico",
-      price: 60000,
-      priceLabel: "$60.000",
+      price: 390000,
+      priceLabel: "Desde $390K/mes + IVA",
       features: ["Feature 1"],
     };
     expect(plan.key).toBe("basic");
-    expect(plan.price).toBe(60000);
+    expect(plan.price).toBe(390000);
   });
 });

@@ -59,7 +59,7 @@ export function ExpiredTrialOverlay() {
       <p className="text-muted-foreground text-center text-xs">
         Todos los planes incluyen configuración de respuestas automáticas y
         atención al cliente. Los precios están expresados en pesos colombianos
-        (COP) e incluyen IVA.
+        (COP), antes de IVA.
       </p>
     </div>
   );
