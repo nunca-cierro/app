@@ -140,6 +140,7 @@ export const sitePlans = {
     {
       name: "Básico",
       type: "Básico",
+      price: "Desde $390K/mes + IVA",
       description:
         "Automatiza las preguntas frecuentes de tus clientes. Ideal para negocios pequeños que empiezan.",
       features: [
@@ -158,6 +159,7 @@ export const sitePlans = {
     {
       name: "Profesional",
       type: "Profesional",
+      price: "Desde $790K/mes + IVA",
       description:
         "Inteligencia artificial que entiende lo que preguntan tus clientes. Para negocios con volumen constante.",
       features: [
@@ -175,6 +177,7 @@ export const sitePlans = {
     {
       name: "Empresarial",
       type: "Empresarial",
+      price: "Desde $1.590K/mes + IVA",
       description:
         "Todo incluido: inteligencia artificial, panel de control avanzado y múltiples negocios.",
       features: [
@@ -188,16 +191,31 @@ export const sitePlans = {
       ],
       featured: false,
     },
+    {
+      name: "Corporativo",
+      type: "Corporativo",
+      price: "A cotizar",
+      description:
+        "Soluciones a la medida para operaciones grandes: múltiples negocios, IA personalizada y soporte dedicado.",
+      features: [
+        "Proyectos desde ~$3.5M/mes + IVA",
+        "Múltiples negocios y usuarios",
+        "IA personalizada para tu operación",
+        "Soporte dedicado y onboarding",
+      ],
+      featured: false,
+    },
   ],
-  // Comparison table rows (without prices)
+  // Comparison table rows (prices: Escenario A, copy strings)
   comparisonRows: [
+    { label: "Precio", basic: "Desde $390K/mes + IVA", pro: "Desde $790K/mes + IVA", enterprise: "Desde $1.590K/mes + IVA" },
     { label: "Tipo de respuestas", basic: "Programadas", pro: "IA", enterprise: "IA" },
     { label: "Productos/Servicios", basic: "Hasta 10", pro: "Hasta 50", enterprise: "Ilimitado" },
     { label: "Conversaciones al mes", basic: "500", pro: "5.000", enterprise: "Ilimitadas" },
     { label: "Negocios", basic: "1", pro: "3", enterprise: "Ilimitados" },
     { label: "Métricas semanales", basic: "—", pro: "✅", enterprise: "✅" },
     { label: "Dashboard en vivo", basic: "—", pro: "✅", enterprise: "✅" },
-    { label: "Acceso cliente", basic: "—", pro: "Solo lectura", enterprise: "Editar + agregar" },
+    { label: "Acceso cliente", basic: "—", pro: "Solo lectura", enterprise: "Solo lectura" },
     { label: "Soporte", basic: "WhatsApp", pro: "WhatsApp", enterprise: "Prioritario 24/7" },
   ],
   // Bot-readable plan info (no prices)
@@ -226,7 +244,6 @@ export const sitePlans = {
       hasClientAccess: true,
       clientAccessType: "read",
       supportLevel: "whatsapp_email",
-      model: "gpt-4o-mini",
     },
     enterprise: {
       name: "Empresarial",
@@ -238,9 +255,8 @@ export const sitePlans = {
       hasDashboard: true,
       hasMetrics: true,
       hasClientAccess: true,
-      clientAccessType: "full",
+      clientAccessType: "read", // clients are read-only on ANY plan (CLIENT_VIEW_ONLY)
       supportLevel: "priority_24_7",
-      model: "gpt-4o-mini",
     },
   },
   trialInfo: {
