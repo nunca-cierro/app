@@ -268,6 +268,64 @@ class TestSilentRestore:
             assert me.status_code == 200
             assert me.json()["email"] == user.email
 
+    async def test_me_reissues_csrf_when_missing(self, client, db_session) -> None:
+        """Regression: silent restore must self-heal a missing nc_csrf.
+
+        A restored session could keep a valid nc_access_token while nc_csrf was
+        gone (cookie eviction/clearing), so every mutation 403'd and the user
+        was never forced to re-login. /auth/me must re-emit nc_csrf, not just
+        nc_access_token.
+        """
+        _no_auth_override()
+        user = _create_user(db_session)
+        await db_session.commit()
+
+        async with _https_client() as https:
+            await _login(https, user.email)
+            login_csrf = https.cookies.get(CSRF_COOKIE)
+            # Simulate the CSRF cookie being lost while the session survives.
+            https.cookies.delete(CSRF_COOKIE)
+            assert https.cookies.get(CSRF_COOKIE) is None
+
+            me = await https.get("/api/v1/auth/me")
+            assert me.status_code == 200
+
+            # A fresh nc_csrf is re-issued, still readable by JS.
+            cookies = _set_cookie_headers(me)
+            assert CSRF_COOKIE in cookies
+            assert "HttpOnly" not in cookies[CSRF_COOKIE]
+            new_csrf = https.cookies.get(CSRF_COOKIE)
+            assert new_csrf is not None
+            assert new_csrf != login_csrf  # freshly generated, not the old value
+
+            # The restored session can now perform a CSRF-guarded mutation.
+            ok = await https.post(
+                "/api/v1/auth/change-password",
+                json={"current_password": "secret123", "new_password": "newsecret123"},
+                headers={CSRF_HEADER: https.cookies[CSRF_COOKIE]},
+            )
+            assert ok.status_code == 200, ok.text
+
+    async def test_me_does_not_rotate_existing_csrf(self, client, db_session) -> None:
+        """Guard the race fix: /me must NOT rotate a CSRF cookie that is present.
+
+        The frontend snapshots document.cookie before dispatching a request; a
+        rotation landing in between would yield header=V1/cookie=V2 → 403.
+        """
+        _no_auth_override()
+        user = _create_user(db_session)
+        await db_session.commit()
+
+        async with _https_client() as https:
+            await _login(https, user.email)
+            login_csrf = https.cookies.get(CSRF_COOKIE)
+
+            me = await https.get("/api/v1/auth/me")
+            assert me.status_code == 200
+            # No nc_csrf Set-Cookie when the cookie is already present.
+            assert CSRF_COOKIE not in _set_cookie_headers(me)
+            assert https.cookies.get(CSRF_COOKIE) == login_csrf
+
 
 class TestSseViaCookie:
     async def test_sse_authenticates_via_cookie(self, client, db_session) -> None:
