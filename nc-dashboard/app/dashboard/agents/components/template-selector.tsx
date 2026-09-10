@@ -2,10 +2,14 @@
 
 import { useState } from "react";
 import { useAgentTemplates } from "@/hooks/use-agent-templates";
+import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ChefHat, Sparkles, Utensils, Scissors, Stethoscope } from "lucide-react";
+import { Loader2, ChefHat, Sparkles, Utensils, Scissors, Stethoscope, Briefcase } from "lucide-react";
 import type { AgentTemplate } from "@/lib/types";
-import { templateCategoryEntries } from "@/lib/business-categories";
+import {
+  templateCategoryEntries,
+  internalTemplateCategoryEntries,
+} from "@/lib/business-categories";
 
 /* ------------------------------------------------------------------ */
 /*  Category icons (keys come from the shared registry)                */
@@ -17,6 +21,7 @@ const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>
   hamburgueseria: Sparkles,
   barberia: Scissors,
   clinica: Stethoscope,
+  nuncacierro: Briefcase,
 };
 
 /* ------------------------------------------------------------------ */
@@ -40,8 +45,13 @@ export function TemplateSelector({
   const { templates, isLoading } = useAgentTemplates(
     activeCategory ?? undefined,
   );
+  const { user } = useAuth();
+  const role = user?.current_role ?? user?.role;
 
   const categories = templateCategoryEntries();
+  if (role === "superadmin") {
+    categories.push(...internalTemplateCategoryEntries());
+  }
 
   const handleCategoryClick = (category: string) => {
     setActiveCategory((prev) => (prev === category ? null : category));
