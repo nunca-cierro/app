@@ -17,6 +17,7 @@ from app.api.v1.platform_connections import (
 )
 from app.api.v1.agent_templates import router as agent_templates_router
 from app.api.v1.billing import router as billing_router
+from app.api.v1.plans import router as plans_router
 from app.modules.auth.deps import get_current_user
 from app.modules.auth.csrf import require_csrf
 
@@ -50,3 +51,4 @@ router.include_router(platform_connections_router, dependencies=admin_deps)
 router.include_router(platform_connections_sse_router)
 router.include_router(agent_templates_router, dependencies=admin_deps)
 router.include_router(billing_router, dependencies=admin_deps)
+router.include_router(plans_router, dependencies=admin_deps)
