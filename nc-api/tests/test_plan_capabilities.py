@@ -177,23 +177,24 @@ class TestPlanLimits:
             assert set(PLAN_LIMITS[plan]) == set(self.LIMIT_KEYS)
 
     def test_professional_limits(self) -> None:
-        """Scenario LimitsByKnownPlan: professional → 5/50/5000/3."""
+        """Scenario LimitsByKnownPlan: professional → 10/200/10000/5 (generous)."""
         limits = get_plan_limits("professional")
         assert limits == {
-            "max_agents": 5,
-            "max_products": 50,
-            "max_conversations_per_month": 5000,
-            "max_businesses": 3,
+            "max_agents": 10,
+            "max_products": 200,
+            "max_conversations_per_month": 10000,
+            "max_businesses": 5,
         }
 
     def test_trial_and_basic_limits(self) -> None:
-        """trial/basic share agent/product/business caps; conv differs."""
-        assert get_plan_limits("trial")["max_conversations_per_month"] == 100
-        assert get_plan_limits("basic")["max_conversations_per_month"] == 500
+        """trial/basic are programmed-only (no AI) → conv limit None (N/A)."""
+        assert get_plan_limits("trial")["max_conversations_per_month"] is None
+        assert get_plan_limits("basic")["max_conversations_per_month"] is None
+        assert get_plan_limits("trial")["max_products"] == 25
+        assert get_plan_limits("basic")["max_products"] == 50
         for plan in ("trial", "basic"):
             limits = get_plan_limits(plan)
             assert limits["max_agents"] == 1
-            assert limits["max_products"] == 10
             assert limits["max_businesses"] == 1
 
     def test_enterprise_limits_unlimited(self) -> None:

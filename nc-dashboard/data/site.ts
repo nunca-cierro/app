@@ -60,7 +60,7 @@ export const headerData = {
   },
   navItems: [
     { name: "WhatsApp", href: "/" },
-    { name: "Precios", href: "/precios" },
+    { name: "Planes", href: "/#planes" },
     { name: "Sitios web", href: "/inicio" },
     { name: "Contacto", href: "/#contacto" },
   ],
@@ -84,7 +84,7 @@ export const footerData = {
   description: "Automatización WhatsApp para negocios en Colombia.",
   navItems: [
     { name: "WhatsApp", href: "/" },
-    { name: "Precios", href: "/precios" },
+    { name: "Planes", href: "/#planes" },
     { name: "Sitios web", href: "/inicio" },
     { name: "Contacto", href: "/#contacto" },
   ],
@@ -149,13 +149,12 @@ export const sitePlans = {
       description:
         "Automatiza las preguntas frecuentes de sus clientes. Ideal para negocios que están empezando a automatizar su atención.",
       features: [
-        "Respuestas automáticas programadas por palabras clave",
+        "Respuestas automáticas programadas por palabras clave (ilimitadas)",
         "Atiende clientes fuera de horario",
         "Mensaje de bienvenida personalizado",
-        "Hasta 10 productos/servicios en catálogo",
-        "Hasta 500 conversaciones al mes",
-        "1 negocio",
-        "Métricas semanales",
+        "Hasta 50 productos/servicios en catálogo",
+        "1 negocio y 1 agente",
+        "Métricas semanales (resumen por WhatsApp)",
         "Configuración en 48 horas",
         "Soporte por WhatsApp",
       ],
@@ -170,11 +169,11 @@ export const sitePlans = {
       features: [
         "Todo lo del Plan Básico",
         "Inteligencia artificial (entiende contexto)",
-        "Respuestas ilimitadas",
-        "Hasta 50 productos/servicios en catálogo",
-        "Hasta 5.000 conversaciones al mes",
-        "Hasta 3 negocios",
+        "Hasta 10.000 respuestas con IA al mes",
+        "Hasta 200 productos/servicios en catálogo",
+        "Hasta 5 negocios y 10 agentes",
         "Dashboard en vivo con métricas",
+        "Gestión de conexiones WhatsApp + Telegram",
         "Soporte por WhatsApp",
       ],
       featured: true,
@@ -188,8 +187,8 @@ export const sitePlans = {
       features: [
         "Todo lo del Plan Profesional",
         "Productos/servicios ilimitados en catálogo",
-        "Conversaciones ilimitadas",
-        "Negocios ilimitados",
+        "Respuestas con IA ilimitadas",
+        "Negocios y agentes ilimitados",
         // 2026-09 audit (E): integrations/SLA promises softened to what the
         // code backs — "asesoría para conectar" escalates to a human, no
         // guaranteed response times nor unconfirmed connectors.
@@ -216,11 +215,13 @@ export const sitePlans = {
   // Comparison table rows (prices: Escenario A, copy strings)
   comparisonRows: [
     { label: "Precio", basic: "Desde $390.000/mes + IVA", pro: "Desde $790.000/mes + IVA", enterprise: "Desde $1.590.000/mes + IVA" },
-    { label: "Tipo de respuestas", basic: "Programadas", pro: "IA", enterprise: "IA" },
-    { label: "Productos/Servicios", basic: "Hasta 10", pro: "Hasta 50", enterprise: "Ilimitado" },
-    { label: "Conversaciones al mes", basic: "500", pro: "5.000", enterprise: "Ilimitadas" },
-    { label: "Negocios", basic: "1", pro: "3", enterprise: "Ilimitados" },
-    { label: "Métricas semanales", basic: "—", pro: "✅", enterprise: "✅" },
+    { label: "Tipo de respuestas", basic: "Programadas (palabras clave + FAQ)", pro: "IA con contexto del negocio", enterprise: "IA con contexto del negocio" },
+    { label: "Respuestas programadas (FAQ)", basic: "Ilimitadas", pro: "Ilimitadas", enterprise: "Ilimitadas" },
+    { label: "Respuestas con IA al mes", basic: "—", pro: "10.000", enterprise: "Ilimitadas" },
+    { label: "Productos/Servicios", basic: "Hasta 50", pro: "Hasta 200", enterprise: "Ilimitado" },
+    { label: "Negocios", basic: "1", pro: "5", enterprise: "Ilimitados" },
+    { label: "Agentes", basic: "1", pro: "10", enterprise: "Ilimitados" },
+    { label: "Métricas semanales", basic: "Resumen por WhatsApp", pro: "✅", enterprise: "✅" },
     { label: "Dashboard en vivo", basic: "—", pro: "✅", enterprise: "✅" },
     { label: "Acceso cliente", basic: "—", pro: "Solo lectura", enterprise: "Solo lectura" },
     { label: "Soporte", basic: "WhatsApp", pro: "WhatsApp", enterprise: "Prioritario 24/7" },
@@ -230,8 +231,8 @@ export const sitePlans = {
     basic: {
       name: "Básico",
       type: "programmed",
-      maxProducts: 10,
-      maxConversations: 500,
+      maxProducts: 50,
+      maxConversations: null,
       maxBusinesses: 1,
       hasAI: false,
       hasDashboard: false,
@@ -242,9 +243,9 @@ export const sitePlans = {
     professional: {
       name: "Profesional",
       type: "ai",
-      maxProducts: 50,
-      maxConversations: 5000,
-      maxBusinesses: 3,
+      maxProducts: 200,
+      maxConversations: 10000,
+      maxBusinesses: 5,
       hasAI: true,
       hasDashboard: true,
       hasMetrics: true,
@@ -327,7 +328,7 @@ export const siteFaq = {
     {
       question: "¿Cómo sé cuántos clientes me contactaron?",
       answer:
-        "Todos los planes incluyen métricas semanales con el número de consultas, los horarios más activos y los tipos de preguntas. A partir del plan Profesional sumamos un panel en vivo con estadísticas detalladas.",
+        "Todos los planes incluyen métricas semanales con el número de consultas y los mensajes atendidos. A partir del plan Profesional sumamos un panel en vivo con estadísticas detalladas.",
     },
     {
       question: "¿Funciona para cualquier tipo de negocio?",

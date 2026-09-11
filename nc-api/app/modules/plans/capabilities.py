@@ -78,26 +78,28 @@ PLAN_CAPABILITIES: Final[dict[str, frozenset[str]]] = {
 
 # ── Limits per plan (None = unlimited) ──────────────────────────────────────
 # max_conversations_per_month = AI responses (origin='ai') per tenant per month.
-# Soft limits: consumed by GET /plans/usage for the dashboard meter; they never
-# block or bill (no enforcement in this slice).
+# trial/basic have NO AI (programmed FAQ only) → the AI-response limit is None
+# (N/A; the dashboard meter hides the IA row for plans without CAP_AI). Limits
+# are generous by decision (gpt-4o-mini cost is negligible) and always soft:
+# consumed by GET /plans/usage for the meter, never blocking or billing.
 PLAN_LIMITS: Final[dict[str, dict[str, int | None]]] = {
     "trial": {
         "max_agents": 1,
-        "max_products": 10,
-        "max_conversations_per_month": 100,
+        "max_products": 25,
+        "max_conversations_per_month": None,
         "max_businesses": 1,
     },
     "basic": {
         "max_agents": 1,
-        "max_products": 10,
-        "max_conversations_per_month": 500,
+        "max_products": 50,
+        "max_conversations_per_month": None,
         "max_businesses": 1,
     },
     "professional": {
-        "max_agents": 5,
-        "max_products": 50,
-        "max_conversations_per_month": 5000,
-        "max_businesses": 3,
+        "max_agents": 10,
+        "max_products": 200,
+        "max_conversations_per_month": 10000,
+        "max_businesses": 5,
     },
     "enterprise": {
         "max_agents": None,

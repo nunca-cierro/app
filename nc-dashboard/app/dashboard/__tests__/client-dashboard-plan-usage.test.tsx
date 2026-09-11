@@ -28,6 +28,7 @@ const mocks = vi.hoisted(() => ({
       current_tenant_id: "t1",
       plan: "professional",
       payment_status: "active",
+      capabilities: ["ai.responses", "dashboard.view", "conversations.view"],
     } as Record<string, unknown>,
     isLoading: false,
   },

@@ -546,6 +546,7 @@ function ClientDashboard() {
         data={planUsage}
         isLoading={usageLoading}
         error={usageError}
+        hasAI={hasCapability(user, CAPABILITIES.ai)}
         onUpgrade={() => setShowPayment(true)}
       />
 

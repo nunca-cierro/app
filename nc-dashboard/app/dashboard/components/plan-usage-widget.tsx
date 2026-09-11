@@ -64,11 +64,13 @@ export function PlanUsageWidget({
   isLoading,
   error,
   onUpgrade,
+  hasAI = true,
 }: {
   data: PlanUsage | null;
   isLoading: boolean;
   error: string | null;
   onUpgrade?: () => void;
+  hasAI?: boolean;
 }) {
   const state = usageWidgetState(data, isLoading, error);
   if (state === "hidden" || state === "idle") return null;
@@ -84,6 +86,11 @@ export function PlanUsageWidget({
       <CardContent className="space-y-3">
         {state === "loading" ? (
           <div className="h-2.5 animate-pulse rounded-full bg-muted" />
+        ) : !hasAI ? (
+          <p className="text-sm text-muted-foreground">
+            Su plan incluye respuestas programadas ilimitadas (sin inteligencia
+            artificial). Sus clientes no se quedan sin respuesta.
+          </p>
         ) : state === "unlimited" ? (
           <p className="text-sm text-muted-foreground">
             Plan Ilimitado — sin límites de uso.
