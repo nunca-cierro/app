@@ -131,7 +131,7 @@ export function Contact() {
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance text-stone-800 md:text-4xl">
             {siteContact.title}
           </h2>
-          <p className="mt-4 text-stone-500 leading-relaxed">
+          <p className="mt-4 text-stone-600 leading-relaxed">
             {siteContact.subtitle}
           </p>
         </div>

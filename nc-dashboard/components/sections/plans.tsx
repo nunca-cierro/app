@@ -57,7 +57,7 @@ export function Plans() {
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance text-stone-800 md:text-4xl">
             {sitePlans.title}
           </h2>
-          <p className="mt-4 text-stone-500">{sitePlans.subtitle}</p>
+          <p className="mt-4 text-stone-600">{sitePlans.subtitle}</p>
         </div>
       </AnimatedWrapper>
 
@@ -68,7 +68,7 @@ export function Plans() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-stone-200">
-                  <th className="text-left px-5 py-5 text-stone-500 font-medium">
+                    <th className="text-left px-5 py-5 text-stone-600 font-medium">
                     Característica
                   </th>
                   <th className="px-5 py-5 text-center align-bottom">
@@ -151,7 +151,7 @@ export function Plans() {
         </AnimatedWrapper>
       </div>
 
-      <p className="mx-auto mt-8 max-w-2xl text-center text-sm text-stone-500">
+      <p className="mx-auto mt-8 max-w-2xl text-center text-sm text-stone-600">
         {sitePlans.footerText}
       </p>
 
