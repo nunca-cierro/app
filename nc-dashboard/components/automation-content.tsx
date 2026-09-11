@@ -13,9 +13,10 @@ export function AutomationContent() {
       <HowItWorks />
       <Businesses />
       <Plans />
-      <WebSecondary />
       <Faq />
       <Contact />
+      {/* Sitios web al final — línea secundaria, siempre después del core */}
+      <WebSecondary />
     </>
   );
 }
