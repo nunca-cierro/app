@@ -9,6 +9,7 @@ import {
   headerData,
   footerData,
 } from "@/data/site";
+import { planTerms, findPlanTerm } from "@/data/plan-terms";
 
 /**
  * Slice 4 — landing coherence (plan-differentiation, task 4.5).
@@ -300,5 +301,39 @@ describe("register — no tú/vos pronouns in user-facing copy", () => {
     expect(faq).toBeDefined();
     expect(faq?.answer).toContain("restaurantes, clínicas, concesionarios, inmobiliarias, hoteles, gimnasios y spas");
     expect(faq?.answer).not.toMatch(/barberías, tiendas/);
+  });
+});
+
+// ── PLAN TERMS — tooltip coverage (clarifying explanations) ──
+
+describe("plan-terms — tooltip coverage", () => {
+  it("maps every comparison-row label to a term", () => {
+    for (const row of sitePlans.comparisonRows) {
+      const term = findPlanTerm(row.label);
+      expect(term, `comparison label '${row.label}' lacks a term`).toBeDefined();
+      expect(term!.explanation.length).toBeGreaterThan(10);
+    }
+  });
+
+  it("maps every package feature to a term", () => {
+    const features = sitePlans.packages.flatMap((p) => p.features);
+    for (const feature of features) {
+      const term = findPlanTerm(feature);
+      expect(term, `package feature '${feature}' lacks a term`).toBeDefined();
+      expect(term!.explanation.length).toBeGreaterThan(10);
+    }
+  });
+
+  it("keeps explanations in the usted register (no tú/vos)", () => {
+    for (const term of planTerms) {
+      expect(term.explanation).not.toMatch(
+        /\b(tú|tus|tu|te|ti|contigo|tuyo|tuya)\b/i,
+      );
+    }
+  });
+
+  it("gives the FAQ 'Panel en vivo' wording a term", () => {
+    const term = findPlanTerm("panel en vivo");
+    expect(term).toBeDefined();
   });
 });
