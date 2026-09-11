@@ -126,7 +126,7 @@ export const sitePlans = {
   label: "Planes",
   title: "Elija el plan según lo que necesite su negocio",
   subtitle:
-    "Todos incluyen configuración completa y soporte. Sin contratos largos. Cancela cuando quieras.",
+    "Todos incluyen configuración completa y soporte. Sin contratos largos. Cancele cuando quiera.",
   whatsappBaseUrl: "https://wa.me/573219615338?text=",
   buttonText: "Quiero este plan",
   cardLabels: {
@@ -136,7 +136,7 @@ export const sitePlans = {
     featuredBadge: "Más elegido",
   },
   footerText:
-    "Todos los planes se facturan mensualmente. Sin contratos largos, cancela cuando quieras.",
+    "Todos los planes se facturan mensualmente. Sin contratos largos, cancele cuando quiera.",
   // 2026-09 audit (C): the guarantee must match the REAL trial (7 días,
   // programado, sin IA) — no "primer mes sin riesgo" promise.
   guaranteeText:
@@ -147,7 +147,7 @@ export const sitePlans = {
       type: "Básico",
       price: "Desde $390.000/mes + IVA",
       description:
-        "Automatiza las preguntas frecuentes de tus clientes. Ideal para negocios que están empezando a automatizar su atención.",
+        "Automatiza las preguntas frecuentes de sus clientes. Ideal para negocios que están empezando a automatizar su atención.",
       features: [
         "Respuestas automáticas programadas por palabras clave",
         "Atiende clientes fuera de horario",
@@ -166,7 +166,7 @@ export const sitePlans = {
       type: "Profesional",
       price: "Desde $790.000/mes + IVA",
       description:
-        "Inteligencia artificial que entiende lo que preguntan tus clientes. Para negocios con volumen constante.",
+        "Inteligencia artificial que entiende lo que preguntan sus clientes. Para negocios con volumen constante.",
       features: [
         "Todo lo del Plan Básico",
         "Inteligencia artificial (entiende contexto)",
@@ -193,7 +193,7 @@ export const sitePlans = {
         // 2026-09 audit (E): integrations/SLA promises softened to what the
         // code backs — "asesoría para conectar" escalates to a human, no
         // guaranteed response times nor unconfirmed connectors.
-        "Asesoría para conectar con tus sistemas (a la medida)",
+        "Asesoría para conectar con sus sistemas (a la medida)",
         "Soporte prioritario 24/7",
       ],
       featured: false,
@@ -207,7 +207,7 @@ export const sitePlans = {
       features: [
         "Proyectos desde ~$3.500.000/mes + IVA",
         "Múltiples negocios y usuarios",
-        "IA personalizada para tu operación",
+        "IA personalizada para su operación",
         "Soporte dedicado y onboarding",
       ],
       featured: false,
@@ -268,7 +268,7 @@ export const sitePlans = {
   },
   trialInfo: {
     label: "Prueba gratis",
-    description: "7 días de prueba con respuestas programadas, panel propio y acceso a conversaciones. Cancela cuando quieras.",
+    description: "7 días de prueba con respuestas programadas, panel propio y acceso a conversaciones. Cancele cuando quiera.",
     days: 7,
     type: "programmed",
   },
@@ -286,9 +286,9 @@ export const sitePlans = {
 export const siteFaq = {
   sectionId: "faq",
   label: "Preguntas frecuentes",
-  title: "Todo lo que necesitas saber antes de empezar",
+  title: "Todo lo que necesita saber antes de empezar",
   subtitle:
-    "Respondemos tus dudas para que tomes la mejor decisión sin vueltas.",
+    "Respondemos sus dudas para que tome la mejor decisión sin vueltas.",
   // 2026-09 audit (F): the landing does NOT claim the "API oficial de Meta".
   // The real path is an Evolution API session (WhatsApp Web) — the FAQ below
   // describes it honestly and intentionally avoids any Meta Cloud API claim.
@@ -322,7 +322,7 @@ export const siteFaq = {
     {
       question: "¿Puedo cancelar cuando quiera?",
       answer:
-        "Sí, no hay contratos largos. Cancela cuando quiera sin penalización. Obviamente esperamos que se quede porque los resultados hablan solos.",
+        "Sí, no hay contratos largos. Cancele cuando quiera sin penalización. Obviamente esperamos que se quede porque los resultados hablan solos.",
     },
     {
       question: "¿Cómo sé cuántos clientes me contactaron?",
@@ -399,9 +399,9 @@ export const siteContact = {
 // part of the monthly SaaS. Price reference kept in sync with landingPricing.
 export const siteWebSecondary = {
   label: "Sitios web",
-  title: "¿También necesitas una página web profesional?",
+  title: "¿También necesita una página web profesional?",
   description:
-    "Servicio aparte, con entrega única: diseñamos tu sitio para que más clientes lleguen por WhatsApp. Desde $699.900.",
+    "Servicio aparte, con entrega única: diseñamos su sitio para que más clientes lleguen por WhatsApp. Desde $699.900.",
   ctaLabel: "Ver planes de sitios web",
   href: "/inicio",
 };
@@ -409,7 +409,7 @@ export const siteWebSecondary = {
 export const siteWhatsappFloat = {
   ariaLabel: "Contactar por WhatsApp",
   whatsappText:
-    "Hola, vi NuncaCierro y quiero automatizar mi negocio.\n\nMi negocio es: \nCiudad: \n¿Qué problema tengo?: \n\n¿Qué información necesitas de mí?",
+    "Hola, vi NuncaCierro y quiero automatizar mi negocio.\n\nMi negocio es: \nCiudad: \n¿Qué problema tengo?: \n\n¿Qué información necesita de mí?",
 };
 
 export const siteUi = {

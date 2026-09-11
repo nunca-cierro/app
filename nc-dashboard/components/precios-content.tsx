@@ -247,7 +247,7 @@ export function PreciosContent() {
             Sitios web — servicio aparte
           </p>
           <h2 className="mt-3 text-2xl font-semibold tracking-tight text-balance text-stone-100 md:text-3xl">
-            ¿También buscas una página web profesional?
+            ¿También busca una página web profesional?
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-stone-400 leading-relaxed">
             Los sitios web son un servicio único, no mensual:{" "}
