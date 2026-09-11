@@ -41,10 +41,10 @@ describe("LandingAutomation (cross-sell back to the WhatsApp primary line)", () 
     expect(html).toContain('href="/"');
   });
 
-  it("offers a secondary path to /precios", async () => {
+  it("offers a secondary path to the plans section", async () => {
     const html = await renderToHtml(React.createElement(LandingAutomation));
     expect(html).toContain("Ver planes y precios");
-    expect(html).toContain('href="/precios"');
+    expect(html).toContain('href="/#planes"');
   });
 
   it("uses usted register and no tuteo in the rendered copy", async () => {

@@ -71,7 +71,7 @@ export function Hero() {
               Escríbenos por WhatsApp
             </a>
             <a
-              href="/precios"
+              href="/#planes"
               className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-6 py-3 font-medium text-white/90 no-underline transition-all hover:bg-white/20"
             >
               Ver planes
