@@ -1,9 +1,9 @@
 export const landingContact = {
   sectionId: "contacto",
   label: "Contacto",
-  title: "Hablemos de tu negocio",
+  title: "Hablemos de su negocio",
   subtitle:
-    "Cuéntanos qué necesitas y te mostramos cómo un sitio web puede ayudarte a recibir más clientes por WhatsApp.",
+    "Cuéntenos qué necesita y le mostramos cómo un sitio web puede ayudarle a recibir más clientes por WhatsApp.",
   contacts: [
     {
       icon: "Mail",
@@ -18,7 +18,7 @@ export const landingContact = {
       text: "+57 3219615338",
     },
   ],
-  quickResponseText: "Respuesta inmediata — te leemos al instante",
+  quickResponseText: "Respuesta inmediata — leemos su mensaje al instante",
   confidenceText:
-    "Si no sabes qué plan elegir, te recomendamos el ideal según tu negocio.",
+    "Si no sabe qué plan elegir, le recomendamos el ideal según su negocio.",
 };
