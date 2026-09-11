@@ -79,6 +79,7 @@ function stubFetchOk(
   init?: { status?: number },
 ) {
   const fetchMock = vi.fn(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async (_url: string | URL, _init?: RequestInit) =>
       new Response(body, { status: init?.status ?? 200 }),
   );

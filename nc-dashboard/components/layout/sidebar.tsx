@@ -535,7 +535,7 @@ function TenantSwitcher({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [logout]);
 
   /* ── Only render if the user has 2+ tenants ── */
   if (tenants.length < 2) return null;

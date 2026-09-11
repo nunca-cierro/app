@@ -21,6 +21,7 @@ import {
 
 function stubFetch(response: Response) {
   const fetchMock = vi.fn(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- mock params needed for TypeScript inference on mock.calls
     async (_url: string | URL | Request, _init?: RequestInit) => response,
   );
   vi.stubGlobal("fetch", fetchMock);
@@ -137,6 +138,7 @@ describe("apiClient", () => {
   it("injects X-CSRF-Token on POST/PUT/PATCH/DELETE when the cookie exists", async () => {
     stubDocumentCookie("nc_csrf=csrf-xyz");
     const fetchMock = vi.fn(
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       async (_url: string | URL | Request, _init?: RequestInit) =>
         new Response(JSON.stringify({ ok: true }), {
           status: 200,
@@ -232,6 +234,7 @@ describe("apiClient CSRF self-heal", () => {
         }),
       )
       .mockImplementation(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         async (url: string | URL | Request, _init?: RequestInit) => {
           // GET /auth/me (restore probe) re-emits nc_csrf — simulate it.
           if (String(url).includes("/auth/me")) {
