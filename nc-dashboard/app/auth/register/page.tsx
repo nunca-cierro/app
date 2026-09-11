@@ -62,14 +62,14 @@ function RegisterForm() {
             setError("Este email ya está registrado.");
             break;
           case 422:
-            setError("Verifica los datos ingresados.");
+            setError("Verifique los datos ingresados.");
             break;
           default:
-            setError("Error del servidor. Intenta de nuevo.");
+            setError("Error del servidor. Intente de nuevo.");
             break;
         }
       } else {
-        setError("Error de conexión. Verifica tu conexión a internet.");
+        setError("Error de conexión. Verifique su conexión a internet.");
       }
     } finally {
       setIsSubmitting(false);
@@ -85,7 +85,7 @@ function RegisterForm() {
               Crear Cuenta
             </CardTitle>
             <p className="text-muted-foreground mt-1 text-sm">
-              Regístrate para administrar NuncaCierro
+              Regístrese para administrar NuncaCierro
             </p>
           </CardHeader>
 
@@ -159,12 +159,12 @@ function RegisterForm() {
             </form>
 
             <p className="text-muted-foreground mt-6 text-center text-sm">
-              ¿Ya tienes cuenta?{" "}
+              ¿Ya tiene cuenta?{" "}
               <Link
                 href="/auth/login"
                 className="font-medium text-primary hover:underline"
               >
-                Inicia Sesión
+                Inicie Sesión
               </Link>
             </p>
           </CardContent>
