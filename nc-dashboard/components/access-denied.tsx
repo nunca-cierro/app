@@ -10,7 +10,7 @@ import { ShieldAlert } from "lucide-react";
  * before the redirect fires.
  */
 export function AccessDeniedCard({
-  message = "No tienes permisos para esta acción",
+  message = "No tiene permisos para esta acción",
 }: {
   message?: string;
 }) {

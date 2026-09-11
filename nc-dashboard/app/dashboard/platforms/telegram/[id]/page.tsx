@@ -351,8 +351,8 @@ export default function TelegramConnectionDetailPage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-xs text-muted-foreground">
-                  Registrá el webhook para que Telegram envíe los mensajes de
-                  tus clientes a NuncaCierro.
+                  Registre el webhook para que Telegram envíe los mensajes de
+                  sus clientes a NuncaCierro.
                 </p>
 
                 {extraData?.webhook_url && (

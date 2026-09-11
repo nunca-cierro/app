@@ -53,7 +53,7 @@ export function formatUsageLimit(limit: number | null): string {
 /* ------------------------------------------------------------------ */
 
 /**
- * "Uso de tu plan" — medidor informativo del tenant activo (Slice 3).
+ * "Uso de su plan" — medidor informativo del tenant activo (Slice 3).
  * Barra vs límite mensual de respuestas IA; CTA a upgrade >= 80%;
  * estado de exceso > 100%; enterprise (pct null) sin barra; ante fallo
  * de API se oculta y el dashboard sigue operativo. NUNCA bloquea ni
@@ -78,7 +78,7 @@ export function PlanUsageWidget({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm font-medium">
           <Shield className="size-4 text-primary" />
-          Uso de tu plan
+          Uso de su plan
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -132,7 +132,7 @@ export function PlanUsageWidget({
 
             {state === "over" && (
               <p className="text-xs text-destructive">
-                Superaste el límite mensual de respuestas IA.
+                Superó el límite mensual de respuestas IA.
               </p>
             )}
 

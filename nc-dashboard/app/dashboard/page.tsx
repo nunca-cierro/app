@@ -466,7 +466,7 @@ function ClientDashboard() {
         <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm">
           <p className="font-medium text-warning-foreground">⏳ Pago pendiente</p>
           <p className="mt-1 text-muted-foreground">
-            Tu pago está siendo verificado. Te activaremos el plan apenas se confirme.
+            Su pago está siendo verificado. Le activaremos el plan apenas se confirme.
           </p>
           <Button
             variant="outline"
@@ -630,7 +630,7 @@ function ClientDashboard() {
               )}
               {!canEdit && (
                 <p className="mt-2 text-xs text-muted-foreground/70">
-                  Solo lectura. Contacta a tu administrador para realizar cambios.
+                  Solo lectura. Contacte a su administrador para realizar cambios.
                 </p>
               )}
             </CardContent>
@@ -647,10 +647,10 @@ function ClientDashboard() {
         <div className="flex flex-col items-center gap-1 rounded-xl border border-warning/40 bg-warning/10 p-5 text-center">
           <Bot className="size-5 text-warning-foreground" />
           <p className="mt-1 text-sm font-medium text-warning-foreground">
-            ¿Quieres activar un plan con inteligencia artificial?
+            ¿Quiere activar un plan con inteligencia artificial?
           </p>
           <p className="text-xs text-muted-foreground">
-            Contacta a tu administrador para cambiar a un plan Profesional o Empresarial.
+            Contacte a su administrador para cambiar a un plan Profesional o Empresarial.
           </p>
         </div>
       )}

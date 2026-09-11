@@ -52,7 +52,7 @@ export default function NewTelegramConnectionPage() {
         if (err.status === 409) {
           toast.error("Ya existe una conexión con ese token.");
         } else {
-          toast.error("Error al registrar la conexión. Intenta de nuevo.");
+          toast.error("Error al registrar la conexión. Intente de nuevo.");
         }
       } else {
         toast.error("Error de conexión.");

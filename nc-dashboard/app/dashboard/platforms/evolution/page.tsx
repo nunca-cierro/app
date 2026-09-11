@@ -28,7 +28,7 @@ export default function EvolutionPlatformsPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">WhatsApp (Evolution)</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Gestiona tus instancias de Evolution API conectadas.
+            Gestione sus instancias de Evolution API conectadas.
           </p>
         </div>
         {canManage && (

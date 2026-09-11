@@ -131,7 +131,7 @@ export default function AgentDetailPage() {
       setActiveTab("info");
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error("Error al actualizar. Intenta de nuevo.");
+        toast.error("Error al actualizar. Intente de nuevo.");
       } else {
         toast.error("Error de conexión.");
       }

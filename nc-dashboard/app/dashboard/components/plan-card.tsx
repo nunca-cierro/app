@@ -68,7 +68,7 @@ export const PLANS_CONFIG: Record<
     features: [
       "Proyectos desde ~$3.500.000/mes + IVA",
       "Múltiples negocios y usuarios",
-      "IA personalizada para tu operación",
+      "IA personalizada para su operación",
       "Soporte dedicado y onboarding",
     ],
   },

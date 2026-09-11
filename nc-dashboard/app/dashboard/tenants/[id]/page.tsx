@@ -104,7 +104,7 @@ export default function TenantDetailPage() {
         if (err.status === 409) {
           toast.error("El slug ya está en uso.");
         } else {
-          toast.error("Error al actualizar. Intenta de nuevo.");
+          toast.error("Error al actualizar. Intente de nuevo.");
         }
       } else {
         toast.error("Error de conexión.");

@@ -40,7 +40,7 @@ export default function PlatformsNewWhatsAppPage() {
         if (err.status === 409) {
           toast.error("El Phone Number ID ya está registrado.");
         } else {
-          toast.error("Error al registrar el número. Intenta de nuevo.");
+          toast.error("Error al registrar el número. Intente de nuevo.");
         }
       } else {
         toast.error("Error de conexión.");
