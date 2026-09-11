@@ -277,7 +277,7 @@ describe("apiClient CSRF self-heal", () => {
 
     await expect(
       apiClient("/api/v1/tenants", { method: "POST" }),
-    ).rejects.toThrow("Tu sesión no pudo validarse");
+    ).rejects.toThrow("Su sesión no pudo validarse");
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -287,7 +287,7 @@ describe("apiClient CSRF self-heal", () => {
         403,
         JSON.stringify({ detail: "CSRF token missing/mismatch" }),
       ),
-    ).toBe("Tu sesión no pudo validarse. Vuelve a iniciar sesión.");
+    ).toBe("Su sesión no pudo validarse. Vuelva a iniciar sesión.");
   });
 });
 
