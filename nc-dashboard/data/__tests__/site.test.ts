@@ -175,7 +175,7 @@ describe("landing desajuste E — no unbacked enterprise promises", () => {
   it("softens integrations to an advisory phrasing", () => {
     const enterprise = sitePlans.packages.find((p) => p.name === "Empresarial");
     const joined = enterprise?.features.join(" ");
-    expect(joined).toContain("Asesoría para conectar con tus sistemas");
+    expect(joined).toContain("Asesoría para conectar con sus sistemas");
     expect(joined).not.toMatch(/integrar con tus sistemas/i);
   });
 });

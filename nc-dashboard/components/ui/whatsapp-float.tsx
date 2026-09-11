@@ -6,10 +6,10 @@ import { siteBanner, siteWhatsappFloat } from "@/data/site";
 export type Mode = "automation" | "landing";
 
 const automationMessage = encodeURIComponent(
-  "Hola, vi NuncaCierro y quiero información sobre los planes de automatización.\n\nMi negocio es: \nCiudad: \n¿Qué problema tengo?: \n\n¿Qué información necesitas de mí?",
+  "Hola, vi NuncaCierro y quiero información sobre los planes de automatización.\n\nMi negocio es: \nCiudad: \n¿Qué problema tengo?: \n\n¿Qué información necesita de mí?",
 );
 const landingMessage = encodeURIComponent(
-  "Hola, vi NuncaCierro y quiero información sobre los precios de los sitios web.\n\nMi negocio es: \nCiudad: \n¿Qué tipo de sitio necesito?: \n\n¿Qué información necesitas de mí?",
+  "Hola, vi NuncaCierro y quiero información sobre los precios de los sitios web.\n\nMi negocio es: \nCiudad: \n¿Qué tipo de sitio necesito?: \n\n¿Qué información necesita de mí?",
 );
 
 type Props = {
