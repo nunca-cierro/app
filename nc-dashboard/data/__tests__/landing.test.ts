@@ -100,8 +100,8 @@ describe("automation cross-sell — clear path back to the primary line", () => 
     expect(landingAutomation.primary.ctaLabel).toMatch(/automatización/i);
   });
 
-  it("offers a secondary path to /precios", () => {
-    expect(landingAutomation.secondary.href).toBe("/precios");
+  it("offers a secondary path to the plans section", () => {
+    expect(landingAutomation.secondary.href).toBe("/#planes");
   });
 
   it("does not confuse the two product lines (web stays one-time)", () => {

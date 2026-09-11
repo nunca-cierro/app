@@ -10,6 +10,6 @@ export const landingAutomation = {
   },
   secondary: {
     ctaLabel: "Ver planes y precios",
-    href: "/precios",
+    href: "/#planes",
   },
 };
