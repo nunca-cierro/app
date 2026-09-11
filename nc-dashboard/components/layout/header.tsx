@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { headerData, siteWhatsAppMessages } from "@/data/site";
 import { cn } from "@/lib/utils";
@@ -93,7 +94,7 @@ export function Header() {
           {/* Segmented Control - Centrado (WhatsApp primero, oferta principal) */}
           <div className="hidden md:flex justify-center">
             <div className="inline-flex items-center rounded-lg border border-white/15 bg-white/5 p-0.5">
-              <a
+              <Link
                 href="/"
                 className={cn(
                   "rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-200 no-underline",
@@ -103,7 +104,7 @@ export function Header() {
                 )}
               >
                 WhatsApp
-              </a>
+              </Link>
               <a
                 href="/inicio"
                 className={cn(
@@ -176,7 +177,7 @@ export function Header() {
             <div className="flex flex-col gap-3">
               {/* Mobile segmented control */}
               <div className="flex items-center rounded-lg border border-white/15 bg-white/5 p-0.5 mb-2">
-                <a
+                <Link
                   href="/"
                   onClick={() => setIsMenuOpen(false)}
                   className={cn(
@@ -187,7 +188,7 @@ export function Header() {
                   )}
                 >
                   WhatsApp
-                </a>
+                </Link>
                 <a
                   href="/inicio"
                   onClick={() => setIsMenuOpen(false)}

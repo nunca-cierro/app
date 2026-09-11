@@ -31,11 +31,6 @@ export default function PlatformsNewEvolutionPage() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Client is read-only on platforms (T2) — the create flow is unreachable.
-  if (!canManagePlatforms(user?.current_role ?? user?.role)) {
-    return <AccessDeniedCard />;
-  }
-
   // SSE subscription for real-time connection state updates
   useEffect(() => {
     if (step !== "qr" || !connectionId) return;
@@ -70,6 +65,18 @@ export default function PlatformsNewEvolutionPage() {
       closeStream();
     };
   }, [step, connectionId, router]);
+
+  const goToDetail = useCallback(() => {
+    if (connectionId) {
+      router.push(`/dashboard/platforms/evolution/${connectionId}`);
+    }
+  }, [connectionId, router]);
+
+  const goBack = useCallback(() => {
+    setStep("form");
+    setQrCode(null);
+    setErrorMsg(null);
+  }, []);
 
   const handleSubmit = async (data: EvolutionFormValues) => {
     setIsSubmitting(true);
@@ -120,17 +127,10 @@ export default function PlatformsNewEvolutionPage() {
     }
   };
 
-  const goToDetail = useCallback(() => {
-    if (connectionId) {
-      router.push(`/dashboard/platforms/evolution/${connectionId}`);
-    }
-  }, [connectionId, router]);
-
-  const goBack = useCallback(() => {
-    setStep("form");
-    setQrCode(null);
-    setErrorMsg(null);
-  }, []);
+  // Client is read-only on platforms (T2) — the create flow is unreachable.
+  if (!canManagePlatforms(user?.current_role ?? user?.role)) {
+    return <AccessDeniedCard />;
+  }
 
   /* ── QR view ── */
   if (step === "qr" && qrCode) {

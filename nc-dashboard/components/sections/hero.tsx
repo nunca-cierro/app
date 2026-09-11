@@ -1,6 +1,7 @@
 "use client";
 
 import { Section } from "@/components/layout/section";
+import Link from "next/link";
 import { siteHero } from "@/data/site";
 import { WhatsAppMockup } from "./hero/whatsapp-mockup";
 import { QRCard } from "./hero/qr-card";
@@ -70,12 +71,12 @@ export function Hero() {
               </svg>
               Escríbenos por WhatsApp
             </a>
-            <a
+            <Link
               href="/#planes"
               className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-6 py-3 font-medium text-white/90 no-underline transition-all hover:bg-white/20"
             >
               Ver planes
-            </a>
+            </Link>
           </div>
         </div>
 

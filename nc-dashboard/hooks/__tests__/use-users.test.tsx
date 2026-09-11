@@ -26,10 +26,12 @@ vi.mock("@/lib/api", () => {
   return { ApiError, apiClient: mocks.apiClient };
 });
 
-let captured: ReturnType<typeof useUsers> | null = null;
+const resultStore: { current: ReturnType<typeof useUsers> | null } = { current: null };
 
 function HookProbe(): null {
-  captured = useUsers();
+  const result = useUsers();
+  // eslint-disable-next-line react-hooks/immutability -- SSR probe: effects don't run in renderToPipeableStream, so we capture the hook result during render
+  resultStore.current = result;
   return null;
 }
 
@@ -45,11 +47,11 @@ function renderProbe(): Promise<void> {
 describe("useUsers.updateUserRole", () => {
   it("PATCHes /api/v1/admin/users/{id} with body { role } on success", async () => {
     mocks.apiClient.mockReset().mockResolvedValue(undefined);
-    captured = null;
+    resultStore.current = null;
     await renderProbe();
-    expect(captured).not.toBeNull();
+    expect(resultStore.current).not.toBeNull();
 
-    await captured!.updateUserRole("user-9", "client");
+    await resultStore.current!.updateUserRole("user-9", "client");
 
     expect(mocks.apiClient).toHaveBeenCalledTimes(1);
     expect(mocks.apiClient).toHaveBeenCalledWith("/api/v1/admin/users/user-9", {
@@ -64,11 +66,11 @@ describe("useUsers.updateUserRole", () => {
       name: "ApiError",
     });
     mocks.apiClient.mockReset().mockRejectedValue(rejection);
-    captured = null;
+    resultStore.current = null;
     await renderProbe();
 
     await expect(
-      captured!.updateUserRole("user-9", "admin"),
+      resultStore.current!.updateUserRole("user-9", "admin"),
     ).rejects.toMatchObject({ message: rejection.message, status: 400 });
   });
 });
