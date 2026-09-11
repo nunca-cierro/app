@@ -12,19 +12,19 @@
 
 const KNOWN_DETAILS: Record<string, string> = {
   // deps.RoleChecker + tenants client field-restriction (T1)
-  "Operation not permitted": "No tienes permisos para esta acción",
-  "Forbidden": "No tienes permisos para esta acción",
+  "Operation not permitted": "No tiene permisos para esta acción",
+  "Forbidden": "No tiene permisos para esta acción",
   // auth failures — session is dead, re-login
-  "Not authenticated": "Tu sesión expiró. Vuelve a iniciar sesión.",
-  "Invalid or expired token": "Tu sesión expiró. Vuelve a iniciar sesión.",
-  "Invalid token": "Tu sesión expiró. Vuelve a iniciar sesión.",
-  "User not found": "Tu sesión expiró. Vuelve a iniciar sesión.",
+  "Not authenticated": "Su sesión expiró. Vuelva a iniciar sesión.",
+  "Invalid or expired token": "Su sesión expiró. Vuelva a iniciar sesión.",
+  "Invalid token": "Su sesión expiró. Vuelva a iniciar sesión.",
+  "User not found": "Su sesión expiró. Vuelva a iniciar sesión.",
   // CSRF double-submit failure — the session cookie survived but nc_csrf was
   // lost; apiClient retries once after /auth/me re-emits it (b549c7a). If it
   // still fails, the session is unusable → re-login.
-  "CSRF token missing/mismatch": "Tu sesión no pudo validarse. Vuelve a iniciar sesión.",
+  "CSRF token missing/mismatch": "Su sesión no pudo validarse. Vuelva a iniciar sesión.",
   // generic server errors → generic user message
-  "Internal Server Error": "Ocurrió un error. Intenta de nuevo.",
+  "Internal Server Error": "Ocurrió un error. Intente de nuevo.",
 };
 
 /**
@@ -79,6 +79,6 @@ export function friendlyErrorMessage(status: number, rawBody: string): string {
     return trimmed; // plain-text server error (e.g. proxy "Bad Gateway")
   }
 
-  if (status === 422) return "Verifica los datos ingresados.";
-  return "Ocurrió un error. Intenta de nuevo.";
+  if (status === 422) return "Verifique los datos ingresados.";
+  return "Ocurrió un error. Intente de nuevo.";
 }

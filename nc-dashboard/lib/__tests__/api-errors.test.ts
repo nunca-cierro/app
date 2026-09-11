@@ -35,22 +35,22 @@ describe("friendlyErrorMessage (T6 — no raw JSON to users)", () => {
   it("maps the raw 403 'Operation not permitted' to a friendly message", () => {
     expect(
       friendlyErrorMessage(403, '{"detail":"Operation not permitted"}'),
-    ).toBe("No tienes permisos para esta acción");
+    ).toBe("No tiene permisos para esta acción");
   });
 
   it("maps 'Forbidden' to the same friendly permission message", () => {
     expect(friendlyErrorMessage(403, '{"detail":"Forbidden"}')).toBe(
-      "No tienes permisos para esta acción",
+      "No tiene permisos para esta acción",
     );
   });
 
   it("maps auth-failure details to a re-login message", () => {
     expect(friendlyErrorMessage(401, '{"detail":"Not authenticated"}')).toBe(
-      "Tu sesión expiró. Vuelve a iniciar sesión.",
+      "Su sesión expiró. Vuelva a iniciar sesión.",
     );
     expect(
       friendlyErrorMessage(401, '{"detail":"Invalid or expired token"}'),
-    ).toBe("Tu sesión expiró. Vuelve a iniciar sesión.");
+    ).toBe("Su sesión expiró. Vuelva a iniciar sesión.");
   });
 
   it("keeps readable server details (e.g. 409 slug conflict)", () => {
@@ -65,18 +65,18 @@ describe("friendlyErrorMessage (T6 — no raw JSON to users)", () => {
   it("maps 'Internal Server Error' to the generic message", () => {
     expect(
       friendlyErrorMessage(500, '{"detail":"Internal Server Error"}'),
-    ).toBe("Ocurrió un error. Intenta de nuevo.");
+    ).toBe("Ocurrió un error. Intente de nuevo.");
   });
 
   it("falls back to a generic message for raw JSON without a readable detail", () => {
     expect(friendlyErrorMessage(500, '{"error":"boom"}')).toBe(
-      "Ocurrió un error. Intenta de nuevo.",
+      "Ocurrió un error. Intente de nuevo.",
     );
-    expect(friendlyErrorMessage(500, "")).toBe("Ocurrió un error. Intenta de nuevo.");
+    expect(friendlyErrorMessage(500, "")).toBe("Ocurrió un error. Intente de nuevo.");
   });
 
   it("gives a validation hint for 422 without a readable detail", () => {
-    expect(friendlyErrorMessage(422, "")).toBe("Verifica los datos ingresados.");
+    expect(friendlyErrorMessage(422, "")).toBe("Verifique los datos ingresados.");
   });
 
   it("passes through plain-text server errors (readable, not JSON)", () => {
