@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check, Info } from "lucide-react";
 import { Section } from "@/components/layout/section";
 import { Button } from "@/components/ui/button";
 import { siteBanner, sitePlans } from "@/data/site";
+import { findPlanTerm } from "@/data/plan-terms";
 import { AnimatedWrapper } from "@/components/ui/animated-wrapper";
 
 function getWhatsAppUrl(text: string) {
@@ -20,6 +21,27 @@ function CellValue({ value }: { value: string }) {
     return <Check className="inline-block w-4 h-4 text-emerald-500" />;
   }
   return <>{value}</>;
+}
+
+function TermTooltip({ label }: { label: string }) {
+  const term = findPlanTerm(label);
+  if (!term) return null;
+  return (
+    <span className="group relative inline-flex align-middle">
+      <span
+        role="tooltip"
+        tabIndex={0}
+        title={term.explanation}
+        aria-label={term.explanation}
+        className="inline-flex cursor-help text-stone-400 transition-colors group-hover:text-stone-600"
+      >
+        <Info className="h-3.5 w-3.5" />
+      </span>
+      <span className="pointer-events-none absolute left-full top-1/2 z-10 ml-2 w-60 -translate-y-1/2 rounded-md bg-stone-900 px-3 py-2 text-xs font-normal leading-snug text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+        {term.explanation}
+      </span>
+    </span>
+  );
 }
 
 export function Plans() {
@@ -82,7 +104,10 @@ export function Plans() {
                   return (
                     <tr key={row.label}>
                       <td className={isEven ? "px-5 py-3.5 text-stone-600 font-medium bg-stone-100/40" : "px-5 py-3.5 text-stone-600 font-medium"}>
-                        {row.label}
+                        <span className="inline-flex items-center gap-1.5">
+                          {row.label}
+                          <TermTooltip label={row.label} />
+                        </span>
                       </td>
                       <td className={isEven ? "px-5 py-3.5 text-center text-stone-500 bg-stone-100/40" : "px-5 py-3.5 text-center text-stone-500"}>
                         <CellValue value={row.basic} />
