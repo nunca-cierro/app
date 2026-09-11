@@ -3,9 +3,9 @@
 import { useEffect, useState, useRef } from "react";
 
 const negociosImages = [
+  "/negocios/restaurante-gourmet.jpg",
   "/negocios/boutique-moda.jpg",
   "/negocios/clinica-estetica.jpg",
-  "/negocios/restaurante-gourmet.jpg",
   "/negocios/spa-bienestar.jpg",
   "/negocios/inmobiliaria.jpg",
   "/negocios/showroom-automotriz.jpg",

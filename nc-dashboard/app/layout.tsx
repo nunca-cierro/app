@@ -84,7 +84,7 @@ export default function RootLayout({
         />
         <link
           rel="preload"
-          href="/negocios/restaurante.jpg"
+          href="/negocios/restaurante-gourmet.jpg"
           as="image"
           fetchPriority="high"
         />
