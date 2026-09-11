@@ -77,13 +77,13 @@ export default function RootLayout({
         ))}
         <link
           rel="preload"
-          href="/websites/Nuncacierro web y movil.png"
+          href="/websites/Nuncacierro web y movil.webp"
           as="image"
           fetchPriority="high"
         />
         <link
           rel="preload"
-          href="/negocios/restaurante-gourmet.jpg"
+          href="/negocios/restaurante-gourmet.webp"
           as="image"
           fetchPriority="high"
         />

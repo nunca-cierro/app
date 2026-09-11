@@ -1,22 +1,23 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import Image from "next/image";
 
 const negociosImages = [
-  "/negocios/restaurante-gourmet.jpg",
-  "/negocios/boutique-moda.jpg",
-  "/negocios/clinica-estetica.jpg",
-  "/negocios/spa-bienestar.jpg",
-  "/negocios/inmobiliaria.jpg",
-  "/negocios/showroom-automotriz.jpg",
+  "/negocios/restaurante-gourmet.webp",
+  "/negocios/boutique-moda.webp",
+  "/negocios/clinica-estetica.webp",
+  "/negocios/spa-bienestar.webp",
+  "/negocios/inmobiliaria.webp",
+  "/negocios/showroom-automotriz.webp",
 ];
 
 const websitesImages = [
-  "/websites/Nuncacierro web y movil.png",
-  "/websites/Restaurante website.jpeg",
-  "/websites/Mujer sosteniendo smartphone.jpeg",
-  "/websites/Negocio mostrando el sitio.jpeg",
-  "/websites/Diseño en celular.jpeg",
+  "/websites/Nuncacierro web y movil.webp",
+  "/websites/Restaurante website.webp",
+  "/websites/Mujer sosteniendo smartphone.webp",
+  "/websites/Negocio mostrando el sitio.webp",
+  "/websites/Diseño en celular.webp",
 ];
 
 const ROTATE_INTERVAL = 5000; // 5 seconds per image
@@ -39,7 +40,7 @@ export function HeroBackground({ images = "negocios" }: HeroBackgroundProps = {}
   // Preload next image whenever the current image changes
   useEffect(() => {
     const nextIndex = (currentIndex + 1) % heroImages.length;
-    const img = new Image();
+    const img = new window.Image();
     img.src = heroImages[nextIndex];
   }, [currentIndex, heroImages]);
 
@@ -78,31 +79,40 @@ export function HeroBackground({ images = "negocios" }: HeroBackgroundProps = {}
   return (
     <div className="absolute inset-0 bg-stone-950">
       {/* Current image — always rendered behind */}
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-stone-950"
-        style={{
-          backgroundImage: `url('${heroImages[currentIndex]}')`,
-          zIndex: 2,
-        }}
-      />
+      <div className="absolute inset-0 z-2">
+        <Image
+          src={heroImages[currentIndex]}
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover"
+          unoptimized
+        />
+      </div>
 
-      {/* Previous image — fades out on top; bg-stone-950 prevents transparent flash */}
+      {/* Previous image — fades out on top */}
       {previousIndex !== null && (
         <div
-          className="absolute inset-0 bg-cover bg-center bg-stone-950"
+          className="absolute inset-0 z-3"
           style={{
-            backgroundImage: `url('${heroImages[previousIndex]}')`,
             opacity: fadeOut ? 0 : 1,
             transition: fadeOut ? `opacity ${FADE_DURATION}ms ease-in-out` : "none",
             willChange: "opacity",
-            zIndex: 3,
           }}
-        />
+        >
+          <Image
+            src={heroImages[previousIndex]}
+            alt=""
+            fill
+            sizes="100vw"
+            className="object-cover"
+            unoptimized
+          />
+        </div>
       )}
 
-      {/* Scrim for text readability — left-weighted gradient. Flat bg-black/20
-          worked on the dark images but washes out on the daylight v5/v6 set;
-          the gradient keeps the copy readable on both. */}
+      {/* Scrim for text readability — left-weighted gradient */}
       <div className="absolute inset-0 z-10 bg-gradient-to-r from-black/55 via-black/30 to-transparent" />
     </div>
   );

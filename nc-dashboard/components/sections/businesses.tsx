@@ -3,6 +3,7 @@
 import { Section } from "@/components/layout/section";
 import { AnimatedWrapper, itemVariants } from "@/components/ui/animated-wrapper";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 interface Business {
   name: string;
@@ -12,35 +13,36 @@ interface Business {
 
 // v6 set: one image per card, shared with the hero rotation (daylight-realistic
 // direction). The owner generates these files; old sources move to legacy.
+// Images served as WebP (quality 80) — ~200KB vs ~2.5MB JPG.
 const businesses: Business[] = [
   {
     name: "Restaurante gourmet",
-    image: "/negocios/restaurante-gourmet.jpg",
+    image: "/negocios/restaurante-gourmet.webp",
     message: "¿Hay reserva para hoy a las 8 pm para 4 personas?",
   },
   {
     name: "Boutique de moda",
-    image: "/negocios/boutique-moda.jpg",
+    image: "/negocios/boutique-moda.webp",
     message: "¿Tienen el vestido de la vitrina disponible en talla M?",
   },
   {
     name: "Clínica estética",
-    image: "/negocios/clinica-estetica.jpg",
+    image: "/negocios/clinica-estetica.webp",
     message: "¿Me agendan cita con el especialista para esta semana?",
   },
   {
     name: "Spa y bienestar",
-    image: "/negocios/spa-bienestar.jpg",
+    image: "/negocios/spa-bienestar.webp",
     message: "¿Qué horarios tienen el sábado para un masaje relajante?",
   },
   {
     name: "Inmobiliaria",
-    image: "/negocios/inmobiliaria.jpg",
+    image: "/negocios/inmobiliaria.webp",
     message: "¿Puedo visitar el apartamento publicado esta semana?",
   },
   {
     name: "Showroom automotriz",
-    image: "/negocios/showroom-automotriz.jpg",
+    image: "/negocios/showroom-automotriz.webp",
     message: "¿Me agendan una prueba de manejo del modelo 2026?",
   },
 ];
@@ -52,10 +54,14 @@ function BusinessCard({ business }: { business: Business }) {
       className="group relative rounded-2xl overflow-hidden cursor-pointer"
     >
       <div className="relative aspect-[4/3] overflow-hidden">
-        {/* Image */}
-        <div
-          className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-          style={{ backgroundImage: `url('${business.image}')` }}
+        {/* Image — WebP via next/image for automatic format negotiation */}
+        <Image
+          src={business.image}
+          alt={business.name}
+          fill
+          sizes="(max-width: 768px) 80vw, 33vw"
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          unoptimized
         />
 
         {/* Gradient overlay */}
