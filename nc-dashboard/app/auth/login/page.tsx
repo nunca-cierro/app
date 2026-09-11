@@ -61,14 +61,14 @@ function LoginForm() {
             setError("Credenciales inválidas.");
             break;
           case 422:
-            setError("Por favor ingresa email y contraseña.");
+            setError("Por favor ingrese email y contraseña.");
             break;
           default:
-            setError("Error del servidor. Intenta de nuevo.");
+            setError("Error del servidor. Intente de nuevo.");
             break;
         }
       } else {
-        setError("Error de conexión. Verifica tu conexión a internet.");
+        setError("Error de conexión. Verifique su conexión a internet.");
       }
     } finally {
       setIsSubmitting(false);
@@ -143,12 +143,12 @@ function LoginForm() {
             </form>
 
             <p className="text-muted-foreground mt-6 text-center text-sm">
-              ¿No tienes cuenta?{" "}
+              ¿No tiene cuenta?{" "}
               <Link
                 href="/auth/register"
                 className="font-medium text-primary hover:underline"
               >
-                Regístrate
+                Regístrese
               </Link>
             </p>
           </CardContent>
