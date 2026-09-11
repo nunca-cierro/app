@@ -4,7 +4,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/hooks/use-auth";
-import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "sonner";
 import { siteMetadata } from "@/data/site";
 
@@ -89,7 +88,6 @@ export default function RootLayout({
           fetchPriority="high"
         />
       </head>
-      <Analytics />
       {gaId ? (
         <>
           <Script
