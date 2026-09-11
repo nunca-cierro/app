@@ -11,10 +11,8 @@ import {
 /**
  * Slice 4 — payment flow gating (plan-differentiation, task 4.4).
  *
- * Corporate is a marketing-only plan: it MUST NOT appear in the QR /
- * payment flow. The QR map stays intact (basic/professional/enterprise),
- * and `resolvePlanQr` returns null for corporate so the screen shows a
- * quote card instead of a QR. The trial fallback (basic QR) is preserved.
+ * The QR map covers the three payable plans (basic/professional/enterprise).
+ * The trial fallback (basic QR) is preserved.
  */
 
 function stripSsrComments(html: string): string {
@@ -50,11 +48,6 @@ describe("PLAN_QR_MAP", () => {
       "enterprise",
     ]);
   });
-
-  it("does NOT contain corporate — it has no QR (marketing-only)", () => {
-    expect(PLAN_QR_MAP.corporate).toBeUndefined();
-    expect(Object.keys(PLAN_QR_MAP)).not.toContain("corporate");
-  });
 });
 
 describe("resolvePlanQr", () => {
@@ -64,24 +57,12 @@ describe("resolvePlanQr", () => {
     expect(resolvePlanQr("enterprise")).toBe("/payment/QREmpresarial.jpeg");
   });
 
-  it("returns null for corporate — no QR in the payment flow", () => {
-    expect(resolvePlanQr("corporate")).toBeNull();
-  });
-
   it("keeps the trial fallback (basic QR) intact", () => {
     expect(resolvePlanQr("trial")).toBe("/payment/QRBasico.jpeg");
   });
 });
 
 describe("PaymentScreen render (SSR)", () => {
-  it("renders a quote card for corporate — no QR, no payment methods", async () => {
-    const html = await renderScreen("corporate");
-    expect(html).toContain("Corporativo");
-    expect(html).toContain("A cotizar");
-    expect(html).not.toContain("Escanea este código QR");
-    expect(html).not.toContain("QRBasico");
-  });
-
   it("renders the payment header for a payable plan", async () => {
     const html = await renderScreen("basic");
     expect(html).toContain("Pagar Plan Básico");

@@ -13,9 +13,7 @@ import { toast } from "sonner";
 /*  Plan QR path mapping                                               */
 /*                                                                     */
 /*  Escenario A (plan-differentiation, task 4.4): the map stays        */
-/*  intact for the three payable plans. Corporate is marketing-only     */
-/*  and MUST NOT appear here — `resolvePlanQr` returns null for it,     */
-/*  so the payment screen shows a quote card instead of a QR.           */
+/*  intact for the three payable plans.                                */
 /* ------------------------------------------------------------------ */
 
 export const PLAN_QR_MAP: Record<string, string> = {
@@ -26,11 +24,9 @@ export const PLAN_QR_MAP: Record<string, string> = {
 
 /**
  * Resolve the QR image for a plan key.
- * - corporate → null (no QR; quote-only plan, never in the payment flow)
- * - unknown keys (e.g. trial) → basic QR fallback (preserved behavior)
+ * Unknown keys (e.g. trial) → basic QR fallback.
  */
-export function resolvePlanQr(planKey: string): string | null {
-  if (planKey === "corporate") return null;
+export function resolvePlanQr(planKey: string): string {
   return PLAN_QR_MAP[planKey] ?? "/payment/QRBasico.jpeg";
 }
 
@@ -53,41 +49,6 @@ export function PaymentScreen({ planKey, onBack }: PaymentScreenProps) {
 
   const qrUrl = resolvePlanQr(planKey);
   const planLabel = PLAN_LABELS[planKey] ?? planKey;
-
-  /* Corporate is a marketing-only plan: never offer QR/payment methods. */
-  if (qrUrl === null) {
-    return (
-      <div className="mx-auto max-w-2xl space-y-6 py-8">
-        <Button variant="ghost" size="sm" onClick={onBack}>
-          <ArrowLeft className="mr-1 size-4" />
-          Volver a planes
-        </Button>
-        <Card className="bg-muted/30">
-          <CardContent className="flex flex-col items-center gap-4 pt-10 text-center">
-            <h1 className="text-2xl font-bold tracking-tight">
-              Plan {planLabel} — A cotizar
-            </h1>
-            <p className="max-w-md text-muted-foreground">
-              El plan Corporativo se cotiza según las necesidades de su
-              operación. Escríbanos por WhatsApp y le armamos una propuesta a
-              la medida.
-            </p>
-            <Button asChild className="w-full max-w-xs">
-              <a
-                href={`https://wa.me/573219615338?text=${encodeURIComponent(
-                  "Hola, quiero cotizar el plan Corporativo para mi negocio.",
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Cotizar por WhatsApp
-              </a>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   const handleCopy = useCallback(
     async (text: string, index: number) => {

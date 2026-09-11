@@ -3,7 +3,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
-import { siteContactInfo } from "@/data/site";
 
 /* ------------------------------------------------------------------ */
 /*  Plan configuration — source of truth for features and prices       */
@@ -11,13 +10,8 @@ import { siteContactInfo } from "@/data/site";
 /*  Escenario A (owner-validated, plan-differentiation): prices are    */
 /*  pure copy strings ("Desde $X.XXX/mes + IVA") — NEVER runtime         */
 /*  arithmetic. Anti-undercut floor: nothing below $390.000, and paid    */
-/*  tiers always carry "+ IVA". Corporate is marketing-only:             */
-/*  "A cotizar" with a quote CTA, no "Activar" (not payable).           */
+/*  tiers always carry "+ IVA".                                         */
 /* ------------------------------------------------------------------ */
-
-const CORPORATE_QUOTE_URL = `https://wa.me/${siteContactInfo.whatsappNumber}?text=${encodeURIComponent(
-  "Hola, quiero cotizar el plan Corporativo para mi negocio.",
-)}`;
 
 export const PLANS_CONFIG: Record<
   string,
@@ -25,8 +19,6 @@ export const PLANS_CONFIG: Record<
     label: string;
     priceLabel: string;
     features: string[];
-    quoteOnly?: boolean;
-    quoteUrl?: string;
   }
 > = {
   basic: {
@@ -58,18 +50,6 @@ export const PLANS_CONFIG: Record<
       "Productos, conversaciones y negocios ilimitados",
       "Soporte prioritario 24/7",
       "Onboarding personalizado",
-    ],
-  },
-  corporate: {
-    label: "Corporativo",
-    priceLabel: "A cotizar",
-    quoteOnly: true,
-    quoteUrl: CORPORATE_QUOTE_URL,
-    features: [
-      "Proyectos desde ~$3.500.000/mes + IVA",
-      "Múltiples negocios y usuarios",
-      "IA personalizada para su operación",
-      "Soporte dedicado y onboarding",
     ],
   },
 };
@@ -113,13 +93,6 @@ export function PlanCard({ plan, onSelect, featured = false }: PlanCardProps) {
           ))}
         </ul>
         <div className="mt-auto pt-6">
-          {config.quoteOnly ? (
-            <Button asChild className="w-full" variant="outline">
-              <a href={config.quoteUrl} target="_blank" rel="noopener noreferrer">
-                Cotizar
-              </a>
-            </Button>
-          ) : (
             <Button
               className="w-full"
               variant={featured ? "default" : "outline"}
@@ -127,7 +100,6 @@ export function PlanCard({ plan, onSelect, featured = false }: PlanCardProps) {
             >
               Activar
             </Button>
-          )}
         </div>
       </CardContent>
     </Card>

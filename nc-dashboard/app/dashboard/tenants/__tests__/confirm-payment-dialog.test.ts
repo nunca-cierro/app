@@ -11,8 +11,7 @@ import type { Tenant } from "@/lib/types";
 /**
  * Slice 4 — admin payment confirmation amounts (plan-differentiation,
  * task 4.3). The stale $60K/$120K/$250K options are replaced with the
- * Escenario A price labels; corporate is NOT an option (it is a
- * marketing-only plan, never activatable by an admin).
+ * Escenario A price labels.
  */
 
 function stripSsrComments(html: string): string {
@@ -53,7 +52,7 @@ function makeTenant(overrides: Partial<Tenant> = {}): Tenant {
 }
 
 describe("PLAN_OPTIONS (Escenario A)", () => {
-  it("offers exactly the three payable plans — no corporate", () => {
+  it("offers exactly the three payable plans", () => {
     expect(PLAN_OPTIONS.map((o) => o.value)).toEqual([
       "basic",
       "professional",

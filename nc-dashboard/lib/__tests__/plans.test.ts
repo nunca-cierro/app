@@ -28,9 +28,5 @@ describe("PRICE_LABELS (Escenario A — plan-differentiation)", () => {
     }
   });
 
-  it("does NOT include corporate — it is a marketing-only plan without a price", () => {
-    expect(PRICE_LABELS.corporate).toBeUndefined();
-    expect(Object.keys(PRICE_LABELS)).not.toContain("corporate");
-  });
 });
 
