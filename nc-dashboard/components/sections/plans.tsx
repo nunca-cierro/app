@@ -31,7 +31,6 @@ function TermTooltip({ label }: { label: string }) {
       <span
         role="tooltip"
         tabIndex={0}
-        title={term.explanation}
         aria-label={term.explanation}
         className="inline-flex cursor-help text-stone-400 transition-colors group-hover:text-stone-600"
       >

@@ -14,6 +14,11 @@ interface Business {
 // direction). The owner generates these files; old sources move to legacy.
 const businesses: Business[] = [
   {
+    name: "Restaurante gourmet",
+    image: "/negocios/restaurante-gourmet.jpg",
+    message: "¿Hay reserva para hoy a las 8 pm para 4 personas?",
+  },
+  {
     name: "Boutique de moda",
     image: "/negocios/boutique-moda.jpg",
     message: "¿Tienen el vestido de la vitrina disponible en talla M?",
@@ -22,11 +27,6 @@ const businesses: Business[] = [
     name: "Clínica estética",
     image: "/negocios/clinica-estetica.jpg",
     message: "¿Me agendan cita con el especialista para esta semana?",
-  },
-  {
-    name: "Restaurante gourmet",
-    image: "/negocios/restaurante-gourmet.jpg",
-    message: "¿Hay reserva para hoy a las 8 pm para 4 personas?",
   },
   {
     name: "Spa y bienestar",
