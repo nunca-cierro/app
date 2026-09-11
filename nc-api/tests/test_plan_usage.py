@@ -32,10 +32,10 @@ class TestPlanLimitsSchema:
     def test_builds_from_get_plan_limits_professional(self) -> None:
         """get_plan_limits() output is directly consumable by PlanLimits."""
         limits = PlanLimits(**get_plan_limits("professional"))
-        assert limits.max_agents == 5
-        assert limits.max_products == 50
-        assert limits.max_conversations_per_month == 5000
-        assert limits.max_businesses == 3
+        assert limits.max_agents == 10
+        assert limits.max_products == 200
+        assert limits.max_conversations_per_month == 10000
+        assert limits.max_businesses == 5
 
     def test_builds_from_get_plan_limits_enterprise(self) -> None:
         """Enterprise → None values (unlimited)."""
@@ -48,8 +48,8 @@ class TestPlanLimitsSchema:
         limits = PlanLimits(**get_plan_limits("basic"))
         assert limits.model_dump() == {
             "max_agents": 1,
-            "max_products": 10,
-            "max_conversations_per_month": 500,
+            "max_products": 50,
+            "max_conversations_per_month": None,
             "max_businesses": 1,
         }
 
@@ -77,10 +77,10 @@ class TestPlanUsageResponseSchema:
         assert response.model_dump() == {
             "plan": "professional",
             "limits": {
-                "max_agents": 5,
-                "max_products": 50,
-                "max_conversations_per_month": 5000,
-                "max_businesses": 3,
+                "max_agents": 10,
+                "max_products": 200,
+                "max_conversations_per_month": 10000,
+                "max_businesses": 5,
             },
             "usage": {"ai_responses": 1200, "products": 12, "businesses": 2},
             "pct": 24,
@@ -138,29 +138,30 @@ class TestUsageDerivedMetrics:
         from app.api.v1.plans import compute_over_limit
 
         limits = PlanLimits(**get_plan_limits("professional"))
-        # Each metric independently triggers over_limit when above its limit.
+        # Each metric independently triggers over_limit when above its limit
+        # (generous 2026-09 limits: 10/200/10000/5).
         assert (
             compute_over_limit(
-                PlanUsage(ai_responses=5100, products=1, businesses=1), limits
+                PlanUsage(ai_responses=15000, products=1, businesses=1), limits
             )
             is True
         )
         assert (
             compute_over_limit(
-                PlanUsage(ai_responses=100, products=51, businesses=1), limits
+                PlanUsage(ai_responses=100, products=250, businesses=1), limits
             )
             is True
         )
         assert (
             compute_over_limit(
-                PlanUsage(ai_responses=100, products=1, businesses=4), limits
+                PlanUsage(ai_responses=100, products=1, businesses=6), limits
             )
             is True
         )
         # At the limit exactly → NOT over.
         assert (
             compute_over_limit(
-                PlanUsage(ai_responses=5000, products=50, businesses=3), limits
+                PlanUsage(ai_responses=10000, products=200, businesses=5), limits
             )
             is False
         )
@@ -284,13 +285,13 @@ class TestPlanUsageEndpoint:
         assert data == {
             "plan": "professional",
             "limits": {
-                "max_agents": 5,
-                "max_products": 50,
-                "max_conversations_per_month": 5000,
-                "max_businesses": 3,
+                "max_agents": 10,
+                "max_products": 200,
+                "max_conversations_per_month": 10000,
+                "max_businesses": 5,
             },
             "usage": {"ai_responses": 1200, "products": 12, "businesses": 1},
-            "pct": 24,
+            "pct": 12,  # round(1200 * 100 / 10000)
             "over_limit": False,
         }
 
@@ -298,9 +299,9 @@ class TestPlanUsageEndpoint:
     async def test_over_limit_soft_returns_200(
         self, client: AsyncClient, db_session: AsyncSession,
     ) -> None:
-        """OverLimitSoft: 5100/5000 → 200 with pct=102, over_limit=true."""
+        """OverLimitSoft: 10200/10000 → 200 with pct=102, over_limit=true."""
         tenant = await _seed_usage_tenant(
-            db_session, plan="professional", slug="over-pro", ai_messages=5100,
+            db_session, plan="professional", slug="over-pro", ai_messages=10200,
         )
         _auth_as(db_session, tenant_id=tenant.id)
         await db_session.commit()
@@ -309,8 +310,8 @@ class TestPlanUsageEndpoint:
 
         assert response.status_code == 200, response.text
         data = response.json()
-        assert data["usage"]["ai_responses"] == 5100
-        assert data["limits"]["max_conversations_per_month"] == 5000
+        assert data["usage"]["ai_responses"] == 10200
+        assert data["limits"]["max_conversations_per_month"] == 10000
         assert data["pct"] == 102
         assert data["over_limit"] is True
 
@@ -331,7 +332,8 @@ class TestPlanUsageEndpoint:
         assert response.status_code == 200, response.text
         data = response.json()
         assert data["usage"]["ai_responses"] == 3
-        assert data["pct"] == 1  # round(3 * 100 / 500)
+        # basic has NO AI → no AI-response limit (None → pct N/A, meter hidden).
+        assert data["pct"] is None
 
     @pytest.mark.asyncio
     async def test_tenant_isolation_active_tenant_only(
@@ -360,7 +362,7 @@ class TestPlanUsageEndpoint:
         assert data["usage"]["products"] == 5
         # businesses counts the user's memberships (A + B), per design D1.
         assert data["usage"]["businesses"] == 2
-        assert data["pct"] == 6  # round(300 * 100 / 5000)
+        assert data["pct"] == 3  # round(300 * 100 / 10000)
 
     @pytest.mark.asyncio
     async def test_unknown_plan_falls_back_to_basic_limits(
@@ -381,11 +383,12 @@ class TestPlanUsageEndpoint:
         assert data["plan"] == "legacy-plan"
         assert data["limits"] == {
             "max_agents": 1,
-            "max_products": 10,
-            "max_conversations_per_month": 500,
+            "max_products": 50,
+            "max_conversations_per_month": None,
             "max_businesses": 1,
         }
-        assert data["pct"] == 20  # round(100 * 100 / 500)
+        # basic has NO AI → pct N/A (null), meter hidden.
+        assert data["pct"] is None
         assert data["over_limit"] is False
 
     @pytest.mark.asyncio
@@ -418,15 +421,16 @@ class TestPlanUsageEndpoint:
         self, client: AsyncClient, db_session: AsyncSession,
     ) -> None:
         """DowngradePreservesData: 3000 AI responses survive a professional→basic
-        downgrade; the meter keeps counting them and reports over_limit (soft)."""
+        downgrade; the meter keeps counting them. Básico has no AI limit (None)
+        so pct is N/A; the soft excess now comes from products (60 > 50)."""
         tenant = await _seed_usage_tenant(
             db_session, plan="professional", slug="downgrade-co",
-            ai_messages=3000, products=9,
+            ai_messages=3000, products=60,
         )
         _auth_as(db_session, tenant_id=tenant.id)
         await db_session.commit()
 
-        # Downgrade to basic (limit 500) — nothing is deleted or migrated.
+        # Downgrade to basic (generous limits: 50 products, no AI limit).
         tenant.plan = "basic"
         await db_session.commit()
 
@@ -435,10 +439,10 @@ class TestPlanUsageEndpoint:
         assert response.status_code == 200, response.text
         data = response.json()
         assert data["plan"] == "basic"
-        assert data["limits"]["max_conversations_per_month"] == 500
+        assert data["limits"]["max_conversations_per_month"] is None
         assert data["usage"]["ai_responses"] == 3000  # data fully preserved
-        assert data["pct"] == 600  # round(3000 * 100 / 500)
-        assert data["over_limit"] is True
+        assert data["pct"] is None  # basic has no AI limit → N/A
+        assert data["over_limit"] is True  # products 60 > 50 → soft excess
 
     @pytest.mark.asyncio
     async def test_unauthenticated_returns_401(
