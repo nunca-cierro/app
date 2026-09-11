@@ -281,11 +281,11 @@ export function HowItWorks() {
               >
                 <NeonSign type={slide.visual} />
 
-                <h3 className="mt-6 text-2xl md:text-3xl font-semibold text-stone-900 leading-tight">
+                <h2 className="mt-6 text-2xl md:text-3xl font-semibold text-stone-900 leading-tight">
                   {slide.title}
-                </h3>
+                </h2>
 
-                <p className="mt-4 text-base md:text-lg text-stone-500 leading-relaxed">
+                <p className="mt-4 text-base md:text-lg text-stone-600 leading-relaxed">
                   {slide.description}
                 </p>
               </motion.div>
