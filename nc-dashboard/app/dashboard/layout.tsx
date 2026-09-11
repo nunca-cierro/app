@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -18,15 +18,15 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [previousPath, setPreviousPath] = useState(pathname);
+  const previousPathRef = useRef(pathname);
 
   /* ── Close the mobile drawer on navigation ── */
   useEffect(() => {
-    if (pathname !== previousPath) {
-      setPreviousPath(pathname);
+    if (pathname !== previousPathRef.current) {
+      previousPathRef.current = pathname;
       setMobileOpen(false);
     }
-  }, [pathname, previousPath]);
+  }, [pathname]);
 
   /* ── Lock body scroll while the mobile drawer is open ── */
   useEffect(() => {

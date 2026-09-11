@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getPlanUsage, ApiError } from "@/lib/api";
 import type { PlanUsage } from "@/lib/types";
 
@@ -52,20 +52,29 @@ export function usePlanUsage(
   const [isLoading, setIsLoading] = useState<boolean>(() => Boolean(tenantId));
   const [error, setError] = useState<string | null>(null);
   const [refetchCount, setRefetchCount] = useState(0);
+  const prevTenantRef = useRef(tenantId);
 
   useEffect(() => {
     let cancelled = false;
 
+    const prevTenant = prevTenantRef.current;
+    prevTenantRef.current = tenantId;
+
     if (!tenantId) {
       // Sin tenant activo: sin datos previos ni fetch pendiente.
-      setData(null);
-      setError(null);
-      setIsLoading(false);
+      // Only reset state when transitioning from a valid tenant to null
+      // to avoid cascading renders from synchronous setState calls.
+      if (prevTenant) {
+        setData(null);
+        setError(null);
+        setIsLoading(false);
+      }
       return;
     }
 
     // Cambio de tenant → descartar contadores previos mientras se
     // refetchea (spec TenantSwitchPreservesCounters).
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: reset stale state before async fetch
     setData(null);
     setError(null);
     setIsLoading(true);
