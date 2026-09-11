@@ -164,7 +164,7 @@ describe("PlanUsageWidget rendered states", () => {
   it("renders a 24% bar without any CTA (WidgetProgress)", async () => {
     const html = await renderWidget({ data: makeUsage(24) });
 
-    expect(html).toContain("Uso de tu plan");
+    expect(html).toContain("Uso de su plan");
     expect(html).toContain('aria-valuenow="24"');
     expect(html).toContain("width:24%");
     expect(html).toContain("24%");
@@ -181,7 +181,7 @@ describe("PlanUsageWidget rendered states", () => {
   it("renders the over-limit state with CTA above 100% (WidgetOverLimitCta)", async () => {
     const html = await renderWidget({ data: makeUsage(105, true) });
 
-    expect(html).toContain("Superaste el límite mensual");
+    expect(html).toContain("Superó el límite mensual");
     expect(html).toContain("Mejorar plan");
     // Bar clamped to 100% while the label keeps the real 105%.
     expect(html).toContain("width:100%");
@@ -212,7 +212,7 @@ describe("PlanUsageWidget rendered states", () => {
   it("renders only the card shell while loading — no bar, no CTA", async () => {
     const html = await renderWidget({ data: null, isLoading: true });
 
-    expect(html).toContain("Uso de tu plan");
+    expect(html).toContain("Uso de su plan");
     expect(html).not.toContain("progressbar");
     expect(html).not.toContain("Mejorar plan");
   });

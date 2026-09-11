@@ -68,8 +68,8 @@ export function PaymentScreen({ planKey, onBack }: PaymentScreenProps) {
               Plan {planLabel} — A cotizar
             </h1>
             <p className="max-w-md text-muted-foreground">
-              El plan Corporativo se cotiza según las necesidades de tu
-              operación. Escríbenos por WhatsApp y te armamos una propuesta a
+              El plan Corporativo se cotiza según las necesidades de su
+              operación. Escríbanos por WhatsApp y le armamos una propuesta a
               la medida.
             </p>
             <Button asChild className="w-full max-w-xs">
@@ -160,8 +160,8 @@ export function PaymentScreen({ planKey, onBack }: PaymentScreenProps) {
           Pagar Plan {planLabel}
         </h1>
         <p className="text-muted-foreground mt-1">
-          Realiza la transferencia o el depósito a una de las siguientes
-          cuentas y luego envía el comprobante por WhatsApp.
+          Realice la transferencia o el depósito a una de las siguientes
+          cuentas y luego envíe el comprobante por WhatsApp.
         </p>
       </div>
 
@@ -187,10 +187,10 @@ export function PaymentScreen({ planKey, onBack }: PaymentScreenProps) {
           <Card className="overflow-hidden">
             <CardHeader className="bg-muted/30 pb-3">
               <CardTitle className="text-center text-base font-semibold">
-                Escanea este código QR para {planLabel}
+                Escanee este código QR para {planLabel}
               </CardTitle>
               <p className="text-muted-foreground text-center text-xs">
-                Haz una captura o muéstralo directamente
+                Haga una captura o muéstrelo directamente
               </p>
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-4 pt-6">
@@ -208,7 +208,7 @@ export function PaymentScreen({ planKey, onBack }: PaymentScreenProps) {
                 />
               </div>
               <p className="text-muted-foreground text-center text-xs">
-                También puedes usar los datos de transferencia abajo
+                También puede usar los datos de transferencia abajo
               </p>
             </CardContent>
           </Card>
@@ -267,7 +267,7 @@ export function PaymentScreen({ planKey, onBack }: PaymentScreenProps) {
           <Card className="bg-muted/30">
             <CardContent className="pt-6">
               <p className="mb-3 text-center text-sm font-medium">
-                Paso 2: Envíanos el comprobante
+                Paso 2: Envíenos el comprobante
               </p>
               <Button
                 className="w-full bg-green-600 text-white shadow-md transition-all hover:bg-green-700 hover:shadow-lg"
@@ -284,7 +284,7 @@ export function PaymentScreen({ planKey, onBack }: PaymentScreenProps) {
                 Enviar comprobante por WhatsApp
               </Button>
               <p className="text-muted-foreground mt-3 text-center text-xs">
-                Te responderemos apenas verifiquemos el pago
+                Le responderemos apenas verifiquemos el pago
               </p>
             </CardContent>
           </Card>

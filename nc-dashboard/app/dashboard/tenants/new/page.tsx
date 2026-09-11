@@ -40,12 +40,12 @@ export default function NewTenantPage() {
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) {
-          toast.error("Ya existe un negocio con ese nombre. Elige otro nombre.");
+          toast.error("Ya existe un negocio con ese nombre. Elija otro nombre.");
         } else {
-          toast.error("Error al crear el negocio. Intenta de nuevo.");
+          toast.error("Error al crear el negocio. Intente de nuevo.");
         }
       } else {
-        toast.error("Error de conexión. Verifica tu conexión a internet.");
+        toast.error("Error de conexión. Verifique su conexión a internet.");
       }
     } finally {
       setIsSubmitting(false);

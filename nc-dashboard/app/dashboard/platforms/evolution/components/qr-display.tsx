@@ -44,7 +44,7 @@ export function QrDisplay({
     link.click();
     document.body.removeChild(link);
     toast.success("QR descargado", {
-      description: "Ya puedes compartirlo con tu cliente.",
+      description: "Ya puede compartirlo con su cliente.",
     });
   }, [qrCode, connectionName]);
 
@@ -66,7 +66,7 @@ export function QrDisplay({
       if (navigator.share && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: "Código QR WhatsApp",
-          text: "Escanea este código QR con WhatsApp para conectar tu número.",
+          text: "Escanee este código QR con WhatsApp para conectar su número.",
           files: [file],
         });
       } else {
@@ -103,7 +103,7 @@ export function QrDisplay({
       <div className="max-w-xs text-center text-sm text-muted-foreground">
         <p className="font-medium text-foreground">¿Cómo usar este QR?</p>
         <p className="mt-1">
-          Comparte este código con tu cliente. Desde su WhatsApp debe ir a{" "}
+          Comparta este código con su cliente. Desde su WhatsApp debe ir a{" "}
           <span className="font-semibold text-foreground">
             ⋮ Menú → WhatsApp Web
           </span>{" "}

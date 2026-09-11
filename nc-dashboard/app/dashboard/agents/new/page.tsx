@@ -55,9 +55,9 @@ export default function NewAgentPage() {
       }
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error("Error al crear el agente. Intenta de nuevo.");
+        toast.error("Error al crear el agente. Intente de nuevo.");
       } else {
-        toast.error("Error de conexión. Verifica tu conexión a internet.");
+        toast.error("Error de conexión. Verifique su conexión a internet.");
       }
     } finally {
       setIsSubmitting(false);

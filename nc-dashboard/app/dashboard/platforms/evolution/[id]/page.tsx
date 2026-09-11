@@ -355,7 +355,7 @@ export default function PlatformEvolutionDetailPage({
       if (result.qrcode) {
         setTransient({ qrCode: result.qrcode, errorMsg: null, isConnecting: false });
         toast.success("QR generado", {
-          description: "Compártelo con tu cliente para que escanee desde WhatsApp.",
+          description: "Compártalo con su cliente para que escanee desde WhatsApp.",
         });
       } else {
         setTransient({ qrCode: null, errorMsg: null, isConnecting: false });
@@ -396,7 +396,7 @@ export default function PlatformEvolutionDetailPage({
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* ── QR Card — el producto que le vendés al cliente ── */}
+        {/* ── QR Card — el producto que le vende al cliente ── */}
         <Card className={evoState === "qr" && qrCode ? "md:col-span-2" : ""}>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -416,8 +416,8 @@ export default function PlatformEvolutionDetailPage({
             </div>
             <CardDescription>
               {evoState === "qr" && qrCode
-                ? "Comparte este QR con tu cliente para que conecte su WhatsApp"
-                : "Generá un QR para que tu cliente conecte su WhatsApp al sistema"}
+                ? "Comparta este QR con su cliente para que conecte su WhatsApp"
+                : "Genere un QR para que su cliente conecte su WhatsApp al sistema"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -461,7 +461,7 @@ export default function PlatformEvolutionDetailPage({
                 </div>
                 <p className="text-muted-foreground text-xs text-center max-w-xs">
                   El QR sigue activo. El sistema detectará automáticamente cuando
-                  tu cliente escanee. Si ya lo hizo y no se actualiza, presiona
+                  su cliente escanee. Si ya lo hizo y no se actualiza, presione
                   &ldquo;Verificar&rdquo;.
                 </p>
                 <Button
@@ -540,15 +540,15 @@ export default function PlatformEvolutionDetailPage({
                   )}
                   {evoStateCheck.result.state === "close" && (
                     <div className="text-red-700 dark:text-red-400 space-y-1">
-                      <p>La conexión está cerrada. Necesitas generar un nuevo QR.</p>
+                      <p>La conexión está cerrada. Necesita generar un nuevo QR.</p>
                     </div>
                   )}
                   {evoStateCheck.result.state === "qrread" && (
                     <div className="text-amber-700 dark:text-amber-400 space-y-1">
                       <p>El cliente escaneó el QR pero el handshake no se completa.</p>
                       <p className="mt-1">
-                        <strong>Probá esto:</strong> desconectá la instancia, genera un QR nuevo
-                        y pedile al cliente que lo escanee de nuevo.
+                        <strong>Pruebe esto:</strong> desconecte la instancia, genere un QR nuevo
+                        y pídale al cliente que lo escanee de nuevo.
                       </p>
                     </div>
                   )}
@@ -566,7 +566,7 @@ export default function PlatformEvolutionDetailPage({
             {evoState === "connected" && (
               <div className="flex items-center justify-center gap-2 py-4 text-sm text-green-600">
                 <CheckIcon className="size-5" />
-                WhatsApp conectado — tu cliente ya está activo
+                WhatsApp conectado — su cliente ya está activo
               </div>
             )}
 
@@ -581,7 +581,7 @@ export default function PlatformEvolutionDetailPage({
             {evoState === "connecting" && (
               <div className="flex flex-col items-center gap-3 py-4 text-sm">
                 <LoaderIcon className="size-6 animate-spin text-muted-foreground" />
-                <p className="text-muted-foreground">Generando QR para tu cliente...</p>
+                <p className="text-muted-foreground">Generando QR para su cliente...</p>
               </div>
             )}
 
@@ -692,7 +692,7 @@ export default function PlatformEvolutionDetailPage({
                   {antiSpamMode === "" && (
                     <p className="text-xs text-amber-600">
                       Esta conexión no tiene un modo guardado. El sistema usa su valor
-                      por defecto (registro) hasta que elijas uno y guardes.
+                      por defecto (registro) hasta que elija uno y guarde.
                     </p>
                   )}
                 </div>

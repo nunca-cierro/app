@@ -75,7 +75,7 @@ export default function ConversationsPage() {
         <h1 className="text-2xl font-bold tracking-tight">Conversaciones</h1>
         <p className="text-muted-foreground mt-1 text-sm">
           {isClient
-            ? "Historial de conversaciones de tu negocio."
+            ? "Historial de conversaciones de su negocio."
             : "Mensajes entrantes y salientes de todas las plataformas."}
         </p>
       </div>

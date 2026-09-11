@@ -38,14 +38,14 @@ const labelClass = "text-sm font-medium";
 
 /* ── Recommended defaults ─────────────────────────────────────────── */
 const RECOMMENDED_INSTRUCTIONS =
-  "Eres un asistente de atención al cliente.\n" +
-  "- Responde SOLO con la información del negocio que se te proporciona.\n" +
-  "- Si no sabes algo, no inventes — di que un asesor humano va a ayudar.\n" +
-  "- Sé breve: responde lo justo y necesario, sin rodeos.\n" +
-  "- Haz máximo UNA pregunta por mensaje.\n" +
-  "- Si el cliente muestra interés en algo, menciónalo de forma natural.\n" +
+  "Usted es un asistente de atención al cliente.\n" +
+  "- Responde SOLO con la información del negocio que se le proporciona.\n" +
+  "- Si no sabe algo, no invente — diga que un asesor humano va a ayudar.\n" +
+  "- Sea breve: responda lo justo y necesario, sin rodeos.\n" +
+  "- Haga máximo UNA pregunta por mensaje.\n" +
+  "- Si el cliente muestra interés en algo, menciónelo de forma natural.\n" +
   "  La venta debe sentirse como sugerencia, no como empuje.\n" +
-  "- Saluda y ofrece ayuda cuando el cliente salude.";
+  "- Salude y ofrezca ayuda cuando el cliente salude.";
 
 /* ------------------------------------------------------------------ */
 /*  Default config                                                     */
@@ -59,7 +59,7 @@ function emptyConfig(): BusinessConfig {
     tone: "amigable y profesional",
     keywords_to_escalate: [],
     fallback_message:
-      "Un asesor humano te atenderá en breve. Por favor espera mientras te conectamos.",
+      "Un asesor humano lo atenderá en breve. Por favor espere mientras lo conectamos.",
   };
 }
 
@@ -208,12 +208,12 @@ export function BusinessConfigForm({
             }
             placeholder={`Describe cómo debe comportarse el bot al atender clientes. Ej:
 
-- Sé amable, breve y directo. Usa emojis con moderación.
-- Haz máximo UNA pregunta por mensaje.
-- No inventes precios ni productos que no estén en la lista.
-- Si el cliente se interesa, sugiérele el producto de forma natural, sin presionar.
-- Si preguntan algo que no sabes, di: "Un asesor humano te atenderá en breve".
-- Saluda al inicio y ofrece ayuda.`}
+- Sea amable, breve y directo. Use emojis con moderación.
+- Haga máximo UNA pregunta por mensaje.
+- No invente precios ni productos que no estén en la lista.
+- Si el cliente se interesa, sugiérale el producto de forma natural, sin presionar.
+- Si preguntan algo que no sabe, diga: "Un asesor humano lo atenderá en breve".
+- Salude al inicio y ofrezca ayuda.`}
           />
           <p className="text-xs text-muted-foreground">
             Estas instrucciones se combinan con los datos del negocio para
@@ -467,7 +467,7 @@ export function BusinessConfigForm({
               rows={2}
               value={form.fallback_message ?? ""}
               onChange={(e) => setField("fallback_message", e.target.value)}
-              placeholder="Un asesor humano te atenderá en breve."
+              placeholder="Un asesor humano lo atenderá en breve."
             />
           </div>
         </CardContent>

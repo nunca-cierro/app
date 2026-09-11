@@ -197,8 +197,8 @@ export function TenantForm({
         <div>
           <h3 className="text-sm font-medium">Perfil de negocio</h3>
           <p className="text-xs text-muted-foreground">
-            Estos datos llenan automáticamente las plantillas de tu agente
-            (nombre, ciudad, horarios, CTA...). Opcional — puedes completarlos
+            Estos datos llenan automáticamente las plantillas de su agente
+            (nombre, ciudad, horarios, CTA...). Opcional — puede completarlos
             después.
           </p>
         </div>

@@ -151,13 +151,13 @@ export default function PlatformsNewEvolutionPage() {
               Escanea el código QR
             </CardTitle>
             <p className="text-muted-foreground mt-1 text-sm">
-              Abre WhatsApp en tu teléfono y escanea este código para conectar.
+              Abra WhatsApp en su teléfono y escanee este código para conectar.
             </p>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-6 pb-8">
             <QrDisplay qrCode={qrCode} isPolling />
             <p className="text-xs text-muted-foreground text-center">
-              El sistema detectará automáticamente cuando escanees el código
+              El sistema detectará automáticamente cuando escanee el código
             </p>
           </CardContent>
         </Card>
