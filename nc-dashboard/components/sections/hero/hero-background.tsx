@@ -100,8 +100,10 @@ export function HeroBackground({ images = "negocios" }: HeroBackgroundProps = {}
         />
       )}
 
-      {/* Dark overlay for text readability */}
-      <div className="absolute inset-0 bg-black/20 z-10" />
+      {/* Scrim for text readability — left-weighted gradient. Flat bg-black/20
+          worked on the dark images but washes out on the daylight v5/v6 set;
+          the gradient keeps the copy readable on both. */}
+      <div className="absolute inset-0 z-10 bg-gradient-to-r from-black/55 via-black/30 to-transparent" />
     </div>
   );
 }
