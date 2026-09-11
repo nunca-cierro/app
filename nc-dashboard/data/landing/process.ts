@@ -3,34 +3,34 @@ export const landingProcess = {
   label: "Proceso",
   title: "Así de simple empezamos",
   subtitle:
-    "Cuatro pasos claros para que empieces a recibir más clientes lo antes posible.",
+    "Cuatro pasos claros para que empiece a recibir más clientes lo antes posible.",
   stepLabelPrefix: "Paso",
   footerText:
-    "Tendrás avances y versión de prueba para que lo revises antes de publicar.",
+    "Tendrá avances y una versión de prueba para que la revise antes de publicar.",
   steps: [
     {
       number: "01",
-      title: "Analizamos tu negocio",
+      title: "Analizamos su negocio",
       description:
-        "Revisamos qué vendes, a quién le vendes y qué tipo de clientes quieres atraer.",
+        "Revisamos qué vende, a quién le vende y qué tipo de clientes quiere atraer.",
     },
     {
       number: "02",
-      title: "Te mostramos una demo",
+      title: "Le mostramos una demo",
       description:
-        "Te presentamos una propuesta simple para que veas cómo llegaría la gente a tu WhatsApp.",
+        "Le presentamos una propuesta simple para que vea cómo llegarían las personas a su WhatsApp.",
     },
     {
       number: "03",
       title: "Lo activamos",
       description:
-        "Hacemos los ajustes finales y dejamos tu sitio listo para empezar a generar contactos.",
+        "Hacemos los ajustes finales y dejamos su sitio listo para empezar a generar contactos.",
     },
     {
       number: "04",
-      title: "Empiezas a recibir mensajes",
+      title: "Empieza a recibir mensajes",
       description:
-        "Tu negocio queda visible y preparado para que más personas te escriban por WhatsApp.",
+        "Su negocio queda visible y preparado para que más personas le escriban por WhatsApp.",
     },
   ],
 };
