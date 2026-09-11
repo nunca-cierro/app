@@ -197,20 +197,6 @@ export const sitePlans = {
       ],
       featured: false,
     },
-    {
-      name: "Corporativo",
-      type: "Corporativo",
-      price: "A cotizar",
-      description:
-        "Soluciones a la medida para operaciones grandes: múltiples negocios, IA personalizada y soporte dedicado.",
-      features: [
-        "Proyectos desde ~$3.500.000/mes + IVA",
-        "Múltiples negocios y usuarios",
-        "IA personalizada para su operación",
-        "Soporte dedicado y onboarding",
-      ],
-      featured: false,
-    },
   ],
   // Comparison table rows (prices: Escenario A, copy strings)
   comparisonRows: [

@@ -51,13 +51,6 @@ describe("sitePlans packages (Escenario A)", () => {
     expect(byName["Empresarial"]).toBe("Desde $1.590.000/mes + IVA");
   });
 
-  it("includes the marketing-only Corporativo package labeled 'A cotizar'", () => {
-    const corporate = sitePlans.packages.find((p) => p.name === "Corporativo");
-    expect(corporate).toBeDefined();
-    expect(corporate?.price).toBe("A cotizar");
-    expect(corporate?.features).toContain("Proyectos desde ~$3.500.000/mes + IVA");
-  });
-
   it("never drops the '+ IVA' framing on a paid tier", () => {
     for (const pack of sitePlans.packages) {
       if (pack.price === "A cotizar") continue;

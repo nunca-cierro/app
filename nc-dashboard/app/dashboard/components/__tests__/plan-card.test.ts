@@ -9,8 +9,7 @@ import { PLANS_CONFIG, PlanCard } from "@/app/dashboard/components/plan-card";
  *
  * Escenario A (owner-validated): prices are pure copy strings
  * ("Desde $X/mes + IVA") — the `price: number` + `formatPrice` runtime
- * arithmetic was removed. Corporate is a marketing-only card: "A cotizar"
- * with a quote CTA, NEVER an "Activar" button (it is not payable).
+ * arithmetic was removed.
  *
  * Vitest environment is node (no jsdom) → the card renders with
  * react-dom/server (repo pattern: plan-usage-widget.test.tsx).
@@ -46,12 +45,11 @@ function renderCard(plan: string): Promise<string> {
 }
 
 describe("PLANS_CONFIG (Escenario A)", () => {
-  it("defines the three paid plans plus the marketing-only corporate card", () => {
+  it("defines the three paid plans", () => {
     expect(Object.keys(PLANS_CONFIG)).toEqual([
       "basic",
       "professional",
       "enterprise",
-      "corporate",
     ]);
   });
 
@@ -59,7 +57,6 @@ describe("PLANS_CONFIG (Escenario A)", () => {
     expect(PLANS_CONFIG.basic.label).toBe("Básico");
     expect(PLANS_CONFIG.professional.label).toBe("Profesional");
     expect(PLANS_CONFIG.enterprise.label).toBe("Empresarial");
-    expect(PLANS_CONFIG.corporate.label).toBe("Corporativo");
   });
 
   it("shows the exact Escenario A price labels (copy, not arithmetic)", () => {
@@ -81,20 +78,7 @@ describe("PLANS_CONFIG (Escenario A)", () => {
     }
   });
 
-  it("marks corporate as quote-only with 'A cotizar' and a quote URL", () => {
-    expect(PLANS_CONFIG.corporate.priceLabel).toBe("A cotizar");
-    expect(PLANS_CONFIG.corporate.quoteOnly).toBe(true);
-    expect(PLANS_CONFIG.corporate.quoteUrl).toMatch(/^https:\/\/wa\.me\//);
-  });
-
-  it("quotes the corporate reference in the canonized format (~$3.500.000)", () => {
-    expect(PLANS_CONFIG.corporate.features).toContain(
-      "Proyectos desde ~$3.500.000/mes + IVA",
-    );
-    expect(PLANS_CONFIG.corporate.features.join(" ")).not.toContain("~$3.5M");
-  });
-
-  it("keeps features for every card including corporate", () => {
+  it("keeps features for every card", () => {
     for (const plan of Object.values(PLANS_CONFIG)) {
       expect(plan.features.length).toBeGreaterThanOrEqual(3);
     }
@@ -136,14 +120,5 @@ describe("PlanCard render (SSR)", () => {
     expect(html).toContain("Empresarial");
     expect(html).toContain("Desde $1.590.000/mes + IVA");
     expect(html).toContain("Activar");
-  });
-
-  it("renders the corporate card with 'A cotizar', a quote CTA and NO Activar button", async () => {
-    const html = await renderCard("corporate");
-    expect(html).toContain("Corporativo");
-    expect(html).toContain("A cotizar");
-    expect(html).toContain("Cotizar");
-    expect(html).toContain("wa.me");
-    expect(html).not.toContain("Activar");
   });
 });
