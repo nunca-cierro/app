@@ -26,6 +26,7 @@ const USAGE_PAYLOAD: PlanUsage = {
 
 function stubFetch(response: Response) {
   const fetchMock = vi.fn(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async (_url: string | URL | Request, _init?: RequestInit) => response,
   );
   vi.stubGlobal("fetch", fetchMock);
