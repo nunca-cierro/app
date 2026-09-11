@@ -15,7 +15,7 @@ const sections = [
       <>
         <p>
           En <strong>NuncaCierro</strong> («nosotros», «nuestro», «la plataforma»)
-          respetamos tu privacidad y la de los usuarios que interactúan con los
+          respetamos su privacidad y la de los usuarios que interactúan con los
           negocios que utilizan nuestro servicio.
         </p>
 
@@ -26,27 +26,27 @@ const sections = [
         <ul>
           <li>Nombre del negocio y nombre de contacto</li>
           <li>Correo electrónico (<strong>soporte@nuncacierro.com</strong> es nuestro canal oficial)</li>
-          <li>Número de teléfono — usado exclusivamente para vincular tu WhatsApp Business</li>
+          <li>Número de teléfono — usado exclusivamente para vincular su WhatsApp Business</li>
           <li>Información del negocio: categoría, ciudad, horarios, catálogo de productos/servicios, preguntas frecuentes</li>
           <li>Datos de pago (cuando corresponda) — gestionados vía transferencia bancaria</li>
         </ul>
 
-        <h3>2. ¿Cómo usamos tus datos?</h3>
-        <p>Usamos tu información exclusivamente para:</p>
+        <h3>2. ¿Cómo usamos sus datos?</h3>
+        <p>Usamos su información exclusivamente para:</p>
         <ul>
           <li>Configurar, operar y mantener el servicio de automatización WhatsApp contratado</li>
-          <li>Procesar las conversaciones de tus clientes a través del bot de IA (Groq) o respuestas programadas</li>
-          <li>Enviarte métricas semanales y notificaciones del servicio</li>
+          <li>Procesar las conversaciones de sus clientes a través del bot de IA (Groq) o respuestas programadas</li>
+          <li>Enviarle métricas semanales y notificaciones del servicio</li>
           <li>Contactarte para soporte o cambios en el servicio</li>
           <li>Cumplir con obligaciones legales colombianas (Ley 1581 de 2012 — Protección de Datos Personales)</li>
         </ul>
         <p>
-          <strong>No vendemos, alquilamos ni compartimos tus datos con terceros</strong> para fines comerciales o publicitarios.
+          <strong>No vendemos, alquilamos ni compartimos sus datos con terceros</strong> para fines comerciales o publicitarios.
         </p>
 
-        <h3>3. Datos de tus clientes</h3>
+        <h3>3. Datos de sus clientes</h3>
         <p>
-          Cuando un cliente escribe a tu WhatsApp automatizado, almacenamos:
+          Cuando un cliente escribe a su WhatsApp automatizado, almacenamos:
         </p>
         <ul>
           <li>El número de teléfono del cliente (anonimizado en métricas)</li>
@@ -56,8 +56,8 @@ const sections = [
         <p>
           Estos datos se almacenan exclusivamente para que el bot funcione
           (contexto de conversación, historial) y para generarte métricas de uso.
-          <strong>Tú eres el responsable del tratamiento</strong> de los datos de tus
-          clientes finales. Te recomendamos informar a tus clientes que su
+          <strong>Usted es el responsable del tratamiento</strong> de los datos de sus
+          clientes finales. Le recomendamos informar a sus clientes que su
           conversación es gestionada por un asistente automatizado.
         </p>
 
@@ -67,38 +67,38 @@ const sections = [
           Las conversaciones y configuraciones de negocio se procesan a través de
           <strong> Groq API</strong> (proveedor de inteligencia artificial), que puede
           procesar datos en servidores ubicados fuera de Colombia. Al usar nuestro
-          servicio, aceptas esta transferencia internacional de datos necesaria
+          servicio, acepta esta transferencia internacional de datos necesaria
           para el funcionamiento de la IA.
         </p>
 
         <h3>5. Tus derechos (Ley 1581 de 2012)</h3>
-        <p>Como titular de los datos, tienes derecho a:</p>
+        <p>Como titular de los datos, tiene derecho a:</p>
         <ul>
-          <li>Conocer, actualizar y rectificar tus datos personales</li>
+          <li>Conocer, actualizar y rectificar sus datos personales</li>
           <li>Solicitar prueba de la autorización otorgada para el tratamiento</li>
-          <li>Ser informado sobre el uso que se ha dado a tus datos</li>
-          <li>Revocar la autorización y solicitar la eliminación de tus datos</li>
-          <li>Acceder de forma gratuita a tus datos personales</li>
+          <li>Ser informado sobre el uso que se ha dado a sus datos</li>
+          <li>Revocar la autorización y solicitar la eliminación de sus datos</li>
+          <li>Acceder de forma gratuita a sus datos personales</li>
         </ul>
         <p>
-          Para ejercer cualquiera de estos derechos, escríbenos a{" "}
+          Para ejercer cualquiera de estos derechos, escríbanos a{" "}
           <strong>soporte@nuncacierro.com</strong> con el asunto
-          «Protección de Datos — [Nombre de tu negocio]». Responderemos en un
+          «Protección de Datos — [Nombre de su negocio]». Responderemos en un
           plazo máximo de 10 días hábiles.
         </p>
 
         <h3>6. Seguridad</h3>
         <p>
-          Implementamos medidas técnicas y organizativas para proteger tus datos
+          Implementamos medidas técnicas y organizativas para proteger sus datos
           contra acceso no autorizado, pérdida o alteración. Sin embargo, ningún
-          sistema es 100 % seguro. Si detectas alguna vulnerabilidad, por favor
-          repórtala de inmediato a <strong>soporte@nuncacierro.com</strong>.
+          sistema es 100 % seguro. Si detecta alguna vulnerabilidad, por favor
+          repórtela de inmediato a <strong>soporte@nuncacierro.com</strong>.
         </p>
 
         <h3>7. Cambios a esta política</h3>
         <p>
           Nos reservamos el derecho de actualizar esta política en cualquier momento.
-          Te notificaremos los cambios a través del correo electrónico registrado o
+          Le notificaremos los cambios a través del correo electrónico registrado o
           mediante un aviso visible en la plataforma.
         </p>
 
@@ -114,8 +114,8 @@ const sections = [
     content: (
       <>
         <p>
-          Al utilizar <strong>NuncaCierro</strong> («el servicio»), aceptas los
-          siguientes términos y condiciones. Si no estás de acuerdo, no utilices
+          Al utilizar <strong>NuncaCierro</strong> («el servicio»), acepta los
+          siguientes términos y condiciones. Si no está de acuerdo, no utilice
           el servicio.
         </p>
 
@@ -133,8 +133,8 @@ const sections = [
 
         <h3>2. Registro y cuenta</h3>
         <p>
-          Para usar el servicio, debes proporcionar información veraz y completa.
-          Eres responsable de mantener la confidencialidad de tus credenciales
+          Para usar el servicio, debe proporcionar información veraz y completa.
+          Usted es responsable de mantener la confidencialidad de sus credenciales
           de acceso. NuncaCierro se reserva el derecho de suspender o cancelar
           cuentas que violen estos términos.
         </p>
@@ -149,7 +149,7 @@ const sections = [
         <ul>
           <li>Los pagos se realizan por transferencia bancaria.</li>
           <li>La facturación es mensual y recurrente.</li>
-          <li>Puedes cancelar en cualquier momento sin penalización.</li>
+          <li>Puede cancelar en cualquier momento sin penalización.</li>
           <li>No se realizan reembolsos por períodos parciales no utilizados.</li>
           <li>NuncaCierro se reserva el derecho de modificar los precios con
           previo aviso de 30 días.</li>
@@ -160,19 +160,19 @@ const sections = [
           El período de prueba gratuito de 7 días incluye exclusivamente
           respuestas programadas (sin inteligencia artificial). Al finalizar
           el período de prueba, el servicio se desactivará automáticamente a
-          menos que elijas un plan pago. No se requiere tarjeta de crédito
+          menos que elija un plan pago. No se requiere tarjeta de crédito
           para iniciar la prueba.
         </p>
 
         <h3>5. Uso aceptable</h3>
-        <p>Te comprometes a:</p>
+        <p>Usted se compromete a:</p>
         <ul>
           <li>No utilizar el servicio para actividades ilegales, fraudulentas o no autorizadas</li>
           <li>No enviar spam, mensajes masivos no solicitados o contenido malicioso</li>
           <li>No infringir derechos de propiedad intelectual de terceros</li>
           <li>Cumplir con los Términos de Servicio de WhatsApp Business y Meta</li>
-          <li>Informar a tus clientes cuando interactúan con un sistema automatizado</li>
-          <li>Cumplir con la Ley 1581 de 2012 respecto a los datos de tus clientes</li>
+          <li>Informar a sus clientes cuando interactúan con un sistema automatizado</li>
+          <li>Cumplir con la Ley 1581 de 2012 respecto a los datos de sus clientes</li>
         </ul>
         <p>
           NuncaCierro se reserva el derecho de suspender inmediatamente cualquier
@@ -189,9 +189,9 @@ const sections = [
           implícita sobre estos elementos.
         </p>
         <p>
-          Tú conservas la propiedad de los datos e información de tu negocio
-          (catálogo, horarios, FAQ, mensajes). Nos concedes una licencia limitada
-          para usar estos datos exclusivamente con el fin de prestarte el servicio.
+          Usted conserva la propiedad de los datos e información de su negocio
+          (catálogo, horarios, FAQ, mensajes). Nos concede una licencia limitada
+          para usar estos datos exclusivamente con el fin de prestarle el servicio.
         </p>
 
         <h3>7. Limitación de responsabilidad</h3>
@@ -214,7 +214,7 @@ const sections = [
 
         <h3>8. Cancelación</h3>
         <p>
-          Puedes cancelar tu suscripción en cualquier momento notificándonos por
+          Puede cancelar su suscripción en cualquier momento notificándonos por
           WhatsApp o al correo <strong>soporte@nuncacierro.com</strong>. La
           cancelación se hará efectiva al finalizar el período de facturación
           corriente. No hay contratos de permanencia mínima.
@@ -222,9 +222,9 @@ const sections = [
 
         <h3>9. Modificaciones a los términos</h3>
         <p>
-          Podemos actualizar estos términos en cualquier momento. Te notificaremos
+          Podemos actualizar estos términos en cualquier momento. Le notificaremos
           los cambios con al menos 15 días de anticipación. El uso continuado del
-          servicio después de la fecha de vigencia constituye tu aceptación de los
+          servicio después de la fecha de vigencia constituye su aceptación de los
           nuevos términos.
         </p>
 
@@ -267,10 +267,10 @@ const sections = [
         <p>
           Para los planes Profesional y Empresarial, utilizamos la API de Groq
           para procesar las conversaciones con inteligencia artificial. Al usar
-          nuestro servicio, aceptas que:
+          nuestro servicio, acepta que:
         </p>
         <ul>
-          <li>Los mensajes de tus clientes se envían a los servidores de Groq para
+          <li>Los mensajes de sus clientes se envían a los servidores de Groq para
             su procesamiento</li>
           <li>Groq no almacena ni entrena modelos con los datos de las conversaciones</li>
           <li>El tiempo de respuesta puede variar según la disponibilidad del servicio
@@ -282,7 +282,7 @@ const sections = [
         <h3>3. WhatsApp Business y Meta</h3>
         <p>
           El servicio se integra con WhatsApp a través de Evolution API y Meta
-          Cloud API. Al conectar tu WhatsApp Business a NuncaCierro, aceptas
+          Cloud API. Al conectar su WhatsApp Business a NuncaCierro, acepta
           también los Términos de Servicio de WhatsApp Business y las políticas
           de Meta Platforms, Inc. Te recomendamos revisar dichos términos en{" "}
           <a
@@ -298,20 +298,20 @@ const sections = [
 
         <h3>4. Retención de datos</h3>
         <p>
-          Conservamos tus datos y los de tus clientes mientras tu cuenta esté
-          activa. Al cancelar tu suscripción, eliminaremos tus datos en un plazo
+          Conservamos sus datos y los de sus clientes mientras su cuenta esté
+          activa. Al cancelar su suscripción, eliminaremos sus datos en un plazo
           máximo de 30 días, salvo que exista una obligación legal que requiera
           su conservación.
         </p>
         <p>
-          Puedes solicitar la eliminación anticipada de tus datos en cualquier
+          Puede solicitar la eliminación anticipada de sus datos en cualquier
           momento escribiendo a <strong>soporte@nuncacierro.com</strong>.
         </p>
 
         <h3>5. Reporte de vulnerabilidades</h3>
         <p>
-          Si encuentras alguna vulnerabilidad de seguridad en nuestra plataforma,
-          por favor repórtala de inmediato a{" "}
+          Si encuentra alguna vulnerabilidad de seguridad en nuestra plataforma,
+          por favor repórtela de inmediato a{" "}
           <strong>soporte@nuncacierro.com</strong>. Agradecemos la divulgación
           responsable y nos comprometemos a responder en un plazo máximo de 48 horas.
         </p>
@@ -368,14 +368,14 @@ export default function LegalPage() {
           {/* Acceptance note */}
           <div className="mt-16 p-6 rounded-xl border border-amber-200 bg-amber-50">
             <h3 className="text-lg font-semibold text-amber-800 mb-2">
-              Al usar nuestro servicio, aceptas estos términos
+              Al usar nuestro servicio, acepta estos términos
             </h3>
             <p className="text-sm text-amber-700 leading-relaxed">
-              Al registrarte, iniciar una prueba gratuita o contratar cualquier
-              plan de NuncaCierro, confirmas que has leído, entendido y aceptas
+              Al registrarse, iniciar una prueba gratuita o contratar cualquier
+              plan de NuncaCierro, confirma que ha leído, entendido y acepta
               la totalidad de esta Política de Privacidad, los Términos y
               Condiciones y la sección de Datos y Cumplimientos aquí descritos.
-              Si tienes dudas, contáctanos antes de continuar en{" "}
+              Si tiene dudas, contáctenos antes de continuar en{" "}
               <strong>soporte@nuncacierro.com</strong>.
             </p>
           </div>
