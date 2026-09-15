@@ -10,6 +10,7 @@ and reuses the same Groq pipeline and conversation logic.
 
 from __future__ import annotations
 
+import asyncio
 import re
 import typing as t
 import uuid as uuid_pkg
@@ -21,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.rate_limiter import rate_limiter
+from app.core.debounce import push_message, flush_buffer, get_redis
 from app.modules.conversations.models import Conversation, Message
 from app.modules.agents.utils import format_business_config, universal_format_block
 from app.modules.integrations.llm.provider import llm_client
@@ -50,6 +52,11 @@ PAYMENT_KEYWORDS: list[str] = [
 # Extra-data key for per-chat admin cooldown timestamps (dict[str, str]).
 # Maps normalized chat JID → ISO timestamp of last admin message.
 ADMIN_CHAT_COOLDOWNS_KEY: str = "admin_chat_cooldowns"
+
+# Debounce: aggregate rapid-fire messages before processing.
+# When a user sends multiple short messages, wait this long after the
+# last message before calling the LLM (prevents N calls for N messages).
+DEBOUNCE_WINDOW_SECONDS: int = 3
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -424,6 +431,63 @@ async def handle_evolution_incoming(
             jid=chat_jid,
         )
         return
+
+    # ── 2b. Message debounce (non-admin only) ──────────────────────────
+    # Aggregate rapid-fire messages (e.g. "Hola" + "quiero" + "una cita")
+    # into a single LLM call. Uses Redis sorted set + SET NX lock.
+    # The first message in a burst acquires the lock, sleeps for the
+    # debounce window, then flushes and processes all buffered messages.
+    # Subsequent messages within the window just buffer and return.
+    try:
+        redis = await get_redis()
+        debounce_key = f"debounce:{parsed['external_user_id']}:{connection.id}"
+        lock_key = f"debounce_lock:{parsed['external_user_id']}:{connection.id}"
+
+        # Buffer the current message
+        await push_message(parsed["external_user_id"], str(connection.id), parsed)
+
+        # Try to acquire the debounce lock (NX = only if not exists, EX = TTL)
+        acquired = await redis.set(
+            lock_key, "1", nx=True, ex=DEBOUNCE_WINDOW_SECONDS
+        )
+
+        if acquired:
+            # First message in the burst — wait for the debounce window
+            logger.debug(
+                "Debounce: first message, waiting {w}s | user={uid}",
+                w=DEBOUNCE_WINDOW_SECONDS, uid=parsed["external_user_id"],
+            )
+            await asyncio.sleep(DEBOUNCE_WINDOW_SECONDS)
+
+            # Flush all buffered messages
+            messages = await flush_buffer(parsed["external_user_id"], str(connection.id))
+            if not messages:
+                logger.debug("Debounce: buffer empty after flush, skipping")
+                return
+
+            # If multiple messages were buffered, merge them into one
+            if len(messages) > 1:
+                merged_text = " ".join(
+                    m.get("content", "") for m in messages if m.get("content")
+                )
+                parsed["content"] = merged_text
+                logger.info(
+                    "Debounce: merged {n} messages into one | user={uid} | text={text}",
+                    n=len(messages), uid=parsed["external_user_id"],
+                    text=merged_text[:80],
+                )
+            # else: single message, use it as-is (already in parsed)
+        else:
+            # Another message already triggered the debounce timer — just
+            # buffer and return. The first message's handler will process all.
+            logger.debug(
+                "Debounce: buffered, waiting for flush | user={uid}",
+                uid=parsed["external_user_id"],
+            )
+            return
+    except Exception as exc:
+        # Redis failure is non-fatal — fall through to process immediately
+        logger.warning("Debounce failed (non-fatal), processing immediately: {e}", e=exc)
 
     # ── 3. Admin cooldown check (BEFORE conversation creation) ──────────
     # This MUST run before find-or-create to prevent the race condition
