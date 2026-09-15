@@ -13,7 +13,7 @@ const slides = [
   },
   {
     number: "02",
-    title: "Configuramos su WhatsApp en 2 horas hábiles",
+    title: "Configuramos su WhatsApp en máximo 24 horas",
     description:
       "Personalizamos cada respuesta con el tono de su negocio. Usted aprueba antes de activar.",
     visual: "gear",
