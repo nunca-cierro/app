@@ -299,7 +299,7 @@ export const siteFaq = {
     {
       question: "¿Cuánto tiempo toma tenerlo listo?",
       answer:
-        "El bot de WhatsApp lo configuramos en 2 horas hábiles. Los planes más avanzados pueden tomar más tiempo según la complejidad de su negocio.",
+        "El bot de WhatsApp lo configuramos en máximo 24 horas. Los planes más avanzados pueden tomar un poco más según la complejidad de su negocio, pero le mantenemos informado todo el tiempo.",
     },
     {
       question: "¿Necesito conocimientos técnicos para usarlo?",
