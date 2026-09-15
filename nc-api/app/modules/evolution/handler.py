@@ -1029,22 +1029,12 @@ async def handle_evolution_incoming(
         return
 
     # ── 6. Build system prompt from tenant config ──────────────────────
-    from app.modules.agents.models import Prompt
 
     # agent already resolved in step 5a — reused here
 
-    prompts_result = await session.execute(
-        select(Prompt).where(
-            Prompt.tenant_id == tenant.id,
-            Prompt.active == True,
-        )
-    )
-    prompts = list(prompts_result.scalars().all())
-
-    # Priority: business_config (instructions + data) > custom prompt > default
-    system_prompt = (
-        f"Eres un asistente de atención al cliente para {tenant.name}."
-    )
+    # Priority: business_config is the ONLY source of truth.
+    # No more custom prompt fallback or first_message_hint.
+    system_prompt = ""
 
     model = None
     provider = None
@@ -1058,26 +1048,30 @@ async def handle_evolution_incoming(
 
         biz_text = format_business_config(agent.business_config)
         if biz_text:
-            system_prompt = f"{system_prompt}\n\n{biz_text}"
-        elif prompts:
-            # Backward compat: custom prompt when no business_config
-            system_prompt = prompts[0].content
+            system_prompt = biz_text
+        else:
+            # Agent exists but has no business_config — log and use emergency fallback
+            logger.warning(
+                "Agent {aid} has no business_config — using emergency fallback | tenant={tid}",
+                aid=agent.id, tid=tenant_id,
+            )
+            system_prompt = (
+                f"Eres un asistente de atención al cliente para {tenant.name}. "
+                "Responde con amabilidad y guía al cliente hacia la acción."
+            )
 
-    # ── First message hint (ONLY when no business_config instructions) ────
-    # When the tenant has custom business instructions, those ALWAYS win —
-    # the generic hint would override the proactive prompt framework.
-    has_business_instructions = bool(
-        agent and agent.business_config and agent.business_config.get("instructions")
-    )
-    if is_first_message and not has_business_instructions:
-        first_message_hint = (
-            "\n\n---\n"
-            "Este es el primer mensaje del usuario — saluda breve y cálido, "
-            f"preséntate como asistente de {tenant.name} y haz una sola pregunta abierta."
+    if not system_prompt:
+        # No agent configured — emergency fallback
+        logger.warning(
+            "No agent found for tenant {tid} — using emergency fallback",
+            tid=tenant_id,
         )
-        system_prompt += first_message_hint
+        system_prompt = (
+            f"Eres un asistente de atención al cliente para {tenant.name}. "
+            "Responde con amabilidad y guía al cliente hacia la acción."
+        )
 
-    # ── Universal formatting fallbacks (business instructions win) ─────
+    # ── Universal formatting rules (business instructions win) ─────────
     system_prompt += f"\n\n{universal_format_block()}"
 
     # ── 6a. Escalation check — BEFORE AI (Professional+ plans) ─────────────
