@@ -181,6 +181,9 @@ class Settings(BaseSettings):
     rate_limit_max_requests: int = 10
     rate_limit_window_seconds: int = 60
 
+    # ── Redis (debounce, caching) ───────────────────────────────────────
+    cache_redis_url: str = "redis://redis:6379/6"
+
     # ── Anti-Spam ────────────────────────────────────────────────────────
     anti_spam_enabled: bool = True
 
