@@ -1063,16 +1063,17 @@ async def handle_evolution_incoming(
             # Backward compat: custom prompt when no business_config
             system_prompt = prompts[0].content
 
-    # ── First message hint (subordinate to business instructions) ─────
-    if is_first_message:
+    # ── First message hint (ONLY when no business_config instructions) ────
+    # When the tenant has custom business instructions, those ALWAYS win —
+    # the generic hint would override the proactive prompt framework.
+    has_business_instructions = bool(
+        agent and agent.business_config and agent.business_config.get("instructions")
+    )
+    if is_first_message and not has_business_instructions:
         first_message_hint = (
             "\n\n---\n"
-            "Si las instrucciones del negocio no indican otra cosa: este es el "
-            "primer mensaje del usuario — saluda breve y cálido, preséntate como "
-            f"asistente de {tenant.name} y haz una sola pregunta abierta. "
-            "Si las instrucciones del negocio dicen algo distinto (por ejemplo, "
-            "no presentarte en conversaciones de outreach), sigue las "
-            "instrucciones del negocio."
+            "Este es el primer mensaje del usuario — saluda breve y cálido, "
+            f"preséntate como asistente de {tenant.name} y haz una sola pregunta abierta."
         )
         system_prompt += first_message_hint
 
