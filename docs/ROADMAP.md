@@ -77,6 +77,16 @@ Basado en la auditoría técnica propuesta por el usuario:
 
 ---
 
+## 🤖 FASE 5 — Prompt del Bot: Fuente Única de Verdad
+
+| # | Tarea | Estado | Notas |
+|---|-------|--------|-------|
+| 21 | **Unificar capas de prompt** | 🔲 Sin empezar | Bug: handler.py tiene 3 fuentes compitiendo: (1) default genérico (2) business_config (3) first_message_hint. Cuando business_config tiene instrucciones, el hint debería desactivarse. El LLM sigue la última instrucción más específica. |
+| 22 | **Evaluar default prompt** | 🔲 Sin empezar | Línea 1046: "Eres un asistente de atención al cliente para {tenant.name}" es demasiado genérico. Cuando hay business_config, ¿debería eliminarse? |
+| 23 | **Prioridad clara de instrucciones** | 🔲 Sin empezar | Definir orden: business_config > custom prompt > default. Documentar y coderelo en el handler para que no vuelva a pasar. |
+
+---
+
 ## 📊 Métricas (Pendiente de Diseño)
 
 | #   | Tarea                     | Estado         | Notas                                                                                                            |
