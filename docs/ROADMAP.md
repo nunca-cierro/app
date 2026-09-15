@@ -66,6 +66,17 @@ Basado en la auditoría técnica propuesta por el usuario:
 
 ---
 
+## 🖥️ FASE 4 — Dashboard: Auditoría y Limpieza
+
+| # | Tarea | Estado | Notas |
+|---|-------|--------|-------|
+| 17 | **Eliminar CTA del formulario** | 🔲 Sin empezar | Campo `business_cta` ("Escríbenos por WhatsApp al...") no tiene sentido — el cliente YA está hablando por WhatsApp. Quitar del form y del schema. |
+| 18 | **Revisar campos business_profile** | 🔲 Sin empezar | Analizar campo por campo cuáles son útiles vs relleno. Por ahora: name, description, schedule, phone, location, website, social, CTA. ¿Realmente se usan todos en el prompt del bot? |
+| 19 | **Simplificar secciones del form** | 🔲 Sin empezar | Agrupar mejor, quitar ruido. El usuario dice que hay info innecesaria que solo "informativa" pero no aporta al bot. |
+| 20 | **Optimizar métricas backend** | ✅ Desplegado | Redujo queries de 6→2 + índices en `messages.created_at`. Commit `d5d8e35`. |
+
+---
+
 ## 📊 Métricas (Pendiente de Diseño)
 
 | #   | Tarea                     | Estado         | Notas                                                                                                            |
