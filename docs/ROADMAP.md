@@ -48,15 +48,21 @@ Basado en la auditoría técnica propuesta por el usuario:
 
 | #   | Tarea                              | Estado         | Notas                                                                                                                                                                   |
 | --- | ---------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 12  | **Debounce / Message Aggregation** | 🔲 Sin empezar | Cuando el usuario envía 3-5 mensajes cortos seguidos, agregarlos en una sola inferencia (ventana de 3-5s). Evitar 5 llamadas al LLM por "Hola" + "quiero" + "una cita". |
+| 12  | **Debounce / Message Aggregation** | ✅ Desplegado  | Redis sorted sets, ventana 3s, graceful fallback. Commit `cb0476f`.                                                                                                     |
 
-### 3.4 Ciclo de Vida de la Conversación
+### 3.4 Sincronización de Templates
+
+| #   | Tarea                                   | Estado         | Notas                                                                                                                          |
+| --- | --------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| 13  | **Sincronizar agente con template**     | 🔲 Sin empezar | Botón superadmin en dashboard. Endpoint `POST /agents/{id}/sync-template`. Modal de confirmación + diff antes de sobreescribir. Riesgo: perder personalizaciones manuales. Deferred hasta 3-5 clientes reales. (~2-3h) |
+
+### 3.5 Ciclo de Vida de la Conversación
 
 | #   | Tarea                           | Estado         | Notas                                                                                                             |
 | --- | ------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------- |
-| 13  | **Máquina de estados mejorada** | 🔲 Sin empezar | Estados: activa, esperando respuesta, derivada a humano, cerrada. Ya hay `escalated` pero falta formalizar.       |
-| 14  | **Follow-ups automatizados**    | 🔲 Sin empezar | Si un cliente no responde en X horas, enviar mensaje de seguimiento. Ej: "Hola, ¿le sirvió la info que le envié?" |
-| 15  | **Pausa del bot por operador**  | 🔲 Sin empezar | Cuando un humano toma el chat, el bot se pausa (ya parcialmente implementado con cooldown de 72h).                |
+| 14  | **Máquina de estados mejorada** | 🔲 Sin empezar | Estados: activa, esperando respuesta, derivada a humano, cerrada. Ya hay `escalated` pero falta formalizar.       |
+| 15  | **Follow-ups automatizados**    | 🔲 Sin empezar | Si un cliente no responde en X horas, enviar mensaje de seguimiento. Ej: "Hola, ¿le sirvió la info que le envié?" |
+| 16  | **Pausa del bot por operador**  | 🔲 Sin empezar | Cuando un humano toma el chat, el bot se pausa (ya parcialmente implementado con cooldown de 72h).                |
 
 ---
 
