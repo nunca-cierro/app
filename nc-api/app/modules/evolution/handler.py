@@ -47,6 +47,10 @@ PAYMENT_KEYWORDS: list[str] = [
     "pago", "pagar", "qr", "daviplata", "bre-b",
 ]
 
+# Extra-data key for per-chat admin cooldown timestamps (dict[str, str]).
+# Maps normalized chat JID → ISO timestamp of last admin message.
+ADMIN_CHAT_COOLDOWNS_KEY: str = "admin_chat_cooldowns"
+
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
 
@@ -54,6 +58,19 @@ def _has_payment_keyword(text: str) -> bool:
     """Check if *text* contains any payment-related keyword (case-insensitive)."""
     lower = text.lower().strip()
     return any(kw in lower for kw in PAYMENT_KEYWORDS)
+
+
+def _normalize_jid(jid: str) -> str:
+    """Normalize a WhatsApp JID to a bare phone number for stable matching.
+
+    Evolution API delivers JIDs in different shapes depending on context:
+    - ``573102079572@s.whatsapp.net`` (standard)
+    - ``201442656784510@lid`` (linked device ID)
+
+    Both forms refer to the same chat when the numeric prefix matches.
+    Strip the ``@domain`` suffix so cooldown lookups work across formats.
+    """
+    return jid.split("@")[0] if "@" in jid else jid
 
 
 async def _insert_message_dedup(
@@ -388,11 +405,23 @@ async def handle_evolution_incoming(
         extra["admin_last_active_at"] = datetime.now(UTC).isoformat()
         conversation.extra_data = extra
 
+        # Store per-chat cooldown on the CONNECTION so it survives the
+        # LID ↔ phone number mismatch between admin and client webhooks.
+        # Key: normalized remote_jid (the chat partner's JID).
+        chat_jid = _normalize_jid(parsed.get("remote_jid", ""))
+        if chat_jid:
+            conn_extra = dict(connection.extra_data or {})
+            cooldowns: dict = dict(conn_extra.get(ADMIN_CHAT_COOLDOWNS_KEY) or {})
+            cooldowns[chat_jid] = datetime.now(UTC).isoformat()
+            conn_extra[ADMIN_CHAT_COOLDOWNS_KEY] = cooldowns
+            connection.extra_data = conn_extra
+
         conversation.last_message_at = datetime.now(UTC)
         await session.commit()
         logger.info(
-            "Admin message saved — bot cooldown 72h | conv={cid}",
+            "Admin message saved — bot cooldown 72h | conv={cid} | chat_jid={jid}",
             cid=conversation.id,
+            jid=chat_jid,
         )
         return
 
@@ -400,6 +429,73 @@ async def handle_evolution_incoming(
     # This MUST run before find-or-create to prevent the race condition
     # where client webhook creates a new conversation and the bot responds
     # before the admin webhook arrives to set the cooldown.
+    #
+    # Two-level check:
+    #   a) Connection-level cooldowns (set by normalized remote_jid) —
+    #      handles the LID ↔ phone mismatch between admin and client.
+    #   b) Conversation-level cooldown (legacy) — backward compat.
+
+    # ── 3a. Connection-level per-chat cooldown ─────────────────────────
+    chat_jid = _normalize_jid(parsed["external_user_id"])
+    conn_extra = dict(connection.extra_data or {})
+    conn_cooldowns: dict = dict(conn_extra.get(ADMIN_CHAT_COOLDOWNS_KEY) or {})
+    conn_admin_ts = conn_cooldowns.get(chat_jid)
+    if conn_admin_ts:
+        try:
+            admin_time = datetime.fromisoformat(conn_admin_ts)
+            elapsed = datetime.now(UTC) - admin_time
+            if elapsed < timedelta(hours=ADMIN_COOLDOWN_HOURS):
+                # Find or create conversation for silent save
+                conv_result = await session.execute(
+                    select(Conversation).where(
+                        Conversation.tenant_id == tenant_id,
+                        Conversation.platform_connection_id == connection.id,
+                        Conversation.external_user_id == parsed["external_user_id"],
+                        Conversation.status.in_(["open", "escalated"]),
+                    )
+                )
+                conversation = conv_result.scalar_one_or_none()
+                if conversation is None:
+                    conversation = Conversation(
+                        tenant_id=tenant_id,
+                        platform_connection_id=connection.id,
+                        external_user_id=parsed["external_user_id"],
+                        status="open",
+                    )
+                    session.add(conversation)
+                    await session.flush()
+
+                remaining_h = int(
+                    (timedelta(hours=ADMIN_COOLDOWN_HOURS) - elapsed).total_seconds() / 3600
+                )
+                silent_inbound_id = await _insert_message_dedup(
+                    session,
+                    tenant_id=tenant_id,
+                    conversation_id=conversation.id,
+                    platform_connection_id=connection.id,
+                    direction="in",
+                    external_user_id=parsed["external_user_id"],
+                    external_message_id=parsed["external_message_id"],
+                    platform="evolution",
+                    message_type="text",
+                    content=parsed["content"],
+                    status="received",
+                )
+                if silent_inbound_id is None:
+                    return
+                conversation.last_message_at = datetime.now(UTC)
+                await session.commit()
+                logger.info(
+                    "Admin cooldown (conn-level) — silent save ({h}h remaining) | conv={cid} | jid={jid}",
+                    h=remaining_h,
+                    cid=conversation.id,
+                    jid=chat_jid,
+                )
+                return
+        except (ValueError, TypeError):
+            pass
+
+    # ── 3b. Conversation-level cooldown (legacy) ───────────────────────
     conv_result = await session.execute(
         select(Conversation).where(
             Conversation.tenant_id == tenant_id,
