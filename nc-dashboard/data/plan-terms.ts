@@ -20,7 +20,7 @@ export const planTerms: PlanTerm[] = [
     key: "Respuestas con IA al mes",
     matches: ["respuestas con ia", "respuestas ia"],
     explanation:
-      "Mensajes respondidos por la inteligencia artificial con el contexto de tu negocio. Cada plan incluye un cupo mensual de respuestas con IA; las respuestas programadas (FAQ) y las escalaciones a un asesor no consumen tu cupo.",
+      "Mensajes respondidos por la inteligencia artificial con el contexto de tu negocio. Todos los planes incluyen IA, con un cupo mensual según el plan; las respuestas programadas (FAQ) y las escalaciones a un asesor no consumen tu cupo.",
   },
   {
     key: "Respuestas programadas (FAQ)",
@@ -78,12 +78,6 @@ export const planTerms: PlanTerm[] = [
     matches: ["números de whatsapp", "números de wa", "whatsapp number"],
     explanation:
       "Cuántos números de WhatsApp puedes conectar para que el bot atienda consultas. La Prueba y Básico usan 1 número, Profesional incluye hasta 5 y Empresarial es ilimitado.",
-  },
-  {
-    key: "Tipo de respuestas",
-    matches: ["tipo de respuestas"],
-    explanation:
-      "El motor que responde a tus clientes: respuestas programadas por palabras clave (FAQ) e inteligencia artificial con contexto, incluidas en todos los planes.",
   },
   {
     key: "Inteligencia artificial",

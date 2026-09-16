@@ -1,4 +1,4 @@
-import { PLAN_AI_CAPS, AI_QUOTA_NOTE } from "@/lib/plans";
+import { PLAN_AI_CAPS, AI_QUOTA_NOTE, CONVERSATION_ESTIMATE_NOTE } from "@/lib/plans";
 
 export const siteMetadata = {
   lang: "es",
@@ -203,12 +203,12 @@ export const sitePlans = {
   ],
   // Note under the plan table — cap unit semantics (owner-validated copy).
   quotaNote: AI_QUOTA_NOTE,
+  // Footnote with the conversation estimate assumption (owner-validated: ÷4).
+  estimateNote: CONVERSATION_ESTIMATE_NOTE,
   // Comparison table rows (prices: Escenario A, copy strings)
   comparisonRows: [
     { label: "Precio", basic: "Desde $390.000/mes + IVA", pro: "Desde $790.000/mes + IVA", enterprise: "Desde $1.590.000/mes + IVA" },
-    { label: "Tipo de respuestas", basic: "Programadas + IA (hasta 2.000/mes)", pro: "IA con contexto del negocio", enterprise: "IA con contexto del negocio" },
-    { label: "Respuestas programadas (FAQ)", basic: "Ilimitadas", pro: "Ilimitadas", enterprise: "Ilimitadas" },
-    { label: "Respuestas con IA al mes", basic: "Hasta 2.000", pro: "10.000", enterprise: "Ilimitadas" },
+    { label: "Respuestas con IA al mes", basic: "Hasta 2.000 (~500 conversaciones)", pro: "10.000 (~2.500 conversaciones)", enterprise: "Ilimitadas" },
     { label: "Números de WhatsApp", basic: "1", pro: "Hasta 5", enterprise: "Ilimitados" },
     { label: "Productos/Servicios", basic: "Hasta 50", pro: "Hasta 200", enterprise: "Ilimitado" },
     { label: "Negocios", basic: "1", pro: "5", enterprise: "Ilimitados" },

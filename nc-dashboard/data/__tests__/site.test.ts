@@ -41,14 +41,26 @@ describe("sitePlans comparisonRows", () => {
     expect(row?.enterprise).toBe("Desde $1.590.000/mes + IVA");
   });
 
-  it("shows IA with the 2.000 cap for Básico in the AI responses row", () => {
+  it("shows the AI response caps with estimated conversations (÷4, ~)", () => {
     const row = sitePlans.comparisonRows.find(
       (r) => r.label === "Respuestas con IA al mes",
     );
     expect(row).toBeDefined();
-    expect(row?.basic).toBe("Hasta 2.000");
-    expect(row?.pro).toBe("10.000");
+    expect(row?.basic).toBe("Hasta 2.000 (~500 conversaciones)");
+    expect(row?.pro).toBe("10.000 (~2.500 conversaciones)");
     expect(row?.enterprise).toBe("Ilimitadas");
+    expect(sitePlans.estimateNote).toContain("~4 mensajes por conversación");
+  });
+
+  it("drops the Tipo de respuestas and Respuestas programadas (FAQ) rows (noise)", () => {
+    expect(
+      sitePlans.comparisonRows.some((r) => r.label === "Tipo de respuestas"),
+    ).toBe(false);
+    expect(
+      sitePlans.comparisonRows.some(
+        (r) => r.label === "Respuestas programadas (FAQ)",
+      ),
+    ).toBe(false);
   });
 
   it("breaks out WhatsApp numbers as an indexable row (Profesional: hasta 5)", () => {
@@ -155,9 +167,9 @@ describe("landing desajuste C — guarantee matches the real 3-day trial WITH IA
     expect(sitePlans.guaranteeText).toMatch(/IA/i);
   });
 
-  it("explains the AI cap unit under the plan table (owner-validated note)", () => {
+  it("explains the AI cap unit and the FAQ downgrade under the plan table", () => {
     expect(sitePlans.quotaNote).toBe(
-      "1 respuesta con IA = 1 mensaje generado por IA. Las respuestas programadas (FAQ) y las escalaciones a un asesor NO consumen tu cupo.",
+      "1 respuesta con IA = 1 mensaje generado por IA. Al agotar tu cupo mensual, el bot continúa atendiendo con respuestas programadas (FAQ) para que no pierdas clientes. Las escalaciones a un asesor no consumen tu cupo.",
     );
   });
 });

@@ -155,6 +155,10 @@ export function Plans() {
         {sitePlans.quotaNote}
       </p>
 
+      <p className="mx-auto mt-2 max-w-2xl text-center text-xs text-stone-500">
+        {sitePlans.estimateNote}
+      </p>
+
       <p className="mx-auto mt-8 max-w-2xl text-center text-sm text-stone-600">
         {sitePlans.footerText}
       </p>

@@ -31,7 +31,14 @@ export const PLAN_AI_CAPS: Record<string, string> = {
  * unit and what does NOT consume it.
  */
 export const AI_QUOTA_NOTE =
-  "1 respuesta con IA = 1 mensaje generado por IA. Las respuestas programadas (FAQ) y las escalaciones a un asesor NO consumen tu cupo.";
+  "1 respuesta con IA = 1 mensaje generado por IA. Al agotar tu cupo mensual, el bot continúa atendiendo con respuestas programadas (FAQ) para que no pierdas clientes. Las escalaciones a un asesor no consumen tu cupo.";
+
+/**
+ * Footnote under the plan table — the conversation estimate assumption.
+ * Owner-validated: divide by ~4 messages per conversation, use "~" not "=".
+ */
+export const CONVERSATION_ESTIMATE_NOTE =
+  "Cantidad estimada de conversaciones, asumiendo ~4 mensajes por conversación.";
 
 /**
  * Escenario A (owner-validated, plan-differentiation): prices are pure copy
