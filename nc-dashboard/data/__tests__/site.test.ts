@@ -19,9 +19,10 @@ import { planTerms, findPlanTerm } from "@/data/plan-terms";
  * - the FALSE "Empresarial: Editar + agregar" client-access row is fixed
  *   to "Solo lectura" (clients are read-only on ANY plan, backend
  *   CLIENT_VIEW_ONLY)
- * - planInfo does not promise per-plan AI models the code doesn't grant
- *   (the backend uses a single GROQ_MODEL) nor IA on Básico (no CAP_AI)
- * - the trial stays programmed-only (no AI)
+ * - EVERY plan carries AI (backend CAP_AI): trial 500 / Básico 2.000 /
+ *   Profesional 10.000 / Empresarial ilimitado; planInfo does not promise
+ *   per-plan AI models the code doesn't grant (single GROQ_MODEL)
+ * - the trial is 3 días CON IA (soft cap 500 respuestas IA)
  */
 
 describe("sitePlans comparisonRows", () => {
@@ -38,6 +39,26 @@ describe("sitePlans comparisonRows", () => {
     expect(row?.basic).toBe("Desde $390.000/mes + IVA");
     expect(row?.pro).toBe("Desde $790.000/mes + IVA");
     expect(row?.enterprise).toBe("Desde $1.590.000/mes + IVA");
+  });
+
+  it("shows IA with the 2.000 cap for Básico in the AI responses row", () => {
+    const row = sitePlans.comparisonRows.find(
+      (r) => r.label === "Respuestas con IA al mes",
+    );
+    expect(row).toBeDefined();
+    expect(row?.basic).toBe("Hasta 2.000");
+    expect(row?.pro).toBe("10.000");
+    expect(row?.enterprise).toBe("Ilimitadas");
+  });
+
+  it("breaks out WhatsApp numbers as an indexable row (Profesional: hasta 5)", () => {
+    const row = sitePlans.comparisonRows.find(
+      (r) => r.label === "Números de WhatsApp",
+    );
+    expect(row).toBeDefined();
+    expect(row?.basic).toBe("1");
+    expect(row?.pro).toBe("Hasta 5");
+    expect(row?.enterprise).toBe("Ilimitados");
   });
 });
 
@@ -59,17 +80,21 @@ describe("sitePlans packages (Escenario A)", () => {
     }
   });
 
-  it("promises no IA on the Básico package copy", () => {
+  it("promises IA on the Básico package copy (soft 2.000 cap)", () => {
     const basic = sitePlans.packages.find((p) => p.name === "Básico");
-    const hasAI = basic?.features.some((f) => /inteligencia artificial|ia\b/i.test(f));
-    expect(hasAI).toBe(false);
+    const hasAI = basic?.features.some((f) =>
+      /inteligencia artificial|ia\b/i.test(f),
+    );
+    expect(hasAI).toBe(true);
+    expect(basic?.features).toContain("Hasta 2.000 respuestas con IA al mes");
   });
 });
 
 describe("sitePlans planInfo (no false promises)", () => {
-  it("keeps hasAI false on Básico (no CAP_AI in the backend)", () => {
-    expect(sitePlans.planInfo.basic.hasAI).toBe(false);
-    expect(sitePlans.planInfo.basic.type).toBe("programmed");
+  it("marks hasAI true on Básico (CAP_AI granted to every plan)", () => {
+    expect(sitePlans.planInfo.basic.hasAI).toBe(true);
+    expect(sitePlans.planInfo.basic.type).toBe("ai");
+    expect(sitePlans.planInfo.basic.maxConversations).toBe(2000);
   });
 
   it("does NOT promise a per-plan AI model the code doesn't grant", () => {
@@ -84,12 +109,13 @@ describe("sitePlans planInfo (no false promises)", () => {
   });
 });
 
-describe("sitePlans trialInfo (programmed-only)", () => {
-  it("describes a programmed FAQ trial without AI", () => {
-    expect(sitePlans.trialInfo.type).toBe("programmed");
-    expect(sitePlans.trialInfo.days).toBe(7);
-    expect(sitePlans.trialInfo.description).toContain("programadas");
-    expect(sitePlans.trialInfo.description).not.toMatch(/inteligencia artificial/i);
+describe("sitePlans trialInfo (3 días con IA)", () => {
+  it("describes a 3-day trial WITH AI (soft cap 500 respuestas IA)", () => {
+    expect(sitePlans.trialInfo.type).toBe("ai");
+    expect(sitePlans.trialInfo.days).toBe(3);
+    expect(sitePlans.trialInfo.description).toContain("3 días");
+    expect(sitePlans.trialInfo.description).toContain("500 respuestas IA");
+    expect(sitePlans.trialInfo.description).toMatch(/IA\b/i);
   });
 });
 
@@ -116,28 +142,34 @@ describe("anti-undercut floor (sitePlans)", () => {
 
 // ── 2026-09 audit desajustes (landing swap follow-up) ──
 
-describe("landing desajuste C — guarantee vs 7-day programmed trial", () => {
-  it("aligns the guarantee to the real trial (7 días programado, sin IA)", () => {
-    expect(sitePlans.guaranteeText).toContain("7 días");
+describe("landing desajuste C — guarantee matches the real 3-day trial WITH IA", () => {
+  it("aligns the guarantee to the real trial (3 días con IA, 500 respuestas)", () => {
+    expect(sitePlans.guaranteeText).toContain("3 días");
+    expect(sitePlans.guaranteeText).toContain("500 respuestas IA");
     expect(sitePlans.guaranteeText).not.toMatch(/primer mes/);
     expect(sitePlans.guaranteeText).not.toMatch(/sin riesgo/);
   });
 
-  it("adds the honest 'sin inteligencia artificial' qualifier (matches /precios trialNote)", () => {
-    expect(sitePlans.guaranteeText).toMatch(/sin inteligencia artificial/);
-    expect(sitePlans.guaranteeText).toMatch(/programadas/);
+  it("no longer claims the trial is programmed-only (sin IA)", () => {
+    expect(sitePlans.guaranteeText).not.toMatch(/sin inteligencia artificial/);
+    expect(sitePlans.guaranteeText).toMatch(/IA/i);
+  });
+
+  it("explains the AI cap unit under the plan table (owner-validated note)", () => {
+    expect(sitePlans.quotaNote).toBe(
+      "1 respuesta con IA = 1 mensaje generado por IA. Las respuestas programadas (FAQ) y las escalaciones a un asesor NO consumen tu cupo.",
+    );
   });
 });
 
 describe("landing desajuste D — FAQ claims match plan capabilities", () => {
-  it("gates IA to Profesional+ in the FAQ (no AI on all plans)", () => {
+  it("states AI is included in ALL plans in the FAQ", () => {
     const faq = siteFaq.items.find((f) =>
       f.question.includes("¿El bot entiende lo que los clientes preguntan?"),
     );
     expect(faq).toBeDefined();
-    expect(faq?.answer).toMatch(
-      /A partir del plan Profesional[^.]*inteligencia artificial/,
-    );
+    expect(faq?.answer).toMatch(/todos los planes[^.]*inteligencia artificial/i);
+    expect(faq?.answer).not.toMatch(/A partir del plan Profesional/);
   });
 
   it("says weekly metrics exist on every plan and live dashboard from Profesional", () => {
@@ -169,7 +201,7 @@ describe("landing desajuste E — no unbacked enterprise promises", () => {
   it("softens integrations to an advisory phrasing", () => {
     const enterprise = sitePlans.packages.find((p) => p.name === "Empresarial");
     const joined = enterprise?.features.join(" ");
-    expect(joined).toContain("Asesoría para conectar con sus sistemas");
+    expect(joined).toContain("Asesoría para conectar con tus sistemas");
     expect(joined).not.toMatch(/integrar con tus sistemas/i);
   });
 });
@@ -238,16 +270,16 @@ describe("hero SEO — keyword-strong H1 with brand eyebrow", () => {
   });
 
   it("moves the brand line 'nunca cierra' to the eyebrow kicker", () => {
-    expect(siteHero.eyebrow).toBe("Su negocio nunca cierra");
+    expect(siteHero.eyebrow).toBe("Tu negocio nunca cierra");
     expect(siteHero.title).not.toMatch(/nunca cierra/i);
   });
 });
 
 describe("siteMetadata — no barrio framing, empresa keywords", () => {
-  it("describes the 24/7 bot for empresas with the 7-day free trial", () => {
+  it("describes the 24/7 bot for empresas with the 3-day AI trial", () => {
     expect(siteMetadata.description).toContain("empresas en Colombia");
     expect(siteMetadata.description).toContain("24/7");
-    expect(siteMetadata.description).toContain("7 días de prueba gratis");
+    expect(siteMetadata.description).toContain("3 días de prueba gratis con IA");
     expect(siteMetadata.description).not.toMatch(/barberías|tiendas/i);
     expect(siteMetadata.description).not.toMatch(/pequeña empresa/i);
   });
@@ -259,8 +291,10 @@ describe("siteMetadata — no barrio framing, empresa keywords", () => {
   });
 });
 
-// ── REGISTER — usted (Colombian neutral, NO voseo) ──
-// The audit found a tú/usted mix. Every user-facing string must use usted.
+// ── REGISTER — tuteo (owner-confirmed full tuteo, NO voseo, NO usted) ──
+// Every user-facing string addresses the reader with "tú". No voseo and no
+// "usted". A third-person "su" (e.g. "los negocios… su atención") is fine;
+// a "su/sus/le" addressing the reader is a register regression.
 
 const userFacingTexts = [
   siteMetadata.description,
@@ -280,11 +314,26 @@ const userFacingTexts = [
   ...siteContact.quoteChecklist.items.map((i) => i.text),
 ];
 
-describe("register — no tú/vos pronouns in user-facing copy", () => {
-  it("uses usted forms everywhere in data/site.ts", () => {
+const ustedPattern =
+  /(usted|ustedes|déjeme|cuéntenos|escríbanos|contáctenos|Elija|Cancele|Agende una|su negocio|su empresa|sus clientes|su WhatsApp|su sitio|su plan|su bot|su equipo|le orientamos|le mostramos|le recomendamos|le gustaría|le conviene|le mantenemos|le ayudamos|le respondemos|le acompañamos|tenés|querés|podés|volvé|mirá|dale|tranqui|al toque)/i;
+
+describe("register — tuteo (Colombian neutral, NO voseo, NO usted)", () => {
+  it("uses tú (tuteo) forms everywhere in data/site.ts", () => {
     for (const text of userFacingTexts) {
-      expect(text).not.toMatch(/\b(tú|tus|tu|te|ti|contigo|tuyo|tuya)\b/i);
+      expect(text).not.toMatch(ustedPattern);
     }
+  });
+
+  it("addresses the reader with tú in the key sections", () => {
+    expect(siteHero.eyebrow).toMatch(/Tu negocio/);
+    expect(siteHero.title).toMatch(/tus clientes/);
+    expect(sitePlans.title).toMatch(/tu negocio/);
+    expect(siteContact.title).toMatch(/tu negocio/);
+    expect(siteContact.confidenceText).toMatch(/te orientamos/);
+    const customFaq = siteFaq.items.find((f) =>
+      f.question.includes("¿Puedo personalizar las respuestas?"),
+    );
+    expect(customFaq?.answer).toMatch(/tú defines/);
   });
 
   it("FAQ #8 lists premium verticals first", () => {
@@ -317,10 +366,10 @@ describe("plan-terms — tooltip coverage", () => {
     }
   });
 
-  it("keeps explanations in the usted register (no tú/vos)", () => {
+  it("keeps explanations in the tuteo register (no usted, no voseo)", () => {
     for (const term of planTerms) {
       expect(term.explanation).not.toMatch(
-        /\b(tú|tus|tu|te|ti|contigo|tuyo|tuya)\b/i,
+        /(usted|ustedes|déjeme|cuéntenos|escríbanos|contáctenos|Elija|Cancele|Agende|su negocio|sus canales|su plan|su bot|su cliente|su equipo|sus sistemas|su operación|le acompañamos|le orientamos|le mostramos|le recomendamos|tenés|querés|podés|volvé|mirá|dale|tranqui|al toque)/i,
       );
     }
   });

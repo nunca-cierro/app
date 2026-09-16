@@ -49,7 +49,7 @@ class TestPlanLimitsSchema:
         assert limits.model_dump() == {
             "max_agents": 1,
             "max_products": 50,
-            "max_conversations_per_month": None,
+            "max_conversations_per_month": 2000,
             "max_businesses": 1,
         }
 
@@ -332,8 +332,8 @@ class TestPlanUsageEndpoint:
         assert response.status_code == 200, response.text
         data = response.json()
         assert data["usage"]["ai_responses"] == 3
-        # basic has NO AI → no AI-response limit (None → pct N/A, meter hidden).
-        assert data["pct"] is None
+        # basic has a 2000/mo AI cap → pct = round(3 * 100 / 2000) = 0.
+        assert data["pct"] == 0
 
     @pytest.mark.asyncio
     async def test_tenant_isolation_active_tenant_only(
@@ -368,7 +368,7 @@ class TestPlanUsageEndpoint:
     async def test_unknown_plan_falls_back_to_basic_limits(
         self, client: AsyncClient, db_session: AsyncSession,
     ) -> None:
-        """UnknownPlanFallsBackToBasic: limits = basic; pct vs 500."""
+        """UnknownPlanFallsBackToBasic: limits = basic; pct vs 2000."""
         tenant = await _seed_usage_tenant(
             db_session, plan="legacy-plan", slug="legacy",
             ai_messages=100, products=2,
@@ -384,11 +384,11 @@ class TestPlanUsageEndpoint:
         assert data["limits"] == {
             "max_agents": 1,
             "max_products": 50,
-            "max_conversations_per_month": None,
+            "max_conversations_per_month": 2000,
             "max_businesses": 1,
         }
-        # basic has NO AI → pct N/A (null), meter hidden.
-        assert data["pct"] is None
+        # basic has a 2000/mo AI cap → pct = round(100 * 100 / 2000) = 5.
+        assert data["pct"] == 5
         assert data["over_limit"] is False
 
     @pytest.mark.asyncio
@@ -421,8 +421,8 @@ class TestPlanUsageEndpoint:
         self, client: AsyncClient, db_session: AsyncSession,
     ) -> None:
         """DowngradePreservesData: 3000 AI responses survive a professional→basic
-        downgrade; the meter keeps counting them. Básico has no AI limit (None)
-        so pct is N/A; the soft excess now comes from products (60 > 50)."""
+        downgrade; the meter keeps counting them. Básico now has a 2000/mo AI
+        cap so the soft excess comes from AI (3000 > 2000) and products (60 > 50)."""
         tenant = await _seed_usage_tenant(
             db_session, plan="professional", slug="downgrade-co",
             ai_messages=3000, products=60,
@@ -430,7 +430,7 @@ class TestPlanUsageEndpoint:
         _auth_as(db_session, tenant_id=tenant.id)
         await db_session.commit()
 
-        # Downgrade to basic (generous limits: 50 products, no AI limit).
+        # Downgrade to basic (generous limits: 50 products, 2000 AI responses/mo).
         tenant.plan = "basic"
         await db_session.commit()
 
@@ -439,10 +439,10 @@ class TestPlanUsageEndpoint:
         assert response.status_code == 200, response.text
         data = response.json()
         assert data["plan"] == "basic"
-        assert data["limits"]["max_conversations_per_month"] is None
+        assert data["limits"]["max_conversations_per_month"] == 2000
         assert data["usage"]["ai_responses"] == 3000  # data fully preserved
-        assert data["pct"] is None  # basic has no AI limit → N/A
-        assert data["over_limit"] is True  # products 60 > 50 → soft excess
+        assert data["pct"] == 150  # round(3000 * 100 / 2000) — AI soft excess
+        assert data["over_limit"] is True  # AI 3000 > 2000 AND products 60 > 50
 
     @pytest.mark.asyncio
     async def test_unauthenticated_returns_401(

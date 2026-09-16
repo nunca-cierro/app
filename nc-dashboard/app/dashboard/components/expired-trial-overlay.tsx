@@ -40,11 +40,11 @@ export function ExpiredTrialOverlay() {
           </div>
         </div>
         <h1 className="text-2xl font-bold tracking-tight">
-          Su prueba gratuita de 7 días finalizó
+          Tu prueba gratuita de 3 días finalizó
         </h1>
         <p className="text-muted-foreground mx-auto mt-2 max-w-md">
-          Elija un plan para seguir usando NuncaCierro y no perder ninguna
-          conversación ni configuración de su negocio.
+          Elige un plan para seguir usando NuncaCierro y no perder ninguna
+          conversación ni configuración de tu negocio.
         </p>
       </div>
 

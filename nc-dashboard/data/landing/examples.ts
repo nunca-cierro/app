@@ -22,8 +22,8 @@ export const demoItems: DemoItem[] = [
 export const landingExamples = {
   sectionId: "ejemplos",
   label: "Ejemplos",
-  title: "Así podría verse su sitio web",
-  subtitle: "Estos son ejemplos de sitios web que podemos hacer para su negocio.",
+  title: "Así podría verse tu sitio web",
+  subtitle: "Estos son ejemplos de sitios web que podemos hacer para tu negocio.",
   secondarySubtitle:
     "Creamos sitios web para negocios con enfoque en resultados, diseño profesional y contenido optimizado para atraer clientes.",
   imageAltPrefix: "Demo",
@@ -40,9 +40,9 @@ export const landingExamples = {
     closeText: "Cerrar",
   },
   cta: {
-    title: "¿Quiere una web como estas?",
+    title: "¿Quieres una web como estas?",
     description:
-      "Le diseñamos un sitio a medida con estructura de venta, branding sólido y enfoque de resultados para su negocio.",
+      "Te diseñamos un sitio a medida con estructura de venta, branding sólido y enfoque de resultados para tu negocio.",
     buttonLabel: "Cotizar por WhatsApp",
   },
   demos: demoItems,

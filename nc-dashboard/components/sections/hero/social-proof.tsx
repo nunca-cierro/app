@@ -26,7 +26,7 @@ export function SocialProof() {
 
       {/* Text */}
       <p className="text-[13px] text-white/80">
-        <span className="font-medium">Su negocio</span> puede hacer la diferencia con
+        <span className="font-medium">Tu negocio</span> puede hacer la diferencia con
         NuncaCierro
       </p>
     </div>

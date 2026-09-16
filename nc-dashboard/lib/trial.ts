@@ -3,7 +3,7 @@
  * remaining-days calculation used across the dashboard.
  */
 
-export const TRIAL_DAYS = 7;
+export const TRIAL_DAYS = 3;
 
 const DAY_MS = 86400000;
 

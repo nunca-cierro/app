@@ -153,11 +153,12 @@ describe("ClientDashboard — plan usage widget integration", () => {
     const html = await renderDashboard();
 
     expect(html).toContain("Plan Actual");
-    expect(html).toContain("Uso de su plan");
-    expect(html).toContain("Respuestas IA este mes");
+    expect(html).toContain("Uso de tu plan");
+    expect(html).toContain("1.200");
+    expect(html).toContain("/ 5.000 respuestas IA este mes");
     // Widget tras "Plan Actual" — el orden importa (design, task 3.5).
     expect(html.indexOf("Plan Actual")).toBeLessThan(
-      html.indexOf("Uso de su plan"),
+      html.indexOf("Uso de tu plan"),
     );
   });
 
@@ -168,7 +169,7 @@ describe("ClientDashboard — plan usage widget integration", () => {
 
     expect(html).toContain("Plan Actual");
     expect(html).toContain("Mi Negocio");
-    expect(html).not.toContain("Uso de su plan");
+    expect(html).not.toContain("Uso de tu plan");
   });
 
   it("renders Ilimitado without a bar for an enterprise tenant", async () => {
@@ -191,7 +192,7 @@ describe("ClientDashboard — plan usage widget integration", () => {
 
     const html = await renderDashboard();
 
-    expect(html).toContain("Uso de su plan");
+    expect(html).toContain("Uso de tu plan");
     expect(html).toContain("Ilimitado");
     expect(html).not.toContain("progressbar");
   });

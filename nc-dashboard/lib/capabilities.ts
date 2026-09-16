@@ -41,7 +41,9 @@ function fallbackCapabilities(user: CapabilityUser): Capability[] {
 
   if (role === "superadmin") return [...ALL_CAPABILITIES];
   if (role === "admin") {
-    // Admin is plan-gated exactly like the backend matrix.
+    // Admin is plan-gated exactly like the backend matrix. EVERY plan carries
+    // AI (ai.responses): trial/basic with a soft monthly cap (500/2.000),
+    // professional/enterprise with management + business editing.
     if (plan === "professional" || plan === "enterprise") {
       return [
         CAPABILITIES.dashboardView,
@@ -53,8 +55,12 @@ function fallbackCapabilities(user: CapabilityUser): Capability[] {
         CAPABILITIES.businessEdit,
       ];
     }
-    // basic/trial/unknown plan → view-only dashboard + conversations
-    return [CAPABILITIES.dashboardView, CAPABILITIES.conversationsView];
+    // basic/trial/unknown plan → dashboard + conversations + AI (soft cap)
+    return [
+      CAPABILITIES.dashboardView,
+      CAPABILITIES.conversationsView,
+      CAPABILITIES.ai,
+    ];
   }
   // client + unknown/stale roles → view-only on ANY plan (UR-7). business.view
   // is kept so the client dashboard still renders the read-only config.

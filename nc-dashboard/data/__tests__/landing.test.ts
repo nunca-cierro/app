@@ -15,13 +15,14 @@ import { landingAutomation } from "@/data/landing/automation";
  * `components/landing-content.tsx` (hero → services → process → examples →
  * pricing → faq → contact → automation cross-sell). The prior audit called
  * them dead leftovers — they are NOT; only the copy was left in tú while the
- * rest of the app was swept to usted. These tests pin the usted register, the
+ * rest of the app was swept to usted. These tests pin the TUTEO register
+ * (owner-confirmed: full tú, no usted, no voseo), the
  * one-time web pricing (untouched numbers) and the cross-sell back to the
  * WhatsApp automation primary line.
  */
 
-const tuteoPattern =
-  /\b(tú|tus|tu|te|ti|contigo|tuyo|tuya|tenés|querés|podés|mirá|empieces|complicarte)\b/i;
+const ustedPattern =
+  /(usted|ustedes|déjeme|cuéntenos|escríbanos|contáctenos|Elija|Cancele|Agende una|su negocio|su empresa|sus clientes|su WhatsApp|su sitio|su plan|su bot|su equipo|le orientamos|le mostramos|le recomendamos|le gustaría|le conviene|le mantenemos|le ayudamos|le respondemos|le acompañamos|tenés|querés|podés|volvé|mirá|dale|tranqui|al toque)/i;
 
 const userFacingTexts = [
   landingHero.title,
@@ -66,11 +67,18 @@ const userFacingTexts = [
   landingAutomation.secondary.ctaLabel,
 ];
 
-describe("/inicio web landing — register (usted, no tuteo)", () => {
-  it("uses usted forms in every rendered web-landing string", () => {
+describe("/inicio web landing — register (tuteo, no usted, no voseo)", () => {
+  it("uses tú (tuteo) forms in every rendered web-landing string", () => {
     for (const text of userFacingTexts) {
-      expect(text).not.toMatch(tuteoPattern);
+      expect(text).not.toMatch(ustedPattern);
     }
+  });
+
+  it("addresses the reader with tú in the web landing", () => {
+    expect(landingHero.title).toMatch(/tu negocio/);
+    expect(landingHero.subtitle).toMatch(/Te creamos/i);
+    expect(landingPricing.subtitle).toMatch(/ayudarte|tu sitio web/);
+    expect(landingContact.title).toMatch(/tu negocio/);
   });
 });
 

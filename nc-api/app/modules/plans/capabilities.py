@@ -41,16 +41,18 @@ CLIENT_VIEW_ONLY: Final[frozenset[str]] = frozenset(
 )
 
 # ── Plan matrix ─────────────────────────────────────────────────────────────
-# trial/basic run programmed keyword/FAQ responses; professional/enterprise
-# unlock AI + tenant management capabilities. Superadmin is exempt from plan
-# gates (platform operator provisions agents/connections for any plan).
+# Every plan carries AI (CAP_AI); trial/basic run the programmed keyword/FAQ
+# path as a soft-cap fallback (see the limits section). Agent/connection/
+# business management (agents.manage, connections.manage, business.edit)
+# stays professional+ only. Superadmin is exempt from plan gates (platform
+# operator provisions agents/connections for any plan).
 
 PLAN_CAPABILITIES: Final[dict[str, frozenset[str]]] = {
     "trial": frozenset(
-        {CAP_DASHBOARD_VIEW, CAP_CONVERSATIONS_VIEW}
+        {CAP_DASHBOARD_VIEW, CAP_CONVERSATIONS_VIEW, CAP_AI}
     ),
     "basic": frozenset(
-        {CAP_DASHBOARD_VIEW, CAP_CONVERSATIONS_VIEW}
+        {CAP_DASHBOARD_VIEW, CAP_CONVERSATIONS_VIEW, CAP_AI}
     ),
     "professional": frozenset(
         {
@@ -78,21 +80,21 @@ PLAN_CAPABILITIES: Final[dict[str, frozenset[str]]] = {
 
 # ── Limits per plan (None = unlimited) ──────────────────────────────────────
 # max_conversations_per_month = AI responses (origin='ai') per tenant per month.
-# trial/basic have NO AI (programmed FAQ only) → the AI-response limit is None
-# (N/A; the dashboard meter hides the IA row for plans without CAP_AI). Limits
-# are generous by decision (gpt-4o-mini cost is negligible) and always soft:
-# consumed by GET /plans/usage for the meter, never blocking or billing.
+# trial/basic carry a soft monthly cap (500/2000): when exhausted the handler
+# falls back to programmed FAQ responses instead of calling the LLM. Limits
+# are always soft: consumed by GET /plans/usage for the meter and by the
+# handler's fallback gate, never billing or hard-blocking.
 PLAN_LIMITS: Final[dict[str, dict[str, int | None]]] = {
     "trial": {
         "max_agents": 1,
         "max_products": 25,
-        "max_conversations_per_month": None,
+        "max_conversations_per_month": 500,
         "max_businesses": 1,
     },
     "basic": {
         "max_agents": 1,
         "max_products": 50,
-        "max_conversations_per_month": None,
+        "max_conversations_per_month": 2000,
         "max_businesses": 1,
     },
     "professional": {
@@ -110,7 +112,7 @@ PLAN_LIMITS: Final[dict[str, dict[str, int | None]]] = {
 }
 
 # Free-trial window in days (kept here — not hardcoded in the handler).
-TRIAL_DAYS: Final[int] = 7
+TRIAL_DAYS: Final[int] = 3
 
 DEFAULT_PLAN: Final[str] = "basic"
 

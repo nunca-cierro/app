@@ -1,5 +1,5 @@
 /**
- * Plan term → short clarifying explanation (Spanish, usted, no voseo).
+ * Plan term → short clarifying explanation (Spanish, tuteo, no voseo).
  *
  * Each entry maps one product concept to the tooltip text shown next to the
  * feature label in the plans section. `matches` are case-insensitive substrings
@@ -18,15 +18,15 @@ export type PlanTerm = {
 export const planTerms: PlanTerm[] = [
   {
     key: "Respuestas con IA al mes",
-    matches: ["respuestas con ia"],
+    matches: ["respuestas con ia", "respuestas ia"],
     explanation:
-      "Mensajes respondidos por la inteligencia artificial con el contexto de su negocio. En Básico no aplica (respuestas programadas).",
+      "Mensajes respondidos por la inteligencia artificial con el contexto de tu negocio. Cada plan incluye un cupo mensual de respuestas con IA; las respuestas programadas (FAQ) y las escalaciones a un asesor no consumen tu cupo.",
   },
   {
     key: "Respuestas programadas (FAQ)",
     matches: ["programada", "faq"],
     explanation:
-      "Respuestas automáticas por palabras clave y preguntas frecuentes, sin inteligencia artificial.",
+      "Respuestas automáticas por palabras clave y preguntas frecuentes. No consumen tu cupo de respuestas con IA.",
   },
   {
     key: "Productos/Servicios",
@@ -65,37 +65,43 @@ export const planTerms: PlanTerm[] = [
   {
     key: "Acceso cliente",
     matches: ["acceso cliente", "solo lectura"],
-    explanation: "Rol de solo lectura para su equipo (no editan).",
+    explanation: "Rol de solo lectura para tu equipo (no editan).",
   },
   {
     key: "Gestión de conexiones",
     matches: ["gestión de conexiones"],
     explanation:
-      "Administra usted mismo sus canales de WhatsApp y Telegram.",
+      "Administras tú mismo tus canales de WhatsApp y Telegram.",
+  },
+  {
+    key: "Números de WhatsApp",
+    matches: ["números de whatsapp", "números de wa", "whatsapp number"],
+    explanation:
+      "Cuántos números de WhatsApp puedes conectar para que el bot atienda consultas. La Prueba y Básico usan 1 número, Profesional incluye hasta 5 y Empresarial es ilimitado.",
   },
   {
     key: "Tipo de respuestas",
     matches: ["tipo de respuestas"],
     explanation:
-      "El motor que responde a sus clientes: programado por palabras clave (Básico) o inteligencia artificial con contexto (Profesional+).",
+      "El motor que responde a tus clientes: respuestas programadas por palabras clave (FAQ) e inteligencia artificial con contexto, incluidas en todos los planes.",
   },
   {
     key: "Inteligencia artificial",
     matches: ["inteligencia artificial", "ia personalizada"],
     explanation:
-      "Un asistente que entiende el contexto de su negocio para responder preguntas que no están programadas.",
+      "Un asistente que entiende el contexto de tu negocio para responder preguntas que no están programadas.",
   },
   {
     key: "Precio",
     matches: ["precio", "proyectos desde"],
     explanation:
-      "El costo mensual del plan, con facturación mensual y sin permanencia. Cancele cuando quiera.",
+      "El costo mensual del plan, con facturación mensual y sin permanencia. Cancela cuando quieras.",
   },
   {
     key: "Soporte",
     matches: ["soporte"],
     explanation:
-      "El nivel de acompañamiento y ayuda técnica que recibe, según su plan.",
+      "El nivel de acompañamiento y ayuda técnica que recibes, según tu plan.",
   },
   {
     key: "Todo lo del plan anterior",
@@ -107,24 +113,24 @@ export const planTerms: PlanTerm[] = [
     key: "Atención fuera de horario",
     matches: ["fuera de horario"],
     explanation:
-      "Su bot sigue atendiendo consultas y tomando pedidos aunque usted o su equipo estén fuera del horario de atención.",
+      "Tu bot sigue atendiendo consultas y tomando pedidos aunque tú o tu equipo estén fuera del horario de atención.",
   },
   {
     key: "Mensaje de bienvenida",
     matches: ["bienvenida"],
     explanation:
-      "El primer mensaje automático que recibe su cliente al escribir, para saludarlo y orientarlo.",
+      "El primer mensaje automático que recibe tu cliente al escribir, para saludarlo y orientarlo.",
   },
   {
     key: "Configuración",
     matches: ["configuración"],
-    explanation: "El tiempo que tardamos en dejar su bot listo y funcionando.",
+    explanation: "El tiempo que tardamos en dejar tu bot listo y funcionando.",
   },
   {
     key: "Asesoría a la medida",
     matches: ["asesoría"],
     explanation:
-      "Le acompañamos para conectar el bot con sus sistemas actuales, ajustando la solución a su operación.",
+      "Te acompañamos para conectar el bot con tus sistemas actuales, ajustando la solución a tu operación.",
   },
 ];
 

@@ -86,7 +86,7 @@ describe("PLANS_CONFIG (Escenario A)", () => {
 
   it("professional features include AI mention", () => {
     const hasAI = PLANS_CONFIG.professional.features.some((f) =>
-      f.toLowerCase().includes("inteligencia artificial"),
+      f.toLowerCase().includes("ia"),
     );
     expect(hasAI).toBe(true);
   });

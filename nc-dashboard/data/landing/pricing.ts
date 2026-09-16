@@ -3,7 +3,7 @@ export const landingPricing = {
   label: "Precios",
   title: "Planes claros para empezar hoy",
   subtitle:
-    "Elija el plan según su momento. Todos están enfocados en ayudarle a recibir más clientes con su sitio web.",
+    "Elige el plan según tu momento. Todos están enfocados en ayudarte a recibir más clientes con tu sitio web.",
   whatsappBaseUrl: "https://wa.me/573219615338?text=Me interesa el plan ",
   buttonText: "Quiero este plan",
   cardLabels: {
@@ -12,9 +12,9 @@ export const landingPricing = {
     featuredBadge: "Más elegido",
   },
   footerText:
-    "Cada plan es un pago único, sin mensualidades ni permanencia. Podemos ajustarlo según lo que necesite.",
+    "Cada plan es un pago único, sin mensualidades ni permanencia. Podemos ajustarlo según lo que necesites.",
   guaranteeText:
-    "Si no le gusta el diseño inicial, lo ajustamos hasta que quede a su gusto.",
+    "Si no te gusta el diseño inicial, lo ajustamos hasta que quede a tu gusto.",
   packages: [
     {
       name: "Básico",
@@ -61,7 +61,7 @@ export const landingPricing = {
   comparison: {
     title: "¿Qué incluye cada plan?",
     subtitle:
-      "Compare rápidamente el alcance y tome una decisión con claridad.",
+      "Compara rápidamente el alcance y toma una decisión con claridad.",
     includedLabel: "Incluye",
     positiveLabel: "✔",
     negativeLabel: "—",
@@ -75,8 +75,8 @@ export const landingPricing = {
     ],
   },
   optionalExtras: {
-    title: "Extras opcionales para potenciar su negocio",
-    subtitle: "Puede agregarlos ahora o más adelante",
+    title: "Extras opcionales para potenciar tu negocio",
+    subtitle: "Puedes agregarlos ahora o más adelante",
     itemLabel: "Complemento opcional",
     buttonText: "Agregar a mi plan",
     whatsappTextTemplate:
@@ -86,12 +86,12 @@ export const landingPricing = {
         name: "Gestión de Dominio y Publicación",
         icon: "🌐",
         description:
-          "Nos encargamos de publicar su sitio web y dejarlo funcionando con su dominio.",
+          "Nos encargamos de publicar tu sitio web y dejarlo funcionando con tu dominio.",
         includes: [
           "Publicación del sitio en internet 24/7",
-          "Conexión con su dominio .com (lo paga aparte)",
+          "Conexión con tu dominio .com (lo pagas aparte)",
           "Configuración técnica completa para que esté en línea",
-          "Sin que tenga que hacer nada técnico",
+          "Sin que tengas que hacer nada técnico",
         ],
         price: "Desde $150.000 COP / año",
       },
@@ -99,9 +99,9 @@ export const landingPricing = {
         name: "Mantenimiento y Soporte Mensual",
         icon: "🛠️",
         description:
-          "Su sitio siempre actualizado y funcionando. Ideal si no quiere entrar en temas técnicos.",
+          "Tu sitio siempre actualizado y funcionando. Ideal si no quieres entrar en temas técnicos.",
         includes: [
-          "Cambios de contenido cuando lo necesite (texto, imágenes)",
+          "Cambios de contenido cuando lo necesites (texto, imágenes)",
           "Supervisión de estabilidad y seguridad",
           "Soporte por WhatsApp con respuesta rápida",
         ],
@@ -111,9 +111,9 @@ export const landingPricing = {
   },
   advisoryCta: {
     title:
-      "Agende una asesoría gratis por WhatsApp y le decimos qué plan le conviene.",
+      "Agenda una asesoría gratis por WhatsApp y te decimos qué plan te conviene.",
     description:
-      "Le orientamos sin compromiso para que invierta de forma inteligente y con objetivos claros.",
+      "Te orientamos sin compromiso para que inviertas de forma inteligente y con objetivos claros.",
     buttonText: "Agendar asesoría gratis",
     whatsappText:
       "Hola, quiero agendar una asesoría gratis para saber qué plan web me conviene para mi negocio.",
