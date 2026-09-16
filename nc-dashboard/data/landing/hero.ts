@@ -1,8 +1,8 @@
 export const landingHero = {
   sectionId: "inicio",
-  title: "Más clientes para su negocio con un sitio web profesional",
+  title: "Más clientes para tu negocio con un sitio web profesional",
   subtitle:
-    "Le creamos un sitio web profesional diseñado para atraer, convertir y vender. Presencia premium para su negocio, con pago único y sin complicaciones.",
+    "Te creamos un sitio web profesional diseñado para atraer, convertir y vender. Presencia premium para tu negocio, con pago único y sin complicaciones.",
   cta: {
     primary: {
       label: "Quiero más clientes",

@@ -99,7 +99,7 @@ export function Businesses() {
             Negocios
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-balance text-stone-100 md:text-4xl">
-            Funciona para su tipo de negocio
+            Funciona para tu tipo de negocio
           </h2>
           <p className="mt-4 text-stone-300/80 leading-relaxed">
             Tenga 10 o 10.000 clientes, cada consulta por WhatsApp es una venta en potencia.{" "}

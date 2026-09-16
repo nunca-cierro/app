@@ -38,14 +38,16 @@ const labelClass = "text-sm font-medium";
 
 /* ── Recommended defaults ─────────────────────────────────────────── */
 const RECOMMENDED_INSTRUCTIONS =
-  "Usted es un asistente de atención al cliente.\n" +
-  "- Responde SOLO con la información del negocio que se le proporciona.\n" +
-  "- Si no sabe algo, no invente — diga que un asesor humano va a ayudar.\n" +
-  "- Sea breve: responda lo justo y necesario, sin rodeos.\n" +
-  "- Haga máximo UNA pregunta por mensaje.\n" +
-  "- Si el cliente muestra interés en algo, menciónelo de forma natural.\n" +
+  "Eres un asistente de atención al cliente.\n" +
+  "- Preséntate y explica en 1 frase qué hace el negocio.\n" +
+  "- Responde SOLO con la información del negocio que se te proporciona.\n" +
+  "- Si el cliente pregunta por un servicio, guíalo hacia la acción (agendar, pedir, comprar).\n" +
+  "- Si no sabes algo, no inventes — di que un asesor humano va a ayudar.\n" +
+  "- Sé breve: responde lo justo y necesario, sin rodeos.\n" +
+  "- Haz máximo UNA pregunta por mensaje.\n" +
+  "- Si el cliente muestra interés en algo, menciónalo de forma natural.\n" +
   "  La venta debe sentirse como sugerencia, no como empuje.\n" +
-  "- Salude y ofrezca ayuda cuando el cliente salude.";
+  "- Saluda con emojis con moderación y ofrece ayuda cuando el cliente salude.";
 
 /* ------------------------------------------------------------------ */
 /*  Default config                                                     */
@@ -182,20 +184,22 @@ export function BusinessConfigForm({
             <CardTitle className="text-sm font-medium">
               Instrucciones de comportamiento
             </CardTitle>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-auto px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
-              onClick={() =>
-                setForm((prev) => ({
-                  ...prev,
-                  instructions: RECOMMENDED_INSTRUCTIONS,
-                }))
-              }
-            >
-              + Usar instrucciones recomendadas
-            </Button>
+            {!form.instructions?.trim() && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-auto px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    instructions: RECOMMENDED_INSTRUCTIONS,
+                  }))
+                }
+              >
+                + Usar instrucciones recomendadas
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -208,12 +212,13 @@ export function BusinessConfigForm({
             }
             placeholder={`Describe cómo debe comportarse el bot al atender clientes. Ej:
 
-- Sea amable, breve y directo. Use emojis con moderación.
-- Haga máximo UNA pregunta por mensaje.
-- No invente precios ni productos que no estén en la lista.
-- Si el cliente se interesa, sugiérale el producto de forma natural, sin presionar.
-- Si preguntan algo que no sabe, diga: "Un asesor humano lo atenderá en breve".
-- Salude al inicio y ofrezca ayuda.`}
+- Preséntate y explica en 1 frase qué hace el negocio.
+- Sé amable, breve y directo. Usa emojis con moderación.
+- Haz máximo UNA pregunta por mensaje.
+- No inventes precios ni productos que no estén en la lista.
+- Si el cliente se interesa, sugiérele el producto de forma natural, sin presionar.
+- Si preguntan algo que no sabes, di: "Un asesor humano te atenderá en breve".
+- Saluda al inicio y ofrece ayuda.`}
           />
           <p className="text-xs text-muted-foreground">
             Estas instrucciones se combinan con los datos del negocio para

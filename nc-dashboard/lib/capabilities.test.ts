@@ -70,6 +70,17 @@ describe("hasCapability — safe fallback for legacy sessions (no capabilities)"
     expect(hasCapability(u, CAPABILITIES.businessEdit)).toBe(true);
   });
 
+  it("basic/trial admin fallback includes AI (CAP_AI on every plan, soft cap)", () => {
+    const basic = user({ role: "admin", plan: "basic", capabilities: null });
+    expect(hasCapability(basic, CAPABILITIES.ai)).toBe(true);
+    expect(hasCapability(basic, CAPABILITIES.agentsManage)).toBe(false);
+    expect(hasCapability(basic, CAPABILITIES.businessEdit)).toBe(false);
+
+    const trial = user({ role: "admin", plan: "trial", capabilities: null });
+    expect(hasCapability(trial, CAPABILITIES.ai)).toBe(true);
+    expect(hasCapability(trial, CAPABILITIES.conversationsView)).toBe(true);
+  });
+
   it("enterprise fallback includes edit", () => {
     const u = user({ role: "admin", plan: "enterprise", capabilities: null });
     expect(hasCapability(u, CAPABILITIES.businessEdit)).toBe(true);

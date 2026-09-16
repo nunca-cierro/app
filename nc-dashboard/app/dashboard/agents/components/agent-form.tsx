@@ -140,18 +140,22 @@ export function AgentForm({
       </div>
 
       {isBasicOrTrial ? (
-        /* ── Plan básico/trial: sin IA ── */
+        /* ── Plan básico/trial: IA incluida con cupo mensual ── */
         <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 space-y-2">
           <p>
-            <strong>Plan {plan === "basic" ? "Básico" : "Trial"}</strong> — sin
-            inteligencia artificial.
+            <strong>Plan {plan === "basic" ? "Básico" : "Trial"}</strong> —
+            respuestas con IA incluidas (
+            {plan === "basic"
+              ? "hasta 2.000 respuestas IA al mes"
+              : "hasta 500 respuestas IA"}
+            ).
           </p>
           <p className="text-amber-700">
-            Las respuestas se generan automáticamente buscando coincidencias
-            entre lo que pregunta el cliente y las{" "}
+            Las respuestas se generan automáticamente con IA usando el contexto
+            de tu negocio y, como respaldo, buscando coincidencias con las{" "}
             <strong>Preguntas Frecuentes (FAQ)</strong> que configures en la
-            pestaña <strong>Negocio</strong>. También se usan las palabras clave
-            de derivación para escalar a un humano cuando sea necesario.
+            pestaña <strong>Negocio</strong>. Las respuestas programadas (FAQ) y
+            las escalaciones a un asesor no consumen tu cupo mensual de IA.
           </p>
         </div>
       ) : (

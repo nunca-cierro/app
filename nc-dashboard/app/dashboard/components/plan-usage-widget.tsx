@@ -53,8 +53,8 @@ export function formatUsageLimit(limit: number | null): string {
 /* ------------------------------------------------------------------ */
 
 /**
- * "Uso de su plan" — medidor informativo del tenant activo (Slice 3).
- * Barra vs límite mensual de respuestas IA; CTA a upgrade >= 80%;
+ * "Uso de tu plan" — medidor informativo del tenant activo (Slice 3).
+ * Barra vs cupo mensual de respuestas con IA; CTA a upgrade >= 80%;
  * estado de exceso > 100%; enterprise (pct null) sin barra; ante fallo
  * de API se oculta y el dashboard sigue operativo. NUNCA bloquea ni
  * sugiere enforcement (owner-validated: informative only).
@@ -64,13 +64,11 @@ export function PlanUsageWidget({
   isLoading,
   error,
   onUpgrade,
-  hasAI = true,
 }: {
   data: PlanUsage | null;
   isLoading: boolean;
   error: string | null;
   onUpgrade?: () => void;
-  hasAI?: boolean;
 }) {
   const state = usageWidgetState(data, isLoading, error);
   if (state === "hidden" || state === "idle") return null;
@@ -80,30 +78,25 @@ export function PlanUsageWidget({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm font-medium">
           <Shield className="size-4 text-primary" />
-          Uso de su plan
+          Uso de tu plan
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {state === "loading" ? (
           <div className="h-2.5 animate-pulse rounded-full bg-muted" />
-        ) : !hasAI ? (
-          <p className="text-sm text-muted-foreground">
-            Su plan incluye respuestas programadas ilimitadas (sin inteligencia
-            artificial). Sus clientes no se quedan sin respuesta.
-          </p>
         ) : state === "unlimited" ? (
           <p className="text-sm text-muted-foreground">
-            Plan Ilimitado — sin límites de uso.
+            Plan Ilimitado — respuestas con IA sin límite de uso.
           </p>
         ) : data && data.pct !== null ? (
           <>
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                Respuestas IA este mes:{" "}
                 <strong>
                   {data.usage.ai_responses.toLocaleString("es-CO")}
                 </strong>{" "}
-                de {formatUsageLimit(data.limits.max_conversations_per_month)}
+                / {formatUsageLimit(data.limits.max_conversations_per_month)}{" "}
+                respuestas IA este mes
               </span>
               <span
                 className={cn(
@@ -117,7 +110,7 @@ export function PlanUsageWidget({
 
             <div
               role="progressbar"
-              aria-label="Uso del plan"
+              aria-label="Uso de tu plan"
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={usageBarWidth(data.pct)}
@@ -139,7 +132,9 @@ export function PlanUsageWidget({
 
             {state === "over" && (
               <p className="text-xs text-destructive">
-                Superó el límite mensual de respuestas IA.
+                Superaste el cupo mensual de respuestas IA. Las respuestas
+                programadas (FAQ) y las escalaciones a un asesor no consumen
+                tu cupo.
               </p>
             )}
 

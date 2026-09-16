@@ -27,7 +27,7 @@ interface TenantFormProps {
 /* ------------------------------------------------------------------ */
 
 const PLANS = [
-  { value: "trial", label: "Prueba (7 días)" },
+  { value: "trial", label: "Prueba (3 días)" },
   { value: "basic", label: "Básico" },
   { value: "professional", label: "Profesional" },
   { value: "enterprise", label: "Empresarial" },

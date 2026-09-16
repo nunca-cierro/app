@@ -125,8 +125,8 @@ const sections = [
           vía WhatsApp. Ofrecemos:
         </p>
         <ul>
-          <li>Respuestas automáticas programadas por palabras clave (plan Básico)</li>
-          <li>Respuestas con inteligencia artificial mediante Groq (planes Profesional y Empresarial)</li>
+          <li>Respuestas automáticas programadas por palabras clave (preguntas frecuentes)</li>
+          <li>Respuestas con inteligencia artificial mediante Groq (en todos los planes, con cupos mensuales según el plan)</li>
           <li>Dashboard de métricas y panel de control</li>
           <li>Configuración y soporte técnico</li>
         </ul>
@@ -142,9 +142,9 @@ const sections = [
         <h3>3. Planes y pagos</h3>
         <p>
           Ofrecemos tres planes (Básico, Profesional y Empresarial) más un
-          período de prueba gratuito de 7 días con respuestas programadas. Los
-          precios y características de cada plan se detallan en la sección de
-          Planes de nuestro sitio web.
+          período de prueba gratuito de 3 días con respuestas con IA (hasta 500
+          respuestas IA). Los precios y características de cada plan se detallan
+          en la sección de Planes de nuestro sitio web.
         </p>
         <ul>
           <li>Los pagos se realizan por transferencia bancaria.</li>
@@ -157,11 +157,13 @@ const sections = [
 
         <h3>4. Período de prueba</h3>
         <p>
-          El período de prueba gratuito de 7 días incluye exclusivamente
-          respuestas programadas (sin inteligencia artificial). Al finalizar
-          el período de prueba, el servicio se desactivará automáticamente a
-          menos que elija un plan pago. No se requiere tarjeta de crédito
-          para iniciar la prueba.
+          El período de prueba gratuito de 3 días incluye respuestas con IA
+          (hasta 500 respuestas IA), respuestas programadas (preguntas
+          frecuentes) y escalación a un asesor. Las respuestas programadas y
+          las escalaciones a un asesor no consumen el cupo mensual de IA. Al
+          finalizar el período de prueba, el servicio se desactivará
+          automáticamente a menos que elija un plan pago. No se requiere
+          tarjeta de crédito para iniciar la prueba.
         </p>
 
         <h3>5. Uso aceptable</h3>

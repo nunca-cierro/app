@@ -45,8 +45,8 @@ function renderToHtml(element: React.ReactElement): Promise<string> {
 describe("home swap — automation is the PRIMARY offer on the home", () => {
   it("leads with the keyword-strong WhatsApp automation hero and SaaS plan pricing", async () => {
     const html = await renderToHtml(React.createElement(AutomationContent));
-    expect(html).toContain("Atienda a sus clientes por WhatsApp 24/7");
-    expect(html).toContain("Su negocio nunca cierra");
+    expect(html).toContain("Atiende a tus clientes por WhatsApp 24/7");
+    expect(html).toContain("Tu negocio nunca cierra");
     expect(html).toContain("Desde $390.000/mes + IVA");
     expect(html).toContain("Desde $1.590.000/mes + IVA");
   });
@@ -82,26 +82,34 @@ describe("FAQ — FAQPage JSON-LD is server-built from the FAQ data", () => {
   });
 });
 
-describe("register — usted across the home sections (no voseo mix)", () => {
-  it("renders how-it-works, contact, FAQ and mockup copy in usted", async () => {
+describe("register — tuteo across the home sections (no voseo, no usted)", () => {
+  it("renders how-it-works, contact, FAQ and mockup copy in tú (tuteo)", async () => {
     const html = await renderToHtml(React.createElement(AutomationContent));
-    expect(html).toContain("Cuéntenos cómo funciona su negocio");
-    expect(html).toContain("Usted aprueba antes de activar");
-    expect(html).toContain("Su negocio responde solo mientras usted descansa");
-    expect(html).toContain("¿A qué se dedica su negocio?");
-    expect(html).toContain("Si no sabe qué plan elegir, le orientamos sin compromiso");
-    expect(html).toContain("¿En qué más lo puedo ayudar?");
-    for (const voseoPhrase of [
-      "Nos cuentas cómo funciona tu negocio",
-      "Tú apruebas antes de activar",
-      "mientras tú descansas",
-      "¿En qué ciudad estás?",
-      "¿Qué preguntas recibes",
-      "Escribe tu duda",
-      "te leemos al instante",
-      "Hablemos de tu negocio",
+    expect(html).toContain("Cuéntanos cómo funciona tu negocio");
+    expect(html).toContain("Tú apruebas antes de activar");
+    expect(html).toContain("Tu negocio responde solo mientras tú descansas");
+    expect(html).toContain("¿A qué se dedica tu negocio?");
+    expect(html).toContain("Si no sabes qué plan elegir, te orientamos sin compromiso");
+    expect(html).toContain("¿En qué más te puedo ayudar?");
+    for (const nonTuteoPhrase of [
+      "usted aprueba",
+      "mientras usted descansa",
+      "le orientamos",
+      "Cuéntenos",
+      "su negocio",
+      "Escriba su duda",
+      "¿En qué más lo puedo ayudar?",
+      "tenés",
+      "querés",
+      "podés",
+      "volvé",
+      "mirá",
+      "preguntá",
+      "dale",
+      "tranqui",
+      "al toque",
     ]) {
-      expect(html).not.toContain(voseoPhrase);
+      expect(html).not.toContain(nonTuteoPhrase);
     }
   });
 });

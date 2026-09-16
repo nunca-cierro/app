@@ -505,12 +505,11 @@ function ClientDashboard() {
           {/* Plan features */}
           {plan === "trial" && (
             <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning-foreground">
-              <p className="mb-1 font-medium">Plan de prueba — 7 días gratis</p>
+              <p className="mb-1 font-medium">Plan de prueba — 3 días gratis con IA</p>
               <ul className="list-inside list-disc space-y-1 text-xs text-muted-foreground">
-                <li>Respuestas automáticas por palabras clave</li>
-                <li>Hasta 10 productos en catálogo</li>
-                <li>1 negocio</li>
-                <li>Sin acceso a IA ni métricas avanzadas</li>
+                <li>IA incluida (hasta 500 respuestas IA)</li>
+                <li>Hasta 25 productos en catálogo</li>
+                <li>1 número de WhatsApp</li>
               </ul>
             </div>
           )}
@@ -519,9 +518,9 @@ function ClientDashboard() {
             <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 p-3 text-sm text-sky-800 dark:text-sky-300">
               <p className="mb-1 font-medium">Plan Profesional — IA activa</p>
               <ul className="list-inside list-disc space-y-1 text-xs text-muted-foreground">
-                <li>Inteligencia artificial con Groq</li>
-                <li>Hasta 50 productos en catálogo</li>
-                <li>Hasta 3 negocios</li>
+                <li>Hasta 10.000 respuestas con IA al mes</li>
+                <li>Hasta 200 productos en catálogo</li>
+                <li>Hasta 5 números de WhatsApp</li>
                 <li>Dashboard en vivo con métricas</li>
               </ul>
             </div>
@@ -532,7 +531,8 @@ function ClientDashboard() {
               <p className="mb-1 font-medium">Plan Empresarial — Acceso completo</p>
               <ul className="list-inside list-disc space-y-1 text-xs text-muted-foreground">
                 <li>Todo lo del plan Profesional</li>
-                <li>Productos, conversaciones y negocios ilimitados</li>
+                <li>Respuestas con IA ilimitadas</li>
+                <li>Productos y números de WhatsApp ilimitados</li>
                 <li>Soporte prioritario 24/7</li>
               </ul>
             </div>
@@ -546,7 +546,6 @@ function ClientDashboard() {
         data={planUsage}
         isLoading={usageLoading}
         error={usageError}
-        hasAI={hasCapability(user, CAPABILITIES.ai)}
         onUpgrade={() => setShowPayment(true)}
       />
 
@@ -648,10 +647,11 @@ function ClientDashboard() {
         <div className="flex flex-col items-center gap-1 rounded-xl border border-warning/40 bg-warning/10 p-5 text-center">
           <Bot className="size-5 text-warning-foreground" />
           <p className="mt-1 text-sm font-medium text-warning-foreground">
-            ¿Quiere activar un plan con inteligencia artificial?
+            ¿Quieres más respuestas con IA?
           </p>
           <p className="text-xs text-muted-foreground">
-            Contacte a su administrador para cambiar a un plan Profesional o Empresarial.
+            Tu prueba incluye hasta 500 respuestas IA. Cambia a un plan pago
+            para ampliar el cupo y desbloquear más funciones.
           </p>
         </div>
       )}

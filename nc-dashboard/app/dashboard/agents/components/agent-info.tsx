@@ -64,7 +64,13 @@ function planLabel(plan: string | null | undefined): string {
 }
 
 function usesAI(plan: string | null | undefined): boolean {
-  return plan === "professional" || plan === "enterprise";
+  // Every plan carries AI (trial/basic with a soft monthly cap, 500/2.000).
+  return (
+    plan === "trial" ||
+    plan === "basic" ||
+    plan === "professional" ||
+    plan === "enterprise"
+  );
 }
 
 /* ------------------------------------------------------------------ */

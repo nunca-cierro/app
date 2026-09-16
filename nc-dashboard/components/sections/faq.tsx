@@ -78,7 +78,7 @@ export function Faq() {
                 setSearchQuery(e.target.value);
                 setOpenIndex(null);
               }}
-              placeholder="Escriba su duda..."
+              placeholder="Escribe tu duda..."
               className="flex-1 text-sm text-stone-200 placeholder:text-stone-500 bg-transparent outline-none"
             />
             {searchQuery && (
@@ -104,7 +104,7 @@ export function Faq() {
                   rel="noopener noreferrer"
                   className="text-amber-400 hover:text-amber-300 underline underline-offset-2"
                 >
-                  Escríbanos por WhatsApp
+                  Escríbenos por WhatsApp
                 </a>
               </p>
             </div>

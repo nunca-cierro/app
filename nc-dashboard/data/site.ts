@@ -1,8 +1,10 @@
+import { PLAN_AI_CAPS, AI_QUOTA_NOTE } from "@/lib/plans";
+
 export const siteMetadata = {
   lang: "es",
   title: "NuncaCierro | Automatización WhatsApp para negocios en Colombia",
   description:
-    "Bot de WhatsApp para empresas en Colombia: automatización 24/7 que responde, agenda citas y vende mientras usted no está. 7 días de prueba gratis.",
+    "Bot de WhatsApp para empresas en Colombia: automatización 24/7 que responde, agenda citas y vende mientras no estás. 3 días de prueba gratis con IA.",
   keywords:
     "bot WhatsApp empresas Colombia, automatización WhatsApp Colombia, atención al cliente 24/7 WhatsApp, agenda de citas WhatsApp, IA WhatsApp negocio",
   preconnectUrls: ["https://images.unsplash.com"],
@@ -36,10 +38,10 @@ export const siteWhatsAppMessages = {
 // Hero section data
 export const siteHero = {
   sectionId: "inicio",
-  eyebrow: "Su negocio nunca cierra",
-  title: "Atienda a sus clientes por WhatsApp 24/7",
+  eyebrow: "Tu negocio nunca cierra",
+  title: "Atiende a tus clientes por WhatsApp 24/7",
   subtitle:
-    "Automatizamos su WhatsApp para que su negocio responda 24/7, tome pedidos, agende citas y nunca pierda ventas. Sin configuraciones técnicas.",
+    "Automatizamos tu WhatsApp para que tu negocio responda 24/7, tome pedidos, agende citas y nunca pierda ventas. Sin configuraciones técnicas.",
 };
 
 export const siteDevicePreview = {
@@ -124,9 +126,9 @@ export const footerData = {
 export const sitePlans = {
   sectionId: "planes",
   label: "Planes",
-  title: "Elija el plan según lo que necesite su negocio",
+  title: "Elige el plan según lo que necesite tu negocio",
   subtitle:
-    "Todos incluyen configuración completa y soporte. Sin contratos largos. Cancele cuando quiera.",
+    "Todos incluyen configuración completa y soporte. Sin contratos largos. Cancela cuando quieras.",
   whatsappBaseUrl: "https://wa.me/573219615338?text=",
   buttonText: "Quiero este plan",
   cardLabels: {
@@ -136,26 +138,27 @@ export const sitePlans = {
     featuredBadge: "Más elegido",
   },
   footerText:
-    "Todos los planes se facturan mensualmente. Sin contratos largos, cancele cuando quiera.",
-  // 2026-09 audit (C): the guarantee must match the REAL trial (7 días,
-  // programado, sin IA) — no "primer mes sin riesgo" promise.
-  guaranteeText:
-    "7 días de prueba gratis con su negocio real. Si no le convence, lo desactivamos y no paga nada. Durante la prueba, las respuestas son programadas (sin inteligencia artificial).",
+    "Todos los planes se facturan mensualmente. Sin contratos largos, cancela cuando quieras.",
+  // 2026-09 redesign (FASE 6): trial = 3 días CON IA (soft cap 500 respuestas
+  // IA/mes) — the guarantee must match the real trial, no "primer mes sin
+  // riesgo" promise.
+  guaranteeText: `${PLAN_AI_CAPS.trial} gratis con tu negocio real. Si no te convence, lo desactivamos y no pagas nada.`,
   packages: [
     {
       name: "Básico",
       type: "Básico",
       price: "Desde $390.000/mes + IVA",
       description:
-        "Automatiza las preguntas frecuentes de sus clientes. Ideal para negocios que están empezando a automatizar su atención.",
+        "Automatiza las preguntas frecuentes de tus clientes con respuestas programadas y con IA, con un cupo de hasta 2.000 respuestas con IA al mes. Ideal para negocios que están empezando a automatizar su atención.",
       features: [
         "Respuestas automáticas programadas por palabras clave (ilimitadas)",
+        PLAN_AI_CAPS.basic,
         "Atiende clientes fuera de horario",
         "Mensaje de bienvenida personalizado",
         "Hasta 50 productos/servicios en catálogo",
         "1 negocio y 1 agente",
         "Métricas semanales (resumen por WhatsApp)",
-        "Configuración en 48 horas",
+        "Configuración en 24 horas",
         "Soporte por WhatsApp",
       ],
       featured: false,
@@ -165,11 +168,11 @@ export const sitePlans = {
       type: "Profesional",
       price: "Desde $790.000/mes + IVA",
       description:
-        "Inteligencia artificial que entiende lo que preguntan sus clientes. Para negocios con volumen constante.",
+        "Inteligencia artificial que entiende lo que preguntan tus clientes, con hasta 5 números de WhatsApp. Para negocios con volumen constante.",
       features: [
         "Todo lo del Plan Básico",
         "Inteligencia artificial (entiende contexto)",
-        "Hasta 10.000 respuestas con IA al mes",
+        PLAN_AI_CAPS.professional,
         "Hasta 200 productos/servicios en catálogo",
         "Hasta 5 negocios y 10 agentes",
         "Dashboard en vivo con métricas",
@@ -187,23 +190,26 @@ export const sitePlans = {
       features: [
         "Todo lo del Plan Profesional",
         "Productos/servicios ilimitados en catálogo",
-        "Respuestas con IA ilimitadas",
+        PLAN_AI_CAPS.enterprise,
         "Negocios y agentes ilimitados",
         // 2026-09 audit (E): integrations/SLA promises softened to what the
         // code backs — "asesoría para conectar" escalates to a human, no
         // guaranteed response times nor unconfirmed connectors.
-        "Asesoría para conectar con sus sistemas (a la medida)",
+        "Asesoría para conectar con tus sistemas (a la medida)",
         "Soporte prioritario 24/7",
       ],
       featured: false,
     },
   ],
+  // Note under the plan table — cap unit semantics (owner-validated copy).
+  quotaNote: AI_QUOTA_NOTE,
   // Comparison table rows (prices: Escenario A, copy strings)
   comparisonRows: [
     { label: "Precio", basic: "Desde $390.000/mes + IVA", pro: "Desde $790.000/mes + IVA", enterprise: "Desde $1.590.000/mes + IVA" },
-    { label: "Tipo de respuestas", basic: "Programadas (palabras clave + FAQ)", pro: "IA con contexto del negocio", enterprise: "IA con contexto del negocio" },
+    { label: "Tipo de respuestas", basic: "Programadas + IA (hasta 2.000/mes)", pro: "IA con contexto del negocio", enterprise: "IA con contexto del negocio" },
     { label: "Respuestas programadas (FAQ)", basic: "Ilimitadas", pro: "Ilimitadas", enterprise: "Ilimitadas" },
-    { label: "Respuestas con IA al mes", basic: "—", pro: "10.000", enterprise: "Ilimitadas" },
+    { label: "Respuestas con IA al mes", basic: "Hasta 2.000", pro: "10.000", enterprise: "Ilimitadas" },
+    { label: "Números de WhatsApp", basic: "1", pro: "Hasta 5", enterprise: "Ilimitados" },
     { label: "Productos/Servicios", basic: "Hasta 50", pro: "Hasta 200", enterprise: "Ilimitado" },
     { label: "Negocios", basic: "1", pro: "5", enterprise: "Ilimitados" },
     { label: "Agentes", basic: "1", pro: "10", enterprise: "Ilimitados" },
@@ -216,11 +222,11 @@ export const sitePlans = {
   planInfo: {
     basic: {
       name: "Básico",
-      type: "programmed",
+      type: "ai",
       maxProducts: 50,
-      maxConversations: null,
+      maxConversations: 2000,
       maxBusinesses: 1,
-      hasAI: false,
+      hasAI: true,
       hasDashboard: false,
       hasMetrics: true,
       hasClientAccess: false,
@@ -255,14 +261,15 @@ export const sitePlans = {
   },
   trialInfo: {
     label: "Prueba gratis",
-    description: "7 días de prueba con respuestas programadas, panel propio y acceso a conversaciones. Cancele cuando quiera.",
-    days: 7,
-    type: "programmed",
+    description:
+      "3 días de prueba con IA incluida (hasta 500 respuestas IA), panel propio y acceso a conversaciones. Cancela cuando quieras.",
+    days: 3,
+    type: "ai",
   },
   advisoryCta: {
-    title: "¿No sabe qué plan elegir? Le orientamos sin compromiso.",
+    title: "¿No sabes qué plan elegir? Te orientamos sin compromiso.",
     description:
-      "Le mostramos cómo funciona cada plan y le recomendamos el ideal para su negocio.",
+      "Te mostramos cómo funciona cada plan y te recomendamos el ideal para tu negocio.",
     buttonText: "Agendar asesoría gratis",
     whatsappText:
       "Hola, quiero agendar una asesoría gratis para saber qué plan de automatización me conviene para mi negocio.",
@@ -273,9 +280,9 @@ export const sitePlans = {
 export const siteFaq = {
   sectionId: "faq",
   label: "Preguntas frecuentes",
-  title: "Todo lo que necesita saber antes de empezar",
+  title: "Todo lo que necesitas saber antes de empezar",
   subtitle:
-    "Respondemos sus dudas para que tome la mejor decisión sin vueltas.",
+    "Respondemos tus dudas para que tomes la mejor decisión sin vueltas.",
   // 2026-09 audit (F): the landing does NOT claim the "API oficial de Meta".
   // The real path is an Evolution API session (WhatsApp Web) — the FAQ below
   // describes it honestly and intentionally avoids any Meta Cloud API claim.
@@ -284,32 +291,32 @@ export const siteFaq = {
       question:
         "¿Qué pasa con mi WhatsApp cuando configuran el bot? ¿Dejo de recibir mensajes?",
       answer:
-        "No, todo lo contrario. Sigue recibiendo mensajes normal. El bot responde automáticamente preguntas frecuentes y lo que no sabe se lo reenvía. Si un cliente necesita algo específico, lo deriva a su WhatsApp para que usted lo resuelva.",
+        "No, todo lo contrario. Sigues recibiendo mensajes normal. El bot responde automáticamente preguntas frecuentes y lo que no sabe te lo reenvía. Si un cliente necesita algo específico, lo deriva a tu WhatsApp para que tú lo resuelvas.",
     },
     {
       question: "¿El bot entiende lo que los clientes preguntan?",
       answer:
-        "Sí, en todos los planes el bot responde automáticamente las preguntas más comunes de su negocio: horarios, precios, ubicación, disponibilidad. A partir del plan Profesional, además entiende las preguntas en contexto con inteligencia artificial. Si algo queda fuera de su alcance, se lo reenvía para que lo resuelva.",
+        "Sí, en todos los planes el bot responde automáticamente las preguntas más comunes de tu negocio: horarios, precios, ubicación, disponibilidad. Todos los planes incluyen inteligencia artificial para entender las preguntas en contexto, con un cupo mensual de respuestas con IA según el plan. Si algo queda fuera de tu alcance, te lo reenvía para que lo resuelvas.",
     },
     {
       question: "¿Puedo personalizar las respuestas?",
       answer:
-        "Sí, usted define los mensajes. Le damos una base y la ajustamos con usted hasta que suene exactamente como quiera. Con el tiempo puede cambiarlas cuando quiera.",
+        "Sí, tú defines los mensajes. Te damos una base y la ajustamos contigo hasta que suene exactamente como quieras. Con el tiempo puedes cambiarlas cuando quieras.",
     },
     {
       question: "¿Cuánto tiempo toma tenerlo listo?",
       answer:
-        "El bot de WhatsApp lo configuramos en máximo 24 horas. Los planes más avanzados pueden tomar un poco más según la complejidad de su negocio, pero le mantenemos informado todo el tiempo.",
+        "El bot de WhatsApp lo configuramos en máximo 24 horas. Los planes más avanzados pueden tomar un poco más según la complejidad de tu negocio, pero te mantenemos informado todo el tiempo.",
     },
     {
       question: "¿Necesito conocimientos técnicos para usarlo?",
       answer:
-        "Para nada. Nosotros configuramos todo. Usted solo tiene que revisar los mensajes que le lleguen. Si necesita cambiar algo, nos avisa y lo ajustamos.",
+        "Para nada. Nosotros configuramos todo. Tú solo tienes que revisar los mensajes que te lleguen. Si necesitas cambiar algo, nos avisas y lo ajustamos.",
     },
     {
       question: "¿Puedo cancelar cuando quiera?",
       answer:
-        "Sí, no hay contratos largos. Cancele cuando quiera sin penalización. Obviamente esperamos que se quede porque los resultados hablan solos.",
+        "Sí, no hay contratos largos. Cancela cuando quieras sin penalización. Obviamente esperamos que te quedes porque los resultados hablan solos.",
     },
     {
       question: "¿Cómo sé cuántos clientes me contactaron?",
@@ -319,12 +326,12 @@ export const siteFaq = {
     {
       question: "¿Funciona para cualquier tipo de negocio?",
       answer:
-        "Funciona para cualquier negocio que reciba consultas por WhatsApp: restaurantes, clínicas, concesionarios, inmobiliarias, hoteles, gimnasios y spas. Si su negocio recibe mensajes, le sirve.",
+        "Funciona para cualquier negocio que reciba consultas por WhatsApp: restaurantes, clínicas, concesionarios, inmobiliarias, hoteles, gimnasios y spas. Si tu negocio recibe mensajes, te sirve.",
     },
     {
       question: "¿Necesito WhatsApp Business o un número exclusivo para usarlo?",
       answer:
-        "No, funciona con cualquier WhatsApp, incluso si es su número personal. El bot se conecta como una sesión adicional de WhatsApp Web — usted sigue usando su WhatsApp normal en el celular para hablar con amigos y familia sin problema. El bot responde automáticamente a los clientes, y si alguien pregunta algo que el bot no sabe, se lo reenvía a su WhatsApp para que lo resuelva. Si prefiere tener todo separado, puede usar un chip prepago exclusivo para el negocio, pero no es obligatorio.",
+        "No, funciona con cualquier WhatsApp, incluso si es tu número personal. El bot se conecta como una sesión adicional de WhatsApp Web — tú sigues usando tu WhatsApp normal en el celular para hablar con amigos y familia sin problema. El bot responde automáticamente a los clientes, y si alguien pregunta algo que el bot no sabe, te lo reenvía a tu WhatsApp para que lo resuelvas. Si prefieres tener todo separado, puedes usar un chip prepago exclusivo para el negocio, pero no es obligatorio.",
     },
   ],
 };
@@ -333,9 +340,9 @@ export const siteFaq = {
 export const siteContact = {
   sectionId: "contacto",
   label: "Contacto",
-  title: "Hablemos de su negocio",
+  title: "Hablemos de tu negocio",
   subtitle:
-    "Cuéntenos qué necesita y le mostramos cómo la automatización puede ayudarle a no perder más clientes.",
+    "Cuéntanos qué necesitas y te mostramos cómo la automatización puede ayudarte a no perder más clientes.",
   contacts: [
     {
       icon: "Mail",
@@ -350,31 +357,31 @@ export const siteContact = {
       text: "+57 3219615338",
     },
   ],
-  quickResponseText: "Respuesta inmediata — leemos su mensaje al instante",
+  quickResponseText: "Respuesta inmediata — leemos tu mensaje al instante",
   quoteChecklist: {
     icon: "🤖",
-    title: "Para ayudarle más rápido, cuéntenos:",
+    title: "Para ayudarte más rápido, cuéntanos:",
     items: [
       {
         icon: "FaRegBuilding",
-        text: "¿A qué se dedica su negocio?",
+        text: "¿A qué se dedica tu negocio?",
       },
       {
         icon: "FaMapMarkerAlt",
-        text: "¿En qué ciudad está?",
+        text: "¿En qué ciudad estás?",
       },
       {
         icon: "FaRegStar",
-        text: "¿Qué preguntas recibe siempre por WhatsApp?",
+        text: "¿Qué preguntas recibes siempre por WhatsApp?",
       },
       {
         icon: "FaRegCalendarCheck",
-        text: "¿Quiere agenda automática, catálogo o seguimiento?",
+        text: "¿Quieres agenda automática, catálogo o seguimiento?",
       },
     ],
   },
-  footerText: "Le respondemos de lunes a viernes, de 9:00 a 18:00.",
-  confidenceText: "Si no sabe qué plan elegir, le orientamos sin compromiso.",
+  footerText: "Te respondemos de lunes a viernes, de 9:00 a 18:00.",
+  confidenceText: "Si no sabes qué plan elegir, te orientamos sin compromiso.",
 };
 
 // ============================================================
@@ -386,9 +393,9 @@ export const siteContact = {
 // part of the monthly SaaS. Price reference kept in sync with landingPricing.
 export const siteWebSecondary = {
   label: "Sitios web",
-  title: "¿También necesita una página web profesional?",
+  title: "¿También necesitas una página web profesional?",
   description:
-    "Servicio aparte, con entrega única: diseñamos su sitio para que más clientes lleguen por WhatsApp. Desde $699.900.",
+    "Servicio aparte, con entrega única: diseñamos tu sitio para que más clientes lleguen por WhatsApp. Desde $699.900.",
   ctaLabel: "Ver planes de sitios web",
   href: "/inicio",
 };

@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.conversations.models import Conversation, Message
 from app.modules.evolution.handler import handle_evolution_incoming
+from app.modules.plans.capabilities import get_plan_limits
 from app.modules.tenants.models import Tenant
 
 ORIGIN_TAGS = ("ai", "programmed", "escalation")
@@ -134,8 +135,13 @@ class TestOriginPersistence:
 
 async def _seed_origin_tenant_agent_connection(
     db_session: AsyncSession, *, plan: str, business_config: dict | None = None,
+    reach_ai_cap: bool = False,
 ) -> tuple[Tenant, object]:
-    """Tenant + enabled agent (business_config) + linked Evolution connection."""
+    """Tenant + enabled agent (business_config) + linked Evolution connection.
+
+    ``reach_ai_cap=True`` seeds outbound ``origin='ai'`` messages up to the
+    plan's monthly cap so the soft-cap fallback (programmed path) is exercised.
+    """
     from app.modules.agents.models import AiAgent
     from app.modules.platform_connections.models import PlatformConnection
 
@@ -172,6 +178,21 @@ async def _seed_origin_tenant_agent_connection(
         is_primary=True,
     )
     db_session.add(connection)
+
+    if reach_ai_cap:
+        cap = get_plan_limits(plan)["max_conversations_per_month"]
+        cap_conv = Conversation(
+            tenant_id=tenant.id, external_user_id="cap-seed", status="open",
+        )
+        db_session.add(cap_conv)
+        await db_session.flush()
+        db_session.add_all(
+            Message(
+                tenant_id=tenant.id, conversation_id=cap_conv.id,
+                direction="out", origin="ai", content=f"ai-{i}", status="sent",
+            )
+            for i in range(cap)
+        )
     await db_session.commit()
     return tenant, connection
 
@@ -199,7 +220,12 @@ class TestOriginHandlerPaths:
 
     async def _outbound_rows(self, db_session: AsyncSession) -> list[Message]:
         rows = (await db_session.execute(
-            select(Message).where(Message.direction == "out")
+            select(Message).where(
+                Message.direction == "out",
+                # Exclude the seeded AI-cap consumption messages (their
+                # conversation uses the "cap-seed" external user id).
+                Message.external_user_id != "cap-seed",
+            )
         )).scalars().all()
         return list(rows)
 
@@ -207,7 +233,7 @@ class TestOriginHandlerPaths:
     async def test_faq_programmed_outbound_tagged_inbound_null(
         self, db_session: AsyncSession,
     ) -> None:
-        """ProgrammedOriginTagged: basic tenant FAQ answer → origin='programmed'.
+        """ProgrammedOriginTagged: at-cap basic tenant FAQ answer → origin='programmed'.
 
         Also locks the inbound counterpart: the SAME pipeline persists the
         customer message with origin=NULL (never counted as AI).
@@ -215,6 +241,7 @@ class TestOriginHandlerPaths:
         tenant, connection = await _seed_origin_tenant_agent_connection(
             db_session,
             plan="basic",
+            reach_ai_cap=True,
             business_config={
                 "faq": [
                     {

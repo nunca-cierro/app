@@ -2,15 +2,7 @@
 
 import { Badge } from "@/components/ui/badge";
 import { PLAN_LABELS } from "@/lib/plans";
-
-const TRIAL_DAYS = 7;
-
-function daysRemaining(createdAt: string): number {
-  const start = new Date(createdAt);
-  const end = new Date(start.getTime() + TRIAL_DAYS * 86400000);
-  const remaining = Math.ceil((end.getTime() - Date.now()) / 86400000);
-  return Math.max(0, remaining);
-}
+import { daysRemaining } from "@/lib/trial";
 
 const PLAN_STYLES: Record<string, string> = {
   trial: "border-yellow-500/30 bg-yellow-500/10 text-yellow-300",

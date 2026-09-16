@@ -47,9 +47,11 @@ describe("LandingAutomation (cross-sell back to the WhatsApp primary line)", () 
     expect(html).toContain('href="/#planes"');
   });
 
-  it("uses usted register and no tuteo in the rendered copy", async () => {
+  it("uses tú (tuteo) register and no voseo/usted in the rendered copy", async () => {
     const html = await renderToHtml(React.createElement(LandingAutomation));
-    expect(html).toContain("¿También quiere que su negocio responda");
-    expect(html).not.toMatch(/\b(tú|tus|tu|te|ti|contigo|tuyo|tuya)\b/i);
+    expect(html).toContain("¿También quieres que tu negocio responda");
+    expect(html).not.toMatch(
+      /\b(usted|tenés|querés|podés|volvé|mirá|dale|tranqui|al toque)\b/i,
+    );
   });
 });

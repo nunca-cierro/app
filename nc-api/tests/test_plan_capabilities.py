@@ -90,9 +90,10 @@ class TestCapabilityMatrix:
         for plan in PLAN_CAPABILITIES:
             assert plan_has_capability(plan, CAP_DASHBOARD_VIEW)
 
-    def test_basic_and_trial_lack_ai_and_management(self) -> None:
+    def test_basic_and_trial_have_ai_but_not_management(self) -> None:
+        """trial/basic now carry CAP_AI (soft-capped); management stays pro+."""
         for plan in ("basic", "trial"):
-            assert not plan_has_capability(plan, CAP_AI)
+            assert plan_has_capability(plan, CAP_AI)
             assert not plan_has_capability(plan, CAP_AGENTS_MANAGE)
             assert not plan_has_capability(plan, CAP_CONNECTIONS_MANAGE)
 
@@ -187,9 +188,9 @@ class TestPlanLimits:
         }
 
     def test_trial_and_basic_limits(self) -> None:
-        """trial/basic are programmed-only (no AI) → conv limit None (N/A)."""
-        assert get_plan_limits("trial")["max_conversations_per_month"] is None
-        assert get_plan_limits("basic")["max_conversations_per_month"] is None
+        """trial/basic have AI with soft caps (500/2000) + fixed agent counts."""
+        assert get_plan_limits("trial")["max_conversations_per_month"] == 500
+        assert get_plan_limits("basic")["max_conversations_per_month"] == 2000
         assert get_plan_limits("trial")["max_products"] == 25
         assert get_plan_limits("basic")["max_products"] == 50
         for plan in ("trial", "basic"):

@@ -1,14 +1,14 @@
 export const landingServices = {
   sectionId: "servicios",
   label: "Servicios",
-  title: "Un servicio profesional para conseguir más clientes con su sitio web",
+  title: "Un servicio profesional para conseguir más clientes con tu sitio web",
   badge: "Incluido en todos los planes, sin costos ocultos.",
   services: [
     {
       icon: "Code",
       title: "Captación de clientes",
       description:
-        "Creamos una oferta clara para que las personas interesadas le escriban por WhatsApp y pidan información de inmediato.",
+        "Creamos una oferta clara para que las personas interesadas te escriban por WhatsApp y pidan información de inmediato.",
     },
     {
       icon: "Zap",
@@ -20,7 +20,7 @@ export const landingServices = {
       icon: "Globe",
       title: "Integración directa con WhatsApp",
       description:
-        "Todo queda preparado para que sus clientes le contacten en un clic, sin formularios largos ni pasos innecesarios.",
+        "Todo queda preparado para que tus clientes te contacten en un clic, sin formularios largos ni pasos innecesarios.",
     },
   ],
 };

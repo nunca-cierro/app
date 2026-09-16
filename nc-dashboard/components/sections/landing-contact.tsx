@@ -43,13 +43,13 @@ function LandingContactChatMockup() {
             style={{ backgroundColor: "#DCF8C6" }}
           >
             <p className="text-[13px] text-gray-700 leading-relaxed">
-              ¡Hola! 👋 Cuénteme para ayudarle mejor:
+              ¡Hola! 👋 Cuéntame para ayudarte mejor:
             </p>
             <div className="mt-1.5 space-y-1">
               {[
-                "🏪 ¿A qué se dedica su negocio?",
-                "📍 ¿En qué ciudad está?",
-                "⭐ ¿Qué tipo de sitio le gustaría?",
+                "🏪 ¿A qué se dedica tu negocio?",
+                "📍 ¿En qué ciudad estás?",
+                "⭐ ¿Qué tipo de sitio te gustaría?",
                 "📅 ¿Tiene ejemplos de referencia?",
               ].map((item) => (
                 <p
@@ -96,7 +96,7 @@ function LandingContactChatMockup() {
       {/* Input bar */}
       <div className="mt-3 -mx-4 -mb-4 px-4 py-2.5 bg-stone-50 border-t border-stone-100 flex items-center gap-2">
         <div className="flex-1 bg-white rounded-full px-4 py-2 border border-stone-200">
-          <span className="text-xs text-stone-400">Escriba un mensaje...</span>
+          <span className="text-xs text-stone-400">Escribe un mensaje...</span>
         </div>
         <div className="w-7 h-7 rounded-full bg-[#075E54] flex items-center justify-center">
           <svg
@@ -216,7 +216,7 @@ export function LandingContact() {
 
       {/* Privacy notice */}
       <p className="mt-12 text-center text-xs text-stone-400">
-        Al contactarnos, confirma que acepta nuestra{" "}
+        Al contactarnos, confirmas que aceptas nuestra{" "}
         <a href="/legal#privacidad" className="text-amber-600 hover:text-amber-700 underline underline-offset-2">
           política de privacidad
         </a>

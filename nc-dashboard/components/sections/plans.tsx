@@ -151,6 +151,10 @@ export function Plans() {
         </AnimatedWrapper>
       </div>
 
+      <p className="mx-auto mt-6 max-w-2xl text-center text-xs text-stone-500">
+        {sitePlans.quotaNote}
+      </p>
+
       <p className="mx-auto mt-8 max-w-2xl text-center text-sm text-stone-600">
         {sitePlans.footerText}
       </p>

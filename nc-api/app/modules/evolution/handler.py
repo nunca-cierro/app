@@ -17,7 +17,7 @@ import uuid as uuid_pkg
 from datetime import UTC, datetime, timedelta
 
 from loguru import logger
-from sqlalchemy import select, text, update
+from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -106,11 +106,37 @@ async def _insert_message_dedup(
     return result.scalar_one_or_none()
 
 
+async def _count_ai_responses_this_month(
+    session: AsyncSession, tenant_id: uuid_pkg.UUID
+) -> int:
+    """Outbound AI messages persisted for the tenant since the UTC month start.
+
+    Same counting convention as ``GET /plans/usage`` (``origin='ai'`` +
+    ``direction='out'``) — the soft-cap unit is "AI responses" per tenant per
+    month. Programmed FAQ and escalation outbounds never count.
+    """
+    month_start = datetime.now(UTC).replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    )
+    result = await session.execute(
+        select(func.count())
+        .select_from(Message)
+        .where(
+            Message.tenant_id == tenant_id,
+            Message.origin == "ai",
+            Message.direction == "out",
+            Message.created_at >= month_start,
+        )
+    )
+    return int(result.scalar_one() or 0)
+
+
 # ── Text-matching helpers (programmed responses) ──────────────────────────────
-# Basic/trial plans lack CAP_AI — programmed keyword/FAQ responses are their
-# ONLY reply path, so matching quality here IS product quality for those plans.
-# All matchers normalize Spanish accents and ignore function words; the ORIGINAL
-# text is always kept for sending — normalization only happens for scoring.
+# Every plan carries CAP_AI, but the programmed keyword/FAQ matcher is the
+# soft-cap fallback path (and the ONLY reply path once a plan's monthly AI
+# cap is exhausted), so matching quality here IS product quality. All matchers
+# normalize Spanish accents and ignore function words; the ORIGINAL text is
+# always kept for sending — normalization only happens for scoring.
 
 # Accent folding map: á→a, é→e, í→i, ó→o, ú→u, ü→u, ñ→n (upper + lower).
 _ACCENT_FOLD: dict[int, int] = str.maketrans(
@@ -928,7 +954,7 @@ async def handle_evolution_incoming(
         agent = candidates[0] if candidates else None
 
     # ── 5b. Trial expiration check ──────────────────────────────────────
-    from app.modules.plans.capabilities import CAP_AI, TRIAL_DAYS, plan_has_capability
+    from app.modules.plans.capabilities import TRIAL_DAYS, get_plan_limits
 
     if tenant.plan == "trial":
         trial_end = tenant.created_at.replace(tzinfo=UTC) + timedelta(days=TRIAL_DAYS)
@@ -940,8 +966,23 @@ async def handle_evolution_incoming(
             logger.info("Trial expired for tenant {tid}, message ignored", tid=tenant_id)
             return
 
-    # ── 5c. Programmed responses for plans without AI capability ───────────
-    if not plan_has_capability(tenant.plan, CAP_AI):
+    # ── 5c. Soft AI cap → programmed responses ────────────────────────────
+    # Every plan now carries CAP_AI. The reply path is gated by the monthly AI
+    # cap (soft/consumable): when exhausted the bot falls back to programmed
+    # FAQ/keyword responses so it never dies and never keeps burning LLM calls.
+    # None cap (enterprise) = unlimited → always the normal AI flow.
+    ai_cap = get_plan_limits(tenant.plan)["max_conversations_per_month"]
+    ai_cap_reached = False
+    if ai_cap is not None:
+        ai_usage = await _count_ai_responses_this_month(session, tenant_id)
+        ai_cap_reached = ai_usage >= ai_cap
+        if ai_cap_reached:
+            logger.info(
+                "AI cap reached for tenant {tid} ({used}/{cap}), falling back to programmed responses",
+                tid=tenant_id, used=ai_usage, cap=ai_cap,
+            )
+
+    if ai_cap_reached:
         # Use agent's business_config FAQ + keywords for matching
         biz_config = (agent.business_config or {}) if agent else {}
         faq = biz_config.get("faq") or []
@@ -972,15 +1013,15 @@ async def handle_evolution_incoming(
             if is_first_message:
                 matched_answer = (
                     "¡Hola! 👋 Bienvenido/a a {name}. "
-                    "Soy su asistente automático y estoy aquí para atenderle. "
-                    "Puedo ayudarle con información sobre horarios, "
+                    "Soy tu asistente automático y estoy aquí para atenderte. "
+                    "Puedo ayudarte con información sobre horarios, "
                     "productos, precios y servicios. "
-                    "¿En qué puedo servirle hoy?"
+                    "¿En qué puedo ayudarte hoy?"
                 )
             else:
                 matched_answer = (
                     "¡Hola! 👋 Soy el asistente de {name}. "
-                    "¿En qué más puedo ayudarle?"
+                    "¿En qué más puedo ayudarte?"
                 )
             matched_answer = matched_answer.format(name=tenant.name)
 

@@ -1,15 +1,16 @@
-"""Tests for programmed responses on basic/trial plans (no CAP_AI).
+"""Tests for programmed responses when a plan's AI cap is reached.
 
-Basic/trial tenants have no ``ai.responses`` capability — the programmed
-FAQ/keyword matcher is their ONLY reply path, so matching quality IS product
-quality. Covers:
+trial/basic now carry ``ai.responses`` with a soft monthly cap (500/2000);
+once the cap is exhausted the programmed FAQ/keyword matcher is the fallback
+reply path, so matching quality IS product quality. These tests seed the
+tenant at its AI cap so the handler routes through the programmed path. Covers:
 
 - accent folding in FAQ matching ("atencion" ↔ "atención")
 - single-word question support ("Precios" → "precios")
 - stopword robustness ("¿Dónde están?" never false-matches)
 - escalation keyword matching (phrase keywords + word boundaries)
 - courtesy credit NOT consumed when the send fails (bot keeps replying)
-- basic plan NEVER awaits Groq (regression guard)
+- cap-exhausted plan NEVER awaits Groq (regression guard)
 """
 
 from __future__ import annotations
@@ -133,9 +134,16 @@ class TestEscalationKeywordMatching:
 
 
 async def _create_basic_plan_setup(db_session: AsyncSession) -> tuple:
-    """Tenant on 'basic' (no CAP_AI) + enabled agent with FAQ/keywords + connection."""
+    """Tenant on 'basic' with its AI cap consumed → programmed fallback path.
+
+    Basic now carries CAP_AI with a soft 2000/mo cap; seeding that many
+    ``origin='ai'`` outbound messages puts the tenant at cap so the handler
+    routes through the programmed FAQ/keyword matcher instead of the LLM.
+    """
     from app.modules.agents.models import AiAgent
+    from app.modules.conversations.models import Conversation, Message
     from app.modules.platform_connections.models import PlatformConnection
+    from app.modules.plans.capabilities import get_plan_limits
     from app.modules.tenants.models import Tenant
 
     tenant = Tenant(
@@ -178,6 +186,22 @@ async def _create_basic_plan_setup(db_session: AsyncSession) -> tuple:
         is_primary=True,
     )
     db_session.add(connection)
+
+    # Consume the monthly AI cap (basic = 2000) so the soft-cap gate falls
+    # back to programmed replies below (origin='ai' outbounds count as usage).
+    cap_conv = Conversation(
+        tenant_id=tenant.id, external_user_id="cap-seed", status="open",
+    )
+    db_session.add(cap_conv)
+    await db_session.flush()
+    cap = get_plan_limits("basic")["max_conversations_per_month"]
+    db_session.add_all(
+        Message(
+            tenant_id=tenant.id, conversation_id=cap_conv.id,
+            direction="out", origin="ai", content=f"ai-{i}", status="sent",
+        )
+        for i in range(cap)
+    )
     await db_session.commit()
     return tenant, connection
 
@@ -277,12 +301,12 @@ class TestCourtesyCreditOnSendFailure:
                 mock_send.assert_not_awaited()
 
 
-class TestBasicPlanNeverUsesGroq:
+class TestCapExhaustedFallbackNeverUsesGroq:
     @pytest.mark.asyncio
-    async def test_basic_plan_faq_response_never_awaits_groq(
+    async def test_cap_exhausted_faq_response_never_awaits_groq(
         self, client: AsyncClient, db_session: AsyncSession
     ) -> None:
-        """Regression guard: basic/trial plans MUST never call Groq.
+        """Regression guard: an at-cap basic tenant falls back to FAQ, no Groq.
 
         Also exercises FIX 1 end-to-end: "atencion" matches the FAQ
         question "¿Cuál es el horario de atención?".
@@ -313,7 +337,7 @@ class TestBasicPlanNeverUsesGroq:
                 assert sent_text == "Atendemos de 9 a 6."
 
     @pytest.mark.asyncio
-    async def test_basic_plan_word_boundary_queja_does_not_escalate(
+    async def test_cap_exhausted_word_boundary_queja_does_not_escalate(
         self, client: AsyncClient, db_session: AsyncSession
     ) -> None:
         """FIX 3 end-to-end: 'quejarnos' does NOT trigger keyword 'queja'."""
