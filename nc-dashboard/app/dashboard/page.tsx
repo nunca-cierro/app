@@ -578,6 +578,14 @@ function ClientDashboard() {
         onUpgrade={() => setShowPayment(true)}
       />
 
+      {/* Nota: qué pasa al agotar cupo IA */}
+      <p className="text-xs text-muted-foreground px-1">
+        ¿Qué pasa si se acaba tu cupo? Tu bot continúa respondiendo con las
+        respuestas programadas (FAQ) configuradas. No se detiene. Las
+        respuestas programadas y las escalaciones a un asesor nunca consumen
+        tu cupo de IA.
+      </p>
+
       {/* Business info */}
       {myTenant && (
         <Card>
