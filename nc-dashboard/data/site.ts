@@ -99,7 +99,7 @@ export const footerData = {
     {
       icon: "FaInstagram",
       label: "Instagram",
-      href: "https://wa.me/573219615338",
+      href: "https://www.instagram.com/nuncacierro/",
     },
     {
       icon: "FaFacebook",
