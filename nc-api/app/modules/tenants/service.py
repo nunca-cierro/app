@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.modules.auth.models import PaymentStatus
+from app.modules.auth.models import PaymentStatus, TenantStatus
 from app.modules.tenants.models import Tenant
 
 
@@ -71,6 +71,7 @@ async def activate_tenant_plan(
 
     tenant.plan = plan
     tenant.payment_status = PaymentStatus.ACTIVE
+    tenant.status = TenantStatus.ACTIVE
 
     if tenant.plan_activated_at is None:
         tenant.plan_activated_at = datetime.now(UTC)

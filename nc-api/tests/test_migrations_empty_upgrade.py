@@ -32,7 +32,7 @@ ALEMBIC_INI = Path(__file__).resolve().parents[1] / "alembic.ini"
 # Single head — keep in sync with `alembic heads` output. e3f4a5b6c7d8 adds the
 # nullable messages.origin column (plan-differentiation) on top of f1a2b3c4d5e6
 # (platform_connections.agent_id FK ON DELETE SET NULL).
-HEAD_REVISION = "e3f4a5b6c7d8"
+HEAD_REVISION = "f1e2d3c4b5a6"
 # Revision right before the drop_agent_role data migration.
 PRE_DROP_AGENT_REVISION = "c2d3e4f5a6b7"
 

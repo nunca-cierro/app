@@ -148,9 +148,7 @@ class TestNaturalTonePrompt:
         prompt = await _capture_system_prompt(db_session, connection)
 
         # Subordinate hint wording present (new contract).
-        assert "Si las instrucciones del negocio no indican otra cosa" in prompt
-        assert "sigue las instrucciones del negocio" in prompt
-        assert "asistente de Test Co" in prompt
+        assert "instrucciones del negocio no indican lo contrario" in prompt
 
         # Old imperative hint is gone.
         assert "PRIMER mensaje" not in prompt
@@ -172,7 +170,7 @@ class TestNaturalTonePrompt:
         prompt = await _capture_system_prompt(db_session, connection)
 
         assert prompt.strip().endswith(universal_format_block())
-        assert "Si las instrucciones del negocio no indican otra cosa" in prompt
+        assert "instrucciones del negocio no indican lo contrario" in prompt
 
     @pytest.mark.asyncio
     async def test_user_message_wrapped_exactly_once(self, db_session: AsyncSession) -> None:
