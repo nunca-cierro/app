@@ -1,4 +1,8 @@
-import { PLAN_AI_CAPS, AI_QUOTA_NOTE, CONVERSATION_ESTIMATE_NOTE } from "@/lib/plans";
+import {
+  PLAN_AI_CAPS,
+  AI_QUOTA_NOTE,
+  CONVERSATION_ESTIMATE_NOTE,
+} from "@/lib/plans";
 
 export const siteMetadata = {
   lang: "es",
@@ -25,8 +29,7 @@ export const siteBanner = siteContactInfo;
 export const siteWhatsAppMessages = {
   automation:
     "Hola, quiero información sobre los planes de automatización de WhatsApp.",
-  landing:
-    "Hola, quiero información sobre los precios de los sitios web.",
+  landing: "Hola, quiero información sobre los precios de los sitios web.",
   get automationUrl() {
     return `https://wa.me/${siteContactInfo.whatsappNumber}?text=${encodeURIComponent(this.automation)}`;
   },
@@ -104,7 +107,7 @@ export const footerData = {
     {
       icon: "FaFacebook",
       label: "Facebook",
-      href: "https://wa.me/573219615338",
+      href: "https://www.facebook.com/people/Nunca-Cierro/61589379496353/",
     },
     {
       icon: "FaXTwitter",
@@ -114,11 +117,11 @@ export const footerData = {
   ],
   copyright: {
     label: "Todos los derechos reservados.",
-      legal: [
-        { label: "Privacidad", href: "/legal#privacidad" },
-        { label: "Términos", href: "/legal#terminos" },
-        { label: "Datos y cumplimiento", href: "/legal#datos" },
-      ],
+    legal: [
+      { label: "Privacidad", href: "/legal#privacidad" },
+      { label: "Términos", href: "/legal#terminos" },
+      { label: "Datos y cumplimiento", href: "/legal#datos" },
+    ],
   },
 };
 
@@ -207,16 +210,51 @@ export const sitePlans = {
   estimateNote: CONVERSATION_ESTIMATE_NOTE,
   // Comparison table rows (prices: Escenario A, copy strings)
   comparisonRows: [
-    { label: "Precio", basic: "Desde $390.000/mes + IVA", pro: "Desde $790.000/mes + IVA", enterprise: "Desde $1.590.000/mes + IVA" },
-    { label: "Respuestas con IA al mes", basic: "Hasta 2.000 (~500 conversaciones)", pro: "10.000 (~2.500 conversaciones)", enterprise: "100.000 (~25.000 conversaciones)" },
-    { label: "Números de WhatsApp", basic: "1", pro: "Hasta 5", enterprise: "Ilimitados" },
-    { label: "Productos/Servicios", basic: "Hasta 50", pro: "Hasta 200", enterprise: "Ilimitado" },
+    {
+      label: "Precio",
+      basic: "Desde $390.000/mes + IVA",
+      pro: "Desde $790.000/mes + IVA",
+      enterprise: "Desde $1.590.000/mes + IVA",
+    },
+    {
+      label: "Respuestas con IA al mes",
+      basic: "Hasta 2.000 (~500 conversaciones)",
+      pro: "10.000 (~2.500 conversaciones)",
+      enterprise: "100.000 (~25.000 conversaciones)",
+    },
+    {
+      label: "Números de WhatsApp",
+      basic: "1",
+      pro: "Hasta 5",
+      enterprise: "Ilimitados",
+    },
+    {
+      label: "Productos/Servicios",
+      basic: "Hasta 50",
+      pro: "Hasta 200",
+      enterprise: "Ilimitado",
+    },
     { label: "Negocios", basic: "1", pro: "5", enterprise: "Ilimitados" },
     { label: "Agentes", basic: "1", pro: "10", enterprise: "Ilimitados" },
-    { label: "Métricas semanales", basic: "Resumen por WhatsApp", pro: "✅", enterprise: "✅" },
+    {
+      label: "Métricas semanales",
+      basic: "Resumen por WhatsApp",
+      pro: "✅",
+      enterprise: "✅",
+    },
     { label: "Dashboard en vivo", basic: "—", pro: "✅", enterprise: "✅" },
-    { label: "Acceso cliente", basic: "—", pro: "Solo lectura", enterprise: "Solo lectura" },
-    { label: "Soporte", basic: "WhatsApp", pro: "WhatsApp", enterprise: "Prioritario 24/7" },
+    {
+      label: "Acceso cliente",
+      basic: "—",
+      pro: "Solo lectura",
+      enterprise: "Solo lectura",
+    },
+    {
+      label: "Soporte",
+      basic: "WhatsApp",
+      pro: "WhatsApp",
+      enterprise: "Prioritario 24/7",
+    },
   ],
   // Bot-readable plan info (no prices)
   planInfo: {
@@ -329,7 +367,8 @@ export const siteFaq = {
         "Funciona para cualquier negocio que reciba consultas por WhatsApp: restaurantes, clínicas, concesionarios, inmobiliarias, hoteles, gimnasios y spas. Si tu negocio recibe mensajes, te sirve.",
     },
     {
-      question: "¿Necesito WhatsApp Business o un número exclusivo para usarlo?",
+      question:
+        "¿Necesito WhatsApp Business o un número exclusivo para usarlo?",
       answer:
         "No, funciona con cualquier WhatsApp, incluso si es tu número personal. El bot se conecta como una sesión adicional de WhatsApp Web — tú sigues usando tu WhatsApp normal en el celular para hablar con amigos y familia sin problema. El bot responde automáticamente a los clientes, y si alguien pregunta algo que el bot no sabe, te lo reenvía a tu WhatsApp para que lo resuelvas. Si prefieres tener todo separado, puedes usar un chip prepago exclusivo para el negocio, pero no es obligatorio.",
     },
@@ -410,4 +449,3 @@ export const siteUi = {
   listBullet: "•",
   sheetCloseLabel: "Cerrar",
 };
-
