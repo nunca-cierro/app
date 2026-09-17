@@ -97,6 +97,15 @@ describe("PLANS_CONFIG (Escenario A)", () => {
     );
     expect(hasUnlimited).toBe(true);
   });
+
+  it("enterprise features pin the 100.000 AI cap copy (no unlimited AI)", () => {
+    expect(PLANS_CONFIG.enterprise.features).toContain(
+      "Hasta 100.000 respuestas con IA al mes",
+    );
+    expect(PLANS_CONFIG.enterprise.features).not.toContain(
+      "Respuestas con IA ilimitadas",
+    );
+  });
 });
 
 describe("formatPrice removal", () => {
@@ -120,5 +129,11 @@ describe("PlanCard render (SSR)", () => {
     expect(html).toContain("Empresarial");
     expect(html).toContain("Desde $1.590.000/mes + IVA");
     expect(html).toContain("Activar");
+  });
+
+  it("renders the Empresarial card with the capped AI copy, not unlimited", async () => {
+    const html = await renderCard("enterprise");
+    expect(html).toContain("Hasta 100.000 respuestas con IA al mes");
+    expect(html).not.toContain("Respuestas con IA ilimitadas");
   });
 });

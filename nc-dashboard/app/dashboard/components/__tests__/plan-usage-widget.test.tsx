@@ -25,9 +25,13 @@ import type { PlanUsage } from "@/lib/types";
  * directly (extract-before-mock).
  */
 
-function makeUsage(pct: number | null, overLimit = false): PlanUsage {
+function makeUsage(
+  pct: number | null,
+  overLimit = false,
+  plan = "professional",
+): PlanUsage {
   return {
-    plan: "professional",
+    plan,
     limits: {
       max_agents: 5,
       max_products: 50,
@@ -117,18 +121,24 @@ describe("usageWidgetState", () => {
 
 describe("shouldShowUpgradeCta", () => {
   it("hides the CTA below 80%", () => {
-    expect(shouldShowUpgradeCta(24)).toBe(false);
-    expect(shouldShowUpgradeCta(79)).toBe(false);
+    expect(shouldShowUpgradeCta(24, "professional")).toBe(false);
+    expect(shouldShowUpgradeCta(79, "professional")).toBe(false);
   });
 
-  it("shows the CTA at 80% and above", () => {
-    expect(shouldShowUpgradeCta(80)).toBe(true);
-    expect(shouldShowUpgradeCta(100)).toBe(true);
-    expect(shouldShowUpgradeCta(105)).toBe(true);
+  it("shows the CTA at 80% and above for non-enterprise plans", () => {
+    expect(shouldShowUpgradeCta(80, "professional")).toBe(true);
+    expect(shouldShowUpgradeCta(100, "professional")).toBe(true);
+    expect(shouldShowUpgradeCta(105, "professional")).toBe(true);
   });
 
   it("never shows the CTA for unlimited plans (pct null)", () => {
-    expect(shouldShowUpgradeCta(null)).toBe(false);
+    expect(shouldShowUpgradeCta(null, "professional")).toBe(false);
+  });
+
+  it("never shows the CTA for enterprise at any pct (top plan, no self-service upgrade)", () => {
+    expect(shouldShowUpgradeCta(80, "enterprise")).toBe(false);
+    expect(shouldShowUpgradeCta(90, "enterprise")).toBe(false);
+    expect(shouldShowUpgradeCta(105, "enterprise")).toBe(false);
   });
 });
 
@@ -189,11 +199,28 @@ describe("PlanUsageWidget rendered states", () => {
     expect(html).toContain("105%");
   });
 
-  it("renders 'Ilimitado' without a bar for enterprise (pct null)", async () => {
-    const html = await renderWidget({ data: makeUsage(null) });
+  it("renders 'Ilimitado' without a bar for a pct-null plan (defensive branch)", async () => {
+    const html = await renderWidget({ data: makeUsage(null, false, "enterprise") });
 
     expect(html).toContain("Ilimitado");
     expect(html).not.toContain("progressbar");
+    expect(html).not.toContain("Mejorar plan");
+  });
+
+  it("renders the enterprise bar WITHOUT the upgrade CTA at 90% (EnterpriseBarWithoutUpgradeCta)", async () => {
+    const html = await renderWidget({ data: makeUsage(90, false, "enterprise") });
+
+    expect(html).toContain('aria-valuenow="90"');
+    expect(html).toContain("90%");
+    expect(html).not.toContain("Mejorar plan");
+  });
+
+  it("renders the enterprise over state informatively WITHOUT CTA (EnterpriseOverInformsWithoutCta)", async () => {
+    const html = await renderWidget({ data: makeUsage(105, true, "enterprise") });
+
+    expect(html).toContain("Superaste el cupo mensual de respuestas IA");
+    expect(html).toContain("105%");
+    expect(html).toContain('aria-valuenow="100"');
     expect(html).not.toContain("Mejorar plan");
   });
 

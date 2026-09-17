@@ -970,7 +970,9 @@ async def handle_evolution_incoming(
     # Every plan now carries CAP_AI. The reply path is gated by the monthly AI
     # cap (soft/consumable): when exhausted the bot falls back to programmed
     # FAQ/keyword responses so it never dies and never keeps burning LLM calls.
-    # None cap (enterprise) = unlimited → always the normal AI flow.
+    # Every plan has a cap (500/2000/10000/100000): enterprise caps at 100.000
+    # AI responses/month (fair use) and degrades soft to programmed responses
+    # at/over the cap — no hard block, no billing.
     ai_cap = get_plan_limits(tenant.plan)["max_conversations_per_month"]
     ai_cap_reached = False
     if ai_cap is not None:

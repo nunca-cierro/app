@@ -14,10 +14,10 @@ export type UsageWidgetState =
   | "hidden" // API error → widget oculto (degradación graceful)
   | "loading" // fetch en curso sin datos previos
   | "idle" // sin tenant activo ni fetch pendiente
-  | "unlimited" // pct null → enterprise/ilimitado, sin barra
+  | "unlimited" // pct null → rama defensiva (ningún plan soportado lo alcanza), sin barra
   | "normal" // pct < 80 → barra sin CTA
-  | "warning" // 80 <= pct <= 100 → barra + CTA a upgrade
-  | "over"; // pct > 100 → exceso + CTA (informativo, nunca bloquea)
+  | "warning" // 80 <= pct <= 100 → barra + CTA (salvo enterprise)
+  | "over"; // pct > 100 → exceso + CTA (informativo, nunca bloquea; enterprise sin CTA)
 
 export function usageWidgetState(
   data: PlanUsage | null,
@@ -33,9 +33,13 @@ export function usageWidgetState(
   return "normal";
 }
 
-/** CTA a upgrade: solo cuando hay límite medible y uso >= 80%. */
-export function shouldShowUpgradeCta(pct: number | null): boolean {
-  return pct !== null && pct >= 80;
+/** CTA a upgrade: solo cuando hay límite medible, uso >= 80% y el plan tiene
+ *  un plan superior auto-servicio (enterprise es el plan top → nunca CTA). */
+export function shouldShowUpgradeCta(
+  pct: number | null,
+  plan: string,
+): boolean {
+  return pct !== null && pct >= 80 && plan !== "enterprise";
 }
 
 /** Ancho visual de la barra — clamp a 100% aunque pct exceda. */
@@ -54,10 +58,11 @@ export function formatUsageLimit(limit: number | null): string {
 
 /**
  * "Uso de tu plan" — medidor informativo del tenant activo (Slice 3).
- * Barra vs cupo mensual de respuestas con IA; CTA a upgrade >= 80%;
- * estado de exceso > 100%; enterprise (pct null) sin barra; ante fallo
- * de API se oculta y el dashboard sigue operativo. NUNCA bloquea ni
- * sugiere enforcement (owner-validated: informative only).
+ * Barra vs cupo mensual de respuestas con IA; CTA a upgrade >= 80% salvo
+ * enterprise (plan top, sin plan superior auto-servicio → nunca CTA);
+ * estado de exceso > 100%; el estado "unlimited" (pct null) queda como rama
+ * defensiva; ante fallo de API se oculta y el dashboard sigue operativo.
+ * NUNCA bloquea ni sugiere enforcement (owner-validated: informative only).
  */
 export function PlanUsageWidget({
   data,
@@ -138,7 +143,7 @@ export function PlanUsageWidget({
               </p>
             )}
 
-            {shouldShowUpgradeCta(data.pct) && (
+            {shouldShowUpgradeCta(data.pct, data.plan) && (
               <Button
                 size="sm"
                 className="w-full"

@@ -198,12 +198,12 @@ class TestPlanLimits:
             assert limits["max_agents"] == 1
             assert limits["max_businesses"] == 1
 
-    def test_enterprise_limits_unlimited(self) -> None:
-        """enterprise → all limits None (unlimited, pct not applicable)."""
+    def test_enterprise_ai_cap_capped_others_unlimited(self) -> None:
+        """Scenario EnterpriseAICapCapped: AI cap 100.000/mes; other limits stay None."""
         assert get_plan_limits("enterprise") == {
             "max_agents": None,
             "max_products": None,
-            "max_conversations_per_month": None,
+            "max_conversations_per_month": 100000,
             "max_businesses": None,
         }
 

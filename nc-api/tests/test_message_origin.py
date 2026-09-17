@@ -338,6 +338,79 @@ class TestOriginHandlerPaths:
         assert outbound[0].content == "Respuesta generada por IA"
 
     @pytest.mark.asyncio
+    async def test_enterprise_at_cap_degrades_to_programmed(
+        self, db_session: AsyncSession,
+    ) -> None:
+        """AtCapDegradesToProgrammed: enterprise at 100.000 AI responses →
+        programmed FAQ path, origin='programmed', no LLM call.
+
+        Patches the monthly counter instead of seeding 100K rows (absurdly
+        slow — design: at-cap handler test strategy). The soft gate reads
+        ``tenant.plan`` only, so the same degrade applies to superadmin users
+        (NoSuperadminBypass holds by construction).
+        """
+        tenant, connection = await _seed_origin_tenant_agent_connection(
+            db_session, plan="enterprise", business_config={},
+        )
+        with patch(
+            "app.modules.evolution.handler._count_ai_responses_this_month",
+            new_callable=AsyncMock,
+            return_value=100000,
+        ) as mock_count, patch(
+            "app.modules.evolution.handler.EvolutionAdapter.send_message",
+            new_callable=AsyncMock,
+        ) as mock_send, patch(
+            "app.modules.evolution.handler.llm_client.generate",
+            new_callable=AsyncMock,
+        ) as mock_groq:
+            mock_send.return_value = {"key": {"id": "mock-evo-id"}}
+            await handle_evolution_incoming(
+                event=_make_origin_event("hola"),
+                connection=connection,
+                session=db_session,
+            )
+
+        mock_count.assert_awaited_once()
+        mock_groq.assert_not_awaited()
+        outbound = await self._outbound_rows(db_session)
+        assert len(outbound) == 1
+        assert outbound[0].origin == "programmed"
+
+    @pytest.mark.asyncio
+    async def test_enterprise_below_cap_ai_still_works(
+        self, db_session: AsyncSession,
+    ) -> None:
+        """BelowCapAiStillWorks: enterprise at 99.999 AI responses → normal
+        LLM flow, origin='ai' (counter patched below the 100.000 cap)."""
+        tenant, connection = await _seed_origin_tenant_agent_connection(
+            db_session, plan="enterprise", business_config={},
+        )
+        with patch(
+            "app.modules.evolution.handler._count_ai_responses_this_month",
+            new_callable=AsyncMock,
+            return_value=99999,
+        ) as mock_count, patch(
+            "app.modules.evolution.handler.EvolutionAdapter.send_message",
+            new_callable=AsyncMock,
+        ) as mock_send, patch(
+            "app.modules.evolution.handler.llm_client.generate",
+            new_callable=AsyncMock,
+        ) as mock_groq:
+            mock_send.return_value = {"key": {"id": "mock-evo-id"}}
+            mock_groq.return_value = "Respuesta generada por IA"
+            await handle_evolution_incoming(
+                event=_make_origin_event("¿cuánto cuesta?"),
+                connection=connection,
+                session=db_session,
+            )
+
+        mock_count.assert_awaited_once()
+        mock_groq.assert_awaited_once()
+        outbound = await self._outbound_rows(db_session)
+        assert len(outbound) == 1
+        assert outbound[0].origin == "ai"
+
+    @pytest.mark.asyncio
     async def test_admin_from_me_outbound_origin_null(
         self, db_session: AsyncSession,
     ) -> None:

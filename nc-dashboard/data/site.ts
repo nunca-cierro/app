@@ -208,7 +208,7 @@ export const sitePlans = {
   // Comparison table rows (prices: Escenario A, copy strings)
   comparisonRows: [
     { label: "Precio", basic: "Desde $390.000/mes + IVA", pro: "Desde $790.000/mes + IVA", enterprise: "Desde $1.590.000/mes + IVA" },
-    { label: "Respuestas con IA al mes", basic: "Hasta 2.000 (~500 conversaciones)", pro: "10.000 (~2.500 conversaciones)", enterprise: "Ilimitadas" },
+    { label: "Respuestas con IA al mes", basic: "Hasta 2.000 (~500 conversaciones)", pro: "10.000 (~2.500 conversaciones)", enterprise: "100.000 (~25.000 conversaciones)" },
     { label: "Números de WhatsApp", basic: "1", pro: "Hasta 5", enterprise: "Ilimitados" },
     { label: "Productos/Servicios", basic: "Hasta 50", pro: "Hasta 200", enterprise: "Ilimitado" },
     { label: "Negocios", basic: "1", pro: "5", enterprise: "Ilimitados" },
@@ -249,7 +249,7 @@ export const sitePlans = {
       name: "Empresarial",
       type: "ai",
       maxProducts: null, // unlimited
-      maxConversations: null, // unlimited
+      maxConversations: 100000, // AI fair-use cap (matches backend PLAN_LIMITS)
       maxBusinesses: null, // unlimited
       hasAI: true,
       hasDashboard: true,

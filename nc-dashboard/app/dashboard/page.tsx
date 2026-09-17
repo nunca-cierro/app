@@ -85,7 +85,7 @@ function WelcomeHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/10 via-background to-background p-6">
+    <div className="relative overflow-hidden rounded-2xl border border-primary/15 bg-linear-to-br from-primary/10 via-background to-background p-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -114,7 +114,9 @@ function StatCard({ stat }: { stat: AdminStat }) {
           <p className="text-sm font-medium text-muted-foreground">
             {stat.title}
           </p>
-          <p className="mt-1.5 text-2xl font-bold tracking-tight">{stat.value}</p>
+          <p className="mt-1.5 text-2xl font-bold tracking-tight">
+            {stat.value}
+          </p>
           <p className="mt-1 text-xs text-muted-foreground">{stat.subtitle}</p>
         </div>
         <span
@@ -178,7 +180,11 @@ function SectionHeader({
  * (agents/connections are plan-gated for admin+superadmin) but temporarily
  * loses the create quick actions — see canSeeQuickActions() in lib/rbac.ts.
  */
-export function AdminQuickActions({ role }: { role?: UserRole | string | null }) {
+export function AdminQuickActions({
+  role,
+}: {
+  role?: UserRole | string | null;
+}) {
   if (!canSeeQuickActions(role)) return null;
   return (
     <>
@@ -210,7 +216,9 @@ function AdminDashboard({
 }) {
   const { metrics, isLoading, error } = useMetrics();
   const { tenants, isLoading: loadingTenants } = useTenants();
-  const { conversations, isLoading: loadingConversations } = useConversations({ limit: 5 });
+  const { conversations, isLoading: loadingConversations } = useConversations({
+    limit: 5,
+  });
 
   if (error) return <ErrorBanner message={error} />;
 
@@ -219,7 +227,8 @@ function AdminDashboard({
   const _now = Date.now();
   const _trialMs = TRIAL_DAYS * 86400000;
   const expiredTrials = (tenants ?? []).filter(
-    (t) => t.plan === "trial" && new Date(t.created_at).getTime() + _trialMs < _now,
+    (t) =>
+      t.plan === "trial" && new Date(t.created_at).getTime() + _trialMs < _now,
   );
   const pendingPayments = (tenants ?? []).filter(
     (t) => t.payment_status === "pending" && t.slug !== INTERNAL_TENANT_SLUG,
@@ -311,7 +320,10 @@ function AdminDashboard({
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {tenants.slice(0, 6).map((t) => (
-              <Card key={t.id} className="transition-shadow duration-200 hover:shadow-md">
+              <Card
+                key={t.id}
+                className="transition-shadow duration-200 hover:shadow-md"
+              >
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm">{t.name}</CardTitle>
                 </CardHeader>
@@ -349,7 +361,10 @@ function AdminDashboard({
         ) : (
           <div className="space-y-2">
             {conversations.map((c) => (
-              <Card key={c.id} className="transition-shadow duration-200 hover:shadow-md">
+              <Card
+                key={c.id}
+                className="transition-shadow duration-200 hover:shadow-md"
+              >
                 <CardContent className="flex items-center justify-between py-3">
                   <div>
                     <p className="text-sm font-medium">{c.wa_user_id}</p>
@@ -360,7 +375,9 @@ function AdminDashboard({
                   <span
                     className={cn(
                       "inline-block size-1.5 rounded-full",
-                      c.status === "active" ? "bg-success" : "bg-muted-foreground/50",
+                      c.status === "active"
+                        ? "bg-success"
+                        : "bg-muted-foreground/50",
                     )}
                   />
                 </CardContent>
@@ -389,13 +406,16 @@ function ClientDashboard() {
   const effectiveRole = user?.current_role ?? user?.role;
   // business_config mutation is operator-role-only server-side
   // (PATCH /agents = admin/superadmin), so this client view is read-only.
-  const isOperator = effectiveRole === "admin" || effectiveRole === "superadmin";
+  const isOperator =
+    effectiveRole === "admin" || effectiveRole === "superadmin";
   const canEdit = isOperator && hasCapability(user, CAPABILITIES.businessEdit);
   const canView = hasCapability(user, CAPABILITIES.businessView);
 
   const myTenant = tid ? tenants.find((t) => t.id === tid) : null;
   const myAgent = agents.find((a) => a.tenant_id === tid) ?? null;
-  const remaining = myTenant?.created_at ? daysRemaining(myTenant.created_at) : 0;
+  const remaining = myTenant?.created_at
+    ? daysRemaining(myTenant.created_at)
+    : 0;
 
   // Business config hooks (must be before early return for React hooks rules)
   const { updateBusinessConfig } = useAgent(myAgent?.id ?? "");
@@ -414,7 +434,9 @@ function ClientDashboard() {
   const paymentStatus = myTenant?.payment_status;
   if (!isLoadingTenants) {
     if (showPayment && plan) {
-      return <PaymentScreen planKey={plan} onBack={() => setShowPayment(false)} />;
+      return (
+        <PaymentScreen planKey={plan} onBack={() => setShowPayment(false)} />
+      );
     }
     // Pending payment — show banner instead of blocking
     if (paymentStatus === "pending" && plan !== "trial") {
@@ -464,9 +486,12 @@ function ClientDashboard() {
       {/* Pending payment banner — shown only when payment is pending and plan is not trial */}
       {paymentStatus === "pending" && plan !== "trial" && (
         <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm">
-          <p className="font-medium text-warning-foreground">⏳ Pago pendiente</p>
+          <p className="font-medium text-warning-foreground">
+            ⏳ Pago pendiente
+          </p>
           <p className="mt-1 text-muted-foreground">
-            Su pago está siendo verificado. Le activaremos el plan apenas se confirme.
+            Su pago está siendo verificado. Le activaremos el plan apenas se
+            confirme.
           </p>
           <Button
             variant="outline"
@@ -505,7 +530,9 @@ function ClientDashboard() {
           {/* Plan features */}
           {plan === "trial" && (
             <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning-foreground">
-              <p className="mb-1 font-medium">Plan de prueba — 3 días gratis con IA</p>
+              <p className="mb-1 font-medium">
+                Plan de prueba — 3 días gratis con IA
+              </p>
               <ul className="list-inside list-disc space-y-1 text-xs text-muted-foreground">
                 <li>IA incluida (hasta 500 respuestas IA)</li>
                 <li>Hasta 25 productos en catálogo</li>
@@ -528,10 +555,12 @@ function ClientDashboard() {
 
           {plan === "enterprise" && (
             <div className="rounded-lg border border-violet-500/30 bg-violet-500/10 p-3 text-sm text-violet-800 dark:text-violet-300">
-              <p className="mb-1 font-medium">Plan Empresarial — Acceso completo</p>
+              <p className="mb-1 font-medium">
+                Plan Empresarial — Acceso completo
+              </p>
               <ul className="list-inside list-disc space-y-1 text-xs text-muted-foreground">
                 <li>Todo lo del plan Profesional</li>
-                <li>Respuestas con IA ilimitadas</li>
+                <li>Hasta 100.000 respuestas con IA al mes</li>
                 <li>Productos y números de WhatsApp ilimitados</li>
                 <li>Soporte prioritario 24/7</li>
               </ul>
@@ -561,13 +590,21 @@ function ClientDashboard() {
           <CardContent className="space-y-3 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Estado</span>
-              <Badge variant={myTenant.status === "active" ? "default" : "secondary"}>
+              <Badge
+                variant={myTenant.status === "active" ? "default" : "secondary"}
+              >
                 {myTenant.status === "active" ? "Activo" : "Inactivo"}
               </Badge>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Creado</span>
-              <span>{new Date(myTenant.created_at).toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" })}</span>
+              <span>
+                {new Date(myTenant.created_at).toLocaleDateString("es-CO", {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                })}
+              </span>
             </div>
             {plan === "trial" && (
               <div className="flex justify-between">
@@ -593,7 +630,11 @@ function ClientDashboard() {
               Información del Negocio
             </CardTitle>
             {canEdit && !isEditing && (
-              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+              >
                 <Pencil className="mr-1 size-3" /> Editar
               </Button>
             )}
@@ -620,17 +661,22 @@ function ClientDashboard() {
               {myAgent.business_config.business_info?.description && (
                 <p>{myAgent.business_config.business_info.description}</p>
               )}
-              {myAgent.business_config.products_services && myAgent.business_config.products_services.length > 0 && (
-                <p className="mt-1">
-                  {myAgent.business_config.products_services.length} productos/servicios · {myAgent.business_config.faq?.length ?? 0} preguntas frecuentes
-                </p>
-              )}
+              {myAgent.business_config.products_services &&
+                myAgent.business_config.products_services.length > 0 && (
+                  <p className="mt-1">
+                    {myAgent.business_config.products_services.length}{" "}
+                    productos/servicios ·{" "}
+                    {myAgent.business_config.faq?.length ?? 0} preguntas
+                    frecuentes
+                  </p>
+                )}
               {!myAgent.business_config.business_info?.description && (
                 <p>Sin información configurada.</p>
               )}
               {!canEdit && (
                 <p className="mt-2 text-xs text-muted-foreground/70">
-                  Solo lectura. Contacte a su administrador para realizar cambios.
+                  Solo lectura. Contacte a su administrador para realizar
+                  cambios.
                 </p>
               )}
             </CardContent>

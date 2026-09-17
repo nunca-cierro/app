@@ -12,7 +12,9 @@ Limits semantics (plan-differentiation): ``max_conversations_per_month`` counts
 **AI responses** — outbound messages persisted with ``origin='ai'`` — per tenant
 per month (NOT raw conversations; programmed FAQ and escalations do not count).
 Limits are informative/consumable (soft): nothing in this module enforces or
-bills against them. ``None`` = unlimited (enterprise).
+bills against them. ``None`` = unlimited — applies to ``max_agents``,
+``max_products`` and ``max_businesses`` for enterprise; its AI cap is 100.000
+responses/month (see PLAN_LIMITS).
 """
 
 from __future__ import annotations
@@ -80,10 +82,13 @@ PLAN_CAPABILITIES: Final[dict[str, frozenset[str]]] = {
 
 # ── Limits per plan (None = unlimited) ──────────────────────────────────────
 # max_conversations_per_month = AI responses (origin='ai') per tenant per month.
-# trial/basic carry a soft monthly cap (500/2000): when exhausted the handler
-# falls back to programmed FAQ responses instead of calling the LLM. Limits
-# are always soft: consumed by GET /plans/usage for the meter and by the
-# handler's fallback gate, never billing or hard-blocking.
+# Every plan carries a soft monthly AI cap (500/2000/10000/100000); enterprise
+# caps at 100.000 AI responses/month (fair use — soft, the top plan has no
+# self-service plan above it). When a cap is exhausted the handler falls back
+# to programmed FAQ responses instead of calling the LLM. Limits are always
+# soft: consumed by GET /plans/usage for the meter and by the handler's
+# fallback gate, never billing or hard-blocking. None = unlimited applies to
+# max_agents / max_products / max_businesses only.
 PLAN_LIMITS: Final[dict[str, dict[str, int | None]]] = {
     "trial": {
         "max_agents": 1,
@@ -106,7 +111,7 @@ PLAN_LIMITS: Final[dict[str, dict[str, int | None]]] = {
     "enterprise": {
         "max_agents": None,
         "max_products": None,
-        "max_conversations_per_month": None,
+        "max_conversations_per_month": 100000,
         "max_businesses": None,
     },
 }

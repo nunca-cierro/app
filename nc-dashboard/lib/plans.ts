@@ -23,7 +23,7 @@ export const PLAN_AI_CAPS: Record<string, string> = {
   trial: "3 días con IA incluida (hasta 500 respuestas IA)",
   basic: "Hasta 2.000 respuestas con IA al mes",
   professional: "10.000 respuestas IA/mes y hasta 5 números de WhatsApp",
-  enterprise: "Respuestas con IA ilimitadas",
+  enterprise: "Hasta 100.000 respuestas con IA al mes",
 };
 
 /**
@@ -38,7 +38,7 @@ export const AI_QUOTA_NOTE =
  * Owner-validated: divide by ~4 messages per conversation, use "~" not "=".
  */
 export const CONVERSATION_ESTIMATE_NOTE =
-  "Cantidad estimada de conversaciones, asumiendo ~4 mensajes por conversación.";
+  "Cantidad estimada de conversaciones, asumiendo ~4 respuestas por conversación.";
 
 /**
  * Escenario A (owner-validated, plan-differentiation): prices are pure copy

@@ -3,10 +3,10 @@
 Read-only consumption meter for the ACTIVE tenant (JWT-scoped
 ``current_tenant_id``, design D3): effective plan limits + current usage +
 derived flags. ``pct`` = percentage of AI responses against
-``max_conversations_per_month`` (PRIMARY metric, design D1); ``None`` when the
-plan is unlimited (enterprise). ``over_limit`` = True when ANY usage metric
-exceeds its limit. Soft limits — this module only reports; nothing here
-blocks, enforces or bills.
+``max_conversations_per_month`` (PRIMARY metric, design D1); ``None`` only
+when the limit is ``None`` or 0 (no measurable cap). ``over_limit`` = True
+when ANY usage metric exceeds its limit. Soft limits — this module only
+reports; nothing here blocks, enforces or bills.
 """
 
 from __future__ import annotations
@@ -41,8 +41,8 @@ def current_month_start(now: datetime | None = None) -> datetime:
 def compute_pct(ai_responses: int, limit: int | None) -> int | None:
     """Percentage of AI responses used vs the monthly limit (primary metric).
 
-    ``None`` when the plan is unlimited (enterprise) or the limit is 0 —
-    the percentage is not applicable there.
+    ``None`` when the limit is ``None`` or 0 — the percentage is not
+    applicable without a measurable cap.
     """
     if limit is None or limit <= 0:
         return None

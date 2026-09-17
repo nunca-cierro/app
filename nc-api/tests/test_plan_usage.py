@@ -38,10 +38,12 @@ class TestPlanLimitsSchema:
         assert limits.max_businesses == 5
 
     def test_builds_from_get_plan_limits_enterprise(self) -> None:
-        """Enterprise → None values (unlimited)."""
+        """Enterprise → AI cap 100.000/mes; agents/products/businesses stay unlimited."""
         limits = PlanLimits(**get_plan_limits("enterprise"))
+        assert limits.max_conversations_per_month == 100000
         assert limits.max_agents is None
-        assert limits.max_conversations_per_month is None
+        assert limits.max_products is None
+        assert limits.max_businesses is None
 
     def test_serializes_to_contract_keys(self) -> None:
         """PlanLimits JSON keys match the documented limits contract."""
@@ -99,16 +101,16 @@ class TestPlanUsageResponseSchema:
         assert response.pct == 102
         assert response.over_limit is True
 
-    def test_enterprise_pct_nullable(self) -> None:
-        """Enterprise → pct not applicable (null), over_limit False."""
+    def test_enterprise_pct_numeric(self) -> None:
+        """Enterprise → numeric pct vs the 100.000 cap (10), over_limit False."""
         response = PlanUsageResponse(
             plan="enterprise",
             limits=PlanLimits(**get_plan_limits("enterprise")),
             usage=PlanUsage(ai_responses=9999, products=999, businesses=9),
-            pct=None,
+            pct=10,  # round(9999 * 100 / 100000)
             over_limit=False,
         )
-        assert response.pct is None
+        assert response.pct == 10
         assert response.over_limit is False
 
 
@@ -392,13 +394,13 @@ class TestPlanUsageEndpoint:
         assert data["over_limit"] is False
 
     @pytest.mark.asyncio
-    async def test_enterprise_pct_null_and_never_over(
+    async def test_enterprise_usage_reports_numeric_cap(
         self, client: AsyncClient, db_session: AsyncSession,
     ) -> None:
-        """Enterprise → pct null; unlimited limits never report over_limit."""
+        """EnterpriseUsageReportsNumericCap: limit 100000, numeric pct 0, never over."""
         tenant = await _seed_usage_tenant(
             db_session, plan="enterprise", slug="enterprise-co",
-            ai_messages=60, products=25,  # 25 > basic 10 → proves None limits
+            ai_messages=60, products=25,  # 25 products with None limit → never over
         )
         _auth_as(db_session, tenant_id=tenant.id)
         await db_session.commit()
@@ -410,10 +412,10 @@ class TestPlanUsageEndpoint:
         assert data["limits"] == {
             "max_agents": None,
             "max_products": None,
-            "max_conversations_per_month": None,
+            "max_conversations_per_month": 100000,
             "max_businesses": None,
         }
-        assert data["pct"] is None
+        assert data["pct"] == 0  # round(60 * 100 / 100000)
         assert data["over_limit"] is False
 
     @pytest.mark.asyncio

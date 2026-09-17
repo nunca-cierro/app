@@ -172,18 +172,18 @@ describe("ClientDashboard — plan usage widget integration", () => {
     expect(html).not.toContain("Uso de tu plan");
   });
 
-  it("renders Ilimitado without a bar for an enterprise tenant", async () => {
+  it("renders the enterprise bar with the 100.000 cap and NO upgrade CTA", async () => {
     mocks.planUsage = {
       data: {
         plan: "enterprise",
         limits: {
           max_agents: null,
           max_products: null,
-          max_conversations_per_month: null,
+          max_conversations_per_month: 100000,
           max_businesses: null,
         },
-        usage: { ai_responses: 0, products: 0, businesses: 1 },
-        pct: null,
+        usage: { ai_responses: 90000, products: 12, businesses: 2 },
+        pct: 90,
         over_limit: false,
       },
       isLoading: false,
@@ -193,7 +193,37 @@ describe("ClientDashboard — plan usage widget integration", () => {
     const html = await renderDashboard();
 
     expect(html).toContain("Uso de tu plan");
-    expect(html).toContain("Ilimitado");
-    expect(html).not.toContain("progressbar");
+    // Numeric cap → bar visible for enterprise (no more unlimited state).
+    expect(html).toContain("progressbar");
+    expect(html).toContain("100.000");
+    expect(html).toContain("90%");
+    // Top plan — no self-service upgrade CTA at any pct.
+    expect(html).not.toContain("Mejorar plan");
+  });
+
+  it("renders the enterprise banner with the capped AI copy (no unlimited AI)", async () => {
+    mocks.auth.user.plan = "enterprise";
+    mocks.planUsage = {
+      data: {
+        plan: "enterprise",
+        limits: {
+          max_agents: null,
+          max_products: null,
+          max_conversations_per_month: 100000,
+          max_businesses: null,
+        },
+        usage: { ai_responses: 90000, products: 12, businesses: 2 },
+        pct: 90,
+        over_limit: false,
+      },
+      isLoading: false,
+      error: null,
+    };
+
+    const html = await renderDashboard();
+
+    expect(html).toContain("Plan Empresarial — Acceso completo");
+    expect(html).toContain("Hasta 100.000 respuestas con IA al mes");
+    expect(html).not.toContain("Respuestas con IA ilimitadas");
   });
 });

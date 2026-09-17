@@ -48,8 +48,8 @@ describe("sitePlans comparisonRows", () => {
     expect(row).toBeDefined();
     expect(row?.basic).toBe("Hasta 2.000 (~500 conversaciones)");
     expect(row?.pro).toBe("10.000 (~2.500 conversaciones)");
-    expect(row?.enterprise).toBe("Ilimitadas");
-    expect(sitePlans.estimateNote).toContain("~4 mensajes por conversación");
+    expect(row?.enterprise).toBe("100.000 (~25.000 conversaciones)");
+    expect(sitePlans.estimateNote).toContain("~4 respuestas por conversación");
   });
 
   it("drops the Tipo de respuestas and Respuestas programadas (FAQ) rows (noise)", () => {
@@ -118,6 +118,33 @@ describe("sitePlans planInfo (no false promises)", () => {
   it("marks enterprise client access as read-only (clients never edit)", () => {
     expect(sitePlans.planInfo.enterprise.clientAccessType).toBe("read");
     expect(sitePlans.planInfo.professional.clientAccessType).toBe("read");
+  });
+
+  it("pins the enterprise AI cap to 100000 (Scenario PlanInfoNumericCap)", () => {
+    expect(sitePlans.planInfo.enterprise.maxConversations).toBe(100000);
+    // Products/businesses stay unlimited (None) — only the AI cap changed.
+    expect(sitePlans.planInfo.enterprise.maxProducts).toBeNull();
+    expect(sitePlans.planInfo.enterprise.maxBusinesses).toBeNull();
+  });
+});
+
+describe("enterprise AI cap copy (Scenario NoUnlimitedAiCopyRemains)", () => {
+  it("enterprise package features carry the capped AI copy, not unlimited", () => {
+    const enterprise = sitePlans.packages.find((p) => p.name === "Empresarial");
+    expect(enterprise?.features).toContain(
+      "Hasta 100.000 respuestas con IA al mes",
+    );
+    expect(enterprise?.features).not.toContain(
+      "Respuestas con IA ilimitadas",
+    );
+  });
+
+  it("the comparison AI row no longer reads 'Ilimitadas' for enterprise", () => {
+    const row = sitePlans.comparisonRows.find(
+      (r) => r.label === "Respuestas con IA al mes",
+    );
+    expect(row?.enterprise).not.toBe("Ilimitadas");
+    expect(row?.enterprise).toContain("100.000");
   });
 });
 

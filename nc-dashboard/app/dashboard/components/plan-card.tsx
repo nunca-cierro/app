@@ -46,7 +46,7 @@ export const PLANS_CONFIG: Record<
     priceLabel: "Desde $1.590.000/mes + IVA",
     features: [
       "Todo lo del plan Profesional",
-      "Respuestas con IA ilimitadas",
+      "Hasta 100.000 respuestas con IA al mes",
       "Productos y números de WhatsApp ilimitados",
       "Soporte prioritario 24/7",
       "Onboarding personalizado",

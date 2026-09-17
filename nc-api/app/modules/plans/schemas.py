@@ -2,7 +2,7 @@
 
 Consumed by the usage endpoint (Phase 2) and mirrored by the dashboard widget.
 ``pct`` = percentage of AI responses used against ``max_conversations_per_month``
-(primary metric, design D1); ``None`` when the plan is unlimited (enterprise).
+(primary metric, design D1); ``None`` only when the limit is ``None`` or 0.
 ``over_limit`` = True when ANY usage metric exceeds its limit (soft — the
 endpoint never blocks or bills on it).
 
