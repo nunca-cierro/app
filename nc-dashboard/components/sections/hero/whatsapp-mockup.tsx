@@ -2,32 +2,121 @@
 
 import { useEffect, useState } from "react";
 
-const messages = [
+type Message = {
+  id: number;
+  type: "incoming" | "outgoing";
+  text: string;
+  time: string;
+};
+
+type BusinessScene = {
+  name: string;
+  initials: string;
+  avatarClass: string;
+  messages: Message[];
+};
+
+// Rotating verticals — first clinic, then restaurant, then barbershop.
+// Keep names professional and mid-market; chat scenarios must only show
+// capabilities the product actually has (FAQ/prices/hours — no live booking).
+const scenes: BusinessScene[] = [
   {
-    id: 1,
-    type: "incoming" as const,
-    text: "Hola, ¿a qué hora cierran hoy?",
-    time: "2:15 PM",
+    name: "Clínica DermaPlus",
+    initials: "CD",
+    avatarClass: "bg-blue-100 text-blue-700",
+    messages: [
+      {
+        id: 1,
+        type: "incoming",
+        text: "Hola, ¿cuánto cuesta una limpieza facial?",
+        time: "10:24 AM",
+      },
+      {
+        id: 2,
+        type: "outgoing",
+        text: "¡Hola! 👋 La limpieza facial está en $85.000 y dura aproximadamente 1 hora. ¿Te comparto otros tratamientos?",
+        time: "10:24 AM",
+      },
+      {
+        id: 3,
+        type: "incoming",
+        text: "¿A qué hora cierran hoy?",
+        time: "10:25 AM",
+      },
+      {
+        id: 4,
+        type: "outgoing",
+        text: "Hoy cerramos las 7 pm. Estamos en la Zona T con parqueadero 📍 ¿En qué más te ayudo?",
+        time: "10:25 AM",
+      },
+    ],
   },
   {
-    id: 2,
-    type: "outgoing" as const,
-    text: "¡Hola! 👋 Estamos abiertos hasta las 10 pm. ¿En qué más te puedo ayudar?",
-    time: "2:15 PM",
+    name: "Restaurante Jardín Andino",
+    initials: "JA",
+    avatarClass: "bg-amber-100 text-amber-700",
+    messages: [
+      {
+        id: 1,
+        type: "incoming",
+        text: "¿Tienen menú del día hoy?",
+        time: "1:40 PM",
+      },
+      {
+        id: 2,
+        type: "outgoing",
+        text: "¡Hola! 👋 Sí: sancocho de costilla con patacón a $28.000 🍲 ¿Te paso los horarios o prefieres domicilio?",
+        time: "1:40 PM",
+      },
+      {
+        id: 3,
+        type: "incoming",
+        text: "¿Hacen domicilio?",
+        time: "1:41 PM",
+      },
+      {
+        id: 4,
+        type: "outgoing",
+        text: "Sí 🛵 Pedidos desde las 11 am y el domicilio es gratis desde $45.000. ¿Qué te preparo?",
+        time: "1:41 PM",
+      },
+    ],
   },
   {
-    id: 3,
-    type: "incoming" as const,
-    text: "¿Tienen domicilios?",
-    time: "2:16 PM",
-  },
-  {
-    id: 4,
-    type: "outgoing" as const,
-    text: "Sí, hacemos domicilios en un radio de 2 km. Mínimo $15.000. ¿Deseas hacer un pedido? 🛒",
-    time: "2:16 PM",
+    name: "Barbería Studio Norte",
+    initials: "SN",
+    avatarClass: "bg-indigo-100 text-indigo-700",
+    messages: [
+      {
+        id: 1,
+        type: "incoming",
+        text: "¿Cuánto cuesta corte y barba?",
+        time: "5:02 PM",
+      },
+      {
+        id: 2,
+        type: "outgoing",
+        text: "¡Hola! 👋 Corte clásico $25.000 y corte + barba $38.000 ✂️ ¿Te digo los horarios de esta semana?",
+        time: "5:02 PM",
+      },
+      {
+        id: 3,
+        type: "incoming",
+        text: "¿Abren el domingo?",
+        time: "5:03 PM",
+      },
+      {
+        id: 4,
+        type: "outgoing",
+        text: "Los domingos cerramos. Martes a sábado de 9 am a 8 pm 🕘 ¿Algo más?",
+        time: "5:03 PM",
+      },
+    ],
   },
 ];
+
+// Pause after the last message before rotating to the next business.
+const SCENE_PAUSE_MS = 7000;
 
 function TypingIndicator() {
   return (
@@ -51,12 +140,17 @@ function TypingIndicator() {
 }
 
 export function WhatsAppMockup() {
-  const [visibleMessages, setVisibleMessages] = useState<number>(0);
+  const [sceneIndex, setSceneIndex] = useState(0);
+  const [visibleMessages, setVisibleMessages] = useState(0);
+
+  const scene = scenes[sceneIndex];
+  const messages = scene.messages;
 
   useEffect(() => {
     const timers: NodeJS.Timeout[] = [];
+    const currentMessages = scenes[sceneIndex].messages;
 
-    messages.forEach((_, index) => {
+    currentMessages.forEach((_, index) => {
       timers.push(
         setTimeout(
           () => {
@@ -67,8 +161,21 @@ export function WhatsAppMockup() {
       );
     });
 
+    // Rotate to the next business once the conversation has fully played
+    // out plus a short reading pause. Reset visibility in the same batch as
+    // the scene change so the new chat starts hidden (no flash).
+    timers.push(
+      setTimeout(
+        () => {
+          setVisibleMessages(0);
+          setSceneIndex((prev) => (prev + 1) % scenes.length);
+        },
+        300 + currentMessages.length * 300 + SCENE_PAUSE_MS,
+      ),
+    );
+
     return () => timers.forEach(clearTimeout);
-  }, []);
+  }, [sceneIndex]);
 
   return (
     <div className="relative w-full max-w-[320px] mx-auto">
@@ -96,12 +203,14 @@ export function WhatsAppMockup() {
                 />
               </svg>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-xs font-bold text-gray-600">
-                  DC
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors duration-300 ${scene.avatarClass}`}
+                >
+                  {scene.initials}
                 </div>
                 <div>
                   <p className="text-white text-sm font-medium leading-tight">
-                    Tienda Don Carlos
+                    {scene.name}
                   </p>
                   <p className="text-white/70 text-[10px] leading-tight">
                     en línea
@@ -192,7 +301,7 @@ export function WhatsAppMockup() {
                           fill="currentColor"
                         >
                           <path d="M11.071 0.653l-5.657 5.657-2.121-2.121-1.414 1.414 3.535 3.536 7.071-7.072z" />
-                          <path d="M15.071 0.653l-5.657 5.657-1.414-1.414-1.414 1.414 2.828 2.829 7.071-7.072z" />
+                          <path d="M15.071 0.653l-5.657 5.657-1.414 1.414-1.414 1.414 2.828 2.829 7.071-7.072z" />
                         </svg>
                       )}
                     </div>
