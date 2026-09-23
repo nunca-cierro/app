@@ -90,7 +90,7 @@ describe("register — tuteo across the home sections (no voseo, no usted)", () 
     expect(html).toContain("Tu negocio responde solo mientras tú descansas");
     expect(html).toContain("¿A qué se dedica tu negocio?");
     expect(html).toContain("Si no sabes qué plan elegir, te orientamos sin compromiso");
-    expect(html).toContain("¿En qué más te puedo ayudar?");
+    expect(html).toContain("¿En qué más te ayudo?");
     for (const nonTuteoPhrase of [
       "usted aprueba",
       "mientras usted descansa",
