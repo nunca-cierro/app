@@ -231,7 +231,9 @@ services:
 
   # ── n8n (automatizaciones / workflow automation) ─────────────────────
   # Accesible solo vía Caddy en https://n8n.nuncacierro.com (sin puerto host).
-  # La encryption key se conserva en el volumen n8n_data (/home/node/.n8n/config).
+  # Encryption key: EXPLÍCITA en .env (N8N_ENCRYPTION_KEY) con el MISMO valor que
+  # /home/node/.n8n/config del volumen. NUNCA rotar sin plan de re-cifrado: si se
+  # cambia, todas las credenciales quedan indescifrables.
   # IMAGEN FIJA (2.36.8) + DB_TYPE sqlite explícito:
   #   - El deploy NO recrea n8n por cambio de imagen (latest era mutable).
   #   - Sus datos reales viven en el volumen n8n_data (SQLite), NO en postgres.
@@ -259,6 +261,9 @@ services:
       N8N_PROXY_HOPS: "1"
       GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-America/Bogota}
       DB_TYPE: sqlite
+      # Key maestra obligatoria en .env (inyectada desde el config del volumen,
+      # con MATCH verificado 2026-09-24). Valor vacío => n8n cae al config file.
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-}
 
 volumes:
   pgdata:
