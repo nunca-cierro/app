@@ -20,9 +20,28 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /home/ubuntu/nuncacierro
+            # Guard n8n: captura StartedAt ANTES del deploy (n8n es intocable aquí).
+            N8N_STARTED_BEFORE=$(docker compose ps -q n8n | head -n1)
+            if [ -n "$N8N_STARTED_BEFORE" ]; then
+              N8N_STARTED_BEFORE=$(docker inspect -f '{{.State.StartedAt}}' "$N8N_STARTED_BEFORE")
+            else
+              N8N_STARTED_BEFORE=absent
+            fi
             git pull
             docker compose build nc-api nc-dashboard
             # --no-deps + lista explícita: SOLO se recrean nc-api y nc-dashboard.
             # Caddy (sin 502), n8n, postgres, redis y evolution-api quedan intactos.
             docker compose up -d --no-deps nc-api nc-dashboard
             docker system prune -f
+            # Guard n8n: si su StartedAt cambió, el deploy FALLA de forma visible.
+            N8N_STARTED_AFTER=$(docker compose ps -q n8n | head -n1)
+            if [ -n "$N8N_STARTED_AFTER" ]; then
+              N8N_STARTED_AFTER=$(docker inspect -f '{{.State.StartedAt}}' "$N8N_STARTED_AFTER")
+            else
+              N8N_STARTED_AFTER=absent
+            fi
+            if [ "$N8N_STARTED_BEFORE" != "$N8N_STARTED_AFTER" ]; then
+              echo "FAIL: n8n fue tocado durante el deploy ($N8N_STARTED_BEFORE -> $N8N_STARTED_AFTER)"
+              exit 1
+            fi
+            echo "OK: n8n intacto (StartedAt=$N8N_STARTED_AFTER)"

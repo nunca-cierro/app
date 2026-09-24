@@ -20,6 +20,17 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
+# ── Guard n8n (Capa 3) ──────────────────────────────────────────────────────
+# n8n es INTOCABLE en deploys: su flujo corre 24/7 y sus credenciales no deben
+# depender de este pipeline. Capturamos su StartedAt ANTES de tocar nada; si al
+# final cambió, el deploy se considera fallido y se investiga.
+n8n_started_at() {
+  local id
+  id=$(docker compose ps -q n8n 2>/dev/null | head -n1)
+  if [ -z "$id" ]; then echo "absent"; else docker inspect -f '{{.State.StartedAt}}' "$id"; fi
+}
+N8N_STARTED_BEFORE=$(n8n_started_at)
+
 echo "── 1/5 git pull ──"
 git pull
 
@@ -45,6 +56,14 @@ if [ "$OK" -ne 1 ]; then
   echo "✗ nc-api no respondió en 60s. Revisa: docker compose logs nc-api"
   exit 1
 fi
+
+N8N_STARTED_AFTER=$(n8n_started_at)
+if [ "$N8N_STARTED_BEFORE" != "$N8N_STARTED_AFTER" ]; then
+  echo "✗ n8n cambió durante el deploy ($N8N_STARTED_BEFORE -> $N8N_STARTED_AFTER)"
+  echo "  Un deploy NO debe tocar n8n. Revisa: docker compose logs n8n"
+  exit 1
+fi
+echo "✓ n8n intacto (StartedAt sin cambios)"
 
 echo "── 5/5 verificación sitio ──"
 if curl -fsSI https://nuncacierro.com >/dev/null 2>&1; then
