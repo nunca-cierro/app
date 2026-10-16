@@ -3,7 +3,7 @@
 import { QRCodeSVG } from "qrcode.react";
 
 const WHATSAPP_URL =
-  "https://wa.me/573219615338?text=Hola%2C+vi+NuncaCierro+y+quiero+automatizar+mi+negocio";
+  "https://wa.me/573102079572?text=Hola%2C+vi+NuncaCierro+y+quiero+automatizar+mi+negocio";
 
 export function QRCard() {
   return (

@@ -99,7 +99,7 @@ export function Faq() {
               <p className="text-stone-400 text-sm">
                 No encontramos esa pregunta.{" "}
                 <a
-                  href="https://wa.me/573219615338"
+                  href="https://wa.me/573102079572"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-amber-400 hover:text-amber-300 underline underline-offset-2"

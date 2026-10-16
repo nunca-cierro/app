@@ -61,7 +61,7 @@ export function Hero() {
             style={{ animationDelay: "0.3s" }}
           >
             <a
-              href="https://wa.me/573219615338?text=Hola%2C+vi+NuncaCierro+y+quiero+automatizar+mi+negocio"
+              href="https://wa.me/573102079572?text=Hola%2C+vi+NuncaCierro+y+quiero+automatizar+mi+negocio"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-white font-semibold shadow-lg shadow-green-500/25 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-green-500/30"

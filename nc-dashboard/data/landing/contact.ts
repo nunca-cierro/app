@@ -14,8 +14,8 @@ export const landingContact = {
     {
       icon: "MessageCircle",
       label: "WhatsApp",
-      href: "https://wa.me/573219615338",
-      text: "+57 3219615338",
+      href: "https://wa.me/573102079572",
+      text: "+57 3102079572",
     },
   ],
   quickResponseText: "Respuesta inmediata — leemos tu mensaje al instante",

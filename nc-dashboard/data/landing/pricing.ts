@@ -4,7 +4,7 @@ export const landingPricing = {
   title: "Planes claros para empezar hoy",
   subtitle:
     "Elige el plan según tu momento. Todos están enfocados en ayudarte a recibir más clientes con tu sitio web.",
-  whatsappBaseUrl: "https://wa.me/573219615338?text=Me interesa el plan ",
+  whatsappBaseUrl: "https://wa.me/573102079572?text=Me interesa el plan ",
   buttonText: "Quiero este plan",
   cardLabels: {
     default: "Plan",
