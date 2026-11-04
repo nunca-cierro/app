@@ -45,3 +45,6 @@ Thumbs.db
 
 # Documentation (business-sensitive, never commit)
 docs/
+# Business Skills & Strategy (business-sensitive, never commit)
+skills/
+.agents/
