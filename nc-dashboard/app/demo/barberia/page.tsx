@@ -581,7 +581,7 @@ export default function BarberDemoPage() {
               </p>
               <p className="flex items-center gap-2 text-zinc-300">
                 <Phone className="text-red-700" size={18} />
-                +57 320 555 1234
+                +57 (312) 493-2822
               </p>
               <a
                 href="https://instagram.com"
@@ -596,7 +596,7 @@ export default function BarberDemoPage() {
 
             <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-900/60 p-5">
               <a
-                href="https://wa.me/573205551234?text=Hola%2C%20quiero%20cotizar%20una%20web%20para%20mi%20barber%C3%ADa"
+                href="https://wa.me/573124932822?text=Hola%2C%20quiero%20cotizar%20una%20web%20para%20mi%20barber%C3%ADa"
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex w-full items-center justify-center rounded-md bg-red-900 px-4 py-3 font-semibold text-white transition hover:bg-red-800"
@@ -617,7 +617,7 @@ export default function BarberDemoPage() {
       </main>
 
       <a
-        href="https://wa.me/573205551234?text=Hola%2C%20quiero%20reservar%20un%20turno%20en%20BLACK%20BEARD"
+        href="https://wa.me/573124932822?text=Hola%2C%20quiero%20reservar%20un%20turno%20en%20BLACK%20BEARD"
         target="_blank"
         rel="noreferrer"
         className="fixed bottom-6 right-6 z-50 rounded-full bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-green-500"

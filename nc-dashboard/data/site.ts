@@ -15,7 +15,7 @@ export const siteMetadata = {
 };
 
 export const siteContactInfo = {
-  whatsappNumber: "573102079572",
+  whatsappNumber: "573124932822",
   whatsappText:
     "Hola, quiero automatizar mi negocio con NuncaCierro.\n\nMi negocio es: ->\nEstoy ubicado en: ->\nMi mayor problema con los clientes es: ->",
   get whatsappUrl() {
@@ -75,7 +75,9 @@ export const headerData = {
   },
   button: {
     label: "Escríbenos",
-    href: "https://wa.me/573102079572",
+    get href() {
+      return `https://wa.me/${siteContactInfo.whatsappNumber}`;
+    },
   },
 };
 
@@ -97,7 +99,9 @@ export const footerData = {
     {
       icon: "FaWhatsapp",
       label: "WhatsApp",
-      href: "https://wa.me/573102079572",
+      get href() {
+        return `https://wa.me/${siteContactInfo.whatsappNumber}`;
+      },
     },
     {
       icon: "FaInstagram",
@@ -112,7 +116,9 @@ export const footerData = {
     {
       icon: "FaXTwitter",
       label: "X (Twitter)",
-      href: "https://wa.me/573102079572",
+      get href() {
+        return `https://wa.me/${siteContactInfo.whatsappNumber}`;
+      },
     },
   ],
   copyright: {
@@ -132,7 +138,9 @@ export const sitePlans = {
   title: "Elige el plan según lo que necesite tu negocio",
   subtitle:
     "Todos incluyen configuración completa y soporte. Sin contratos largos. Cancela cuando quieras.",
-  whatsappBaseUrl: "https://wa.me/573102079572?text=",
+  get whatsappBaseUrl() {
+    return `https://wa.me/${siteContactInfo.whatsappNumber}?text=`;
+  },
   buttonText: "Quiero este plan",
   cardLabels: {
     basic: "Básico",
@@ -392,8 +400,10 @@ export const siteContact = {
     {
       icon: "MessageCircle",
       label: "WhatsApp",
-      href: "https://wa.me/573102079572",
-      text: "+57 3102079572",
+      get href() {
+        return `https://wa.me/${siteContactInfo.whatsappNumber}`;
+      },
+      text: "+57 312 4932822",
     },
   ],
   quickResponseText: "Respuesta inmediata — leemos tu mensaje al instante",

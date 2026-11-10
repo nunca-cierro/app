@@ -1,11 +1,14 @@
 "use client";
 
 import { QRCodeSVG } from "qrcode.react";
+import { siteContactInfo } from "@/data/site";
 
-const WHATSAPP_URL =
-  "https://wa.me/573102079572?text=Hola%2C+vi+NuncaCierro+y+quiero+automatizar+mi+negocio";
+const getWhatsappUrl = () =>
+  `https://wa.me/${siteContactInfo.whatsappNumber}?text=Hola%2C+vi+NuncaCierro+y+quiero+automatizar+mi+negocio`;
 
 export function QRCard() {
+  const whatsappUrl = getWhatsappUrl();
+
   return (
     <>
       {/* Desktop QR */}
@@ -13,7 +16,7 @@ export function QRCard() {
         <div className="inline-flex flex-col items-center gap-3 rounded-2xl border border-white/10 bg-[rgba(8,8,8,0.65)] p-5 shadow-2xl backdrop-blur-xl">
           <div className="bg-white p-3 rounded-xl">
             <QRCodeSVG
-              value={WHATSAPP_URL}
+              value={whatsappUrl}
               size={120}
               bgColor="#FFFFFF"
               fgColor="#000000"
@@ -22,7 +25,7 @@ export function QRCard() {
             />
           </div>
           <p className="text-xs text-white/85 text-center leading-relaxed font-medium">
-            👀 Escanea para ver cómo funciona
+            Escanea para ver cómo funciona
           </p>
         </div>
       </div>
@@ -30,7 +33,7 @@ export function QRCard() {
       {/* Mobile CTA button */}
       <div className="md:hidden">
         <a
-          href={WHATSAPP_URL}
+          href={whatsappUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-3 rounded-full bg-[#25D366] px-6 py-4 text-white font-semibold text-base shadow-lg shadow-green-500/25 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-green-500/30 active:translate-y-0"

@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
 import {
   Menu,
   X,
@@ -14,6 +15,7 @@ import {
   BadgeCheck,
   Smile,
 } from "lucide-react";
+import { DemoChatWidget } from "@/components/demo/demo-chat-widget";
 
 const imageLoader = ({ src }: { src: string }) => src;
 
@@ -26,9 +28,6 @@ const NAV_LINKS = [
   { label: "FAQ", id: "faq" },
   { label: "Contacto", id: "contacto" },
 ];
-
-const WHATSAPP_MESSAGE =
-  "Hola, vi la demo de Sonrisa Premium y quiero agendar una valoración.";
 
 type Treatment = {
   title: string;
@@ -207,14 +206,26 @@ function WaveDivider() {
   );
 }
 
-export default function DentalDemoPage() {
+function DentalDemoContent() {
+  const searchParams = useSearchParams();
+  const businessName =
+    searchParams.get("clinica") ||
+    searchParams.get("nombre") ||
+    searchParams.get("business") ||
+    "Sonrisa Premium";
+  const customPhone =
+    searchParams.get("telefono") ||
+    searchParams.get("phone") ||
+    "573124932822";
   const [mobileOpen, setMobileOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const whatsappHref = useMemo(
     () =>
-      `https://wa.me/573000000000?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`,
-    [],
+      `https://wa.me/${customPhone}?text=${encodeURIComponent(
+        `Hola, vi la demo de ${businessName} y quiero agendar una valoración.`
+      )}`,
+    [customPhone, businessName],
   );
 
   const scrollToSection = (id: string) => {
@@ -237,7 +248,7 @@ export default function DentalDemoPage() {
             onClick={() => scrollToSection("home")}
             className="text-left text-sm font-semibold leading-tight text-blue-900 sm:text-base"
           >
-            Sonrisa Premium
+            {businessName}
             <span className="block text-xs font-medium text-slate-500 sm:text-sm">
               Clínica Dental
             </span>
@@ -287,7 +298,7 @@ export default function DentalDemoPage() {
         }`}
       >
         <div className="mb-8 flex items-center justify-between">
-          <p className="font-semibold text-blue-900">Sonrisa Premium</p>
+          <p className="font-semibold text-blue-900">{businessName}</p>
           <button
             className="rounded-lg border border-slate-200 p-2"
             onClick={() => setMobileOpen(false)}
@@ -373,7 +384,7 @@ export default function DentalDemoPage() {
             <div className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-slate-200">
               <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
               <p className="text-sm text-slate-700">
-                ⭐ 4.9/5 basado en 1.200 pacientes
+                ? 4.9/5 basado en 1.200 pacientes
               </p>
             </div>
           </div>
@@ -745,7 +756,7 @@ export default function DentalDemoPage() {
               </p>
               <p className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-blue-700" />
-                +57 300 000 0000
+                +57 (312) 493-2822
               </p>
               <p className="flex items-center gap-2">
                 <CalendarDays className="h-4 w-4 text-blue-700" />
@@ -803,7 +814,7 @@ export default function DentalDemoPage() {
 
       <footer className="border-t border-slate-200 bg-white px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto flex w-full max-w-7xl flex-col items-start justify-between gap-4 text-sm text-slate-600 md:flex-row md:items-center">
-          <p>&copy; {new Date().getFullYear()} Sonrisa Premium Clínica Dental</p>
+          <p>&copy; {new Date().getFullYear()} {businessName} Clínica Dental</p>
           <div className="flex flex-wrap items-center gap-4">
             <a href="#">Privacidad</a>
             <a href="#">Términos</a>
@@ -815,14 +826,15 @@ export default function DentalDemoPage() {
         </div>
       </footer>
 
-      <a
-        href={whatsappHref}
-        target="_blank"
-        rel="noreferrer"
-        className="button-glow fixed bottom-6 right-6 z-40 rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-emerald-700"
-      >
-        WhatsApp
-      </a>
+      <DemoChatWidget
+        businessName={businessName}
+        categoryName="odontología y estética oral"
+        services={TREATMENTS}
+        faqs={FAQS}
+        whatsappNumber={customPhone}
+        schedule="Lunes a Sábado · 7:00 a.m. – 8:00 p.m."
+        address="Av. Salud 245, Torre Médica, Consultorio 802"
+      />
 
       <style jsx global>{`
         html {
@@ -906,5 +918,13 @@ export default function DentalDemoPage() {
         }
       `}</style>
     </main>
+  );
+}
+
+export default function DentalDemoPage() {
+  return (
+    <Suspense fallback={null}>
+      <DentalDemoContent />
+    </Suspense>
   );
 }

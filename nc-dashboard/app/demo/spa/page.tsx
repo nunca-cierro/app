@@ -293,7 +293,7 @@ export default function SpaDemo() {
               <p>
                 <span className="font-semibold text-[#4f6f61]">Teléfono:</span>
                 <br />
-                +57 300 111 2233
+                +57 (312) 493-2822
               </p>
             </div>
           </div>
@@ -585,7 +585,7 @@ export default function SpaDemo() {
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 <a
-                  href="https://wa.me/573001112233"
+                  href="https://wa.me/573124932822"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded-full bg-[#6f8a7b] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#5f7a6b]"
@@ -621,7 +621,7 @@ export default function SpaDemo() {
       </main>
 
       <a
-        href="https://wa.me/573001112233"
+        href="https://wa.me/573124932822"
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-5 right-5 z-50 rounded-full bg-[#25D366] px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-1"

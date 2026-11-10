@@ -208,7 +208,7 @@ export default function RestaurantDemo() {
           </div>
           <div className="flex items-center gap-2">
             <Phone className="h-4 w-4 text-[#c89d58]" />
-            +57 314 248 2943
+            +57 (312) 493-2822
           </div>
         </div>
       </div>
@@ -624,7 +624,7 @@ export default function RestaurantDemo() {
                   <span className="font-semibold text-[#eecf9f]">
                     Teléfono:
                   </span>{" "}
-                  +57 314 248 2943
+                  +57 (312) 493-2822
                 </p>
                 <p>
                   <span className="font-semibold text-[#eecf9f]">Correo:</span>{" "}
@@ -634,7 +634,7 @@ export default function RestaurantDemo() {
 
               <div className="mt-8 flex flex-wrap gap-3">
                 <a
-                  href="https://wa.me/573142482943?text=Hola,%20vi%20la%20demo%20de%20tu%20restaurante%20y%20me%20gustaría%20cotizar%20un%20sitio%20web.%20¿Que%20información%20necesitas?"
+                  href="https://wa.me/573124932822?text=Hola,%20vi%20la%20demo%20de%20tu%20restaurante%20y%20me%20gustar%C3%ADa%20cotizar%20un%20sitio%20web.%20%C2%BFQue%20informaci%C3%B3n%20necesitas?"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="premium-cta rounded-full px-6 py-3 font-semibold text-[#21150f]"
@@ -667,7 +667,7 @@ export default function RestaurantDemo() {
       </main>
 
       <a
-        href="https://wa.me/573142482943?text=Hola,%20quiero%20reservar%20en%20La%20Toscana"
+        href="https://wa.me/573124932822?text=Hola,%20quiero%20reservar%20en%20La%20Toscana"
         target="_blank"
         rel="noopener noreferrer"
         className="gold-glow fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#d2a25e] text-[#1a120e] shadow-xl transition hover:scale-105"

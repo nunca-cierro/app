@@ -37,6 +37,13 @@ Este documento establece las reglas operativas, de arquitectura y de gestión de
    * Next.js 16 (App Router) + React 19 + Tailwind CSS v4 + componentes accesibles tipo `shadcn/ui`.
    * Mantener siempre la consistencia visual y diseño profesional B2B.
 
+3. **Garantía de Calidad y Validación Preventiva para Producción:**
+   * **Antes de dar por completada cualquier modificación en frontend**, se debe ejecutar obligatoriamente:
+     1. `pnpm lint`: Cero errores y advertencias de ESLint / React Hooks.
+     2. `pnpm test`: Cobertura del 100% de la suite de pruebas unitarias e integración en verde.
+     3. `pnpm build`: Verificación de que la compilación de producción (SSG/SSR Turbopack) termine con éxito (exit code 0).
+   * Ningún cambio que rompa el linting, las pruebas o el build de producción es admisible.
+
 ---
 
 ## 3. Directrices de Backend y APIs (`nc-api`)
@@ -60,4 +67,22 @@ Este documento establece las reglas operativas, de arquitectura y de gestión de
 * NuncaCierro es una plataforma SaaS B2B orientada a resolver dolores comerciales reales (atención 24/7, agendamiento y retención de clientes fuera de horario).
 * Las decisiones técnicas deben estar subordinadas a la validación comercial y a la adquisición de clientes reales.
 * El playbook maestro de estrategia comercial se encuentra en [`skills/nuncacierro-business/SKILL.md`](file:///skills/nuncacierro-business/SKILL.md).
+
+---
+
+## 5. Estándar para Creación Inmediata de Demos de Nuevos Clientes
+
+Cuando el usuario proporcione información sobre un prospecto o solicite crear una nueva demostración comercial:
+1. **Lectura Previa Obligatoria de la Plantilla:**
+   * **Todo agente debe consultar y seguir estrictamente la guía y plantilla en [`docs/cliente-demo-standard.md`](file:///docs/cliente-demo-standard.md)** antes de generar el código.
+2. **Creación del Archivo Aislado:**
+   * Crear un único archivo en `nc-dashboard/lib/demos/[slug].ts` con el slug en minúsculas y kebab-case (ej. `clinica-robles.ts`).
+   * Cumplir con la interfaz tipada `DemoProfile` de [`lib/demos/types.ts`](file:///nc-dashboard/lib/demos/types.ts) extrayendo o infiriendo servicios con precios en COP, paquetes, testimonios y preguntas frecuentes realistas del negocio.
+3. **Cero Configuración Manual:**
+   * No editar rutas, ni `index.ts`, ni diccionarios manuales; la autocarga e indexación en Next.js App Router es 100% dinámica.
+4. **Regla Estricta de Cero Emojis:**
+   * Prohibido cualquier emoji en títulos, servicios, FAQs o cualquier texto del perfil (`AGENTS.md` regla de UI).
+5. **Validación Preventiva Completa antes de Entregar:**
+   * Ejecutar obligatoriamente `pnpm lint`, `pnpm test` y `pnpm build` en `nc-dashboard`.
+   * Entregar la demostración lista en la URL `/demo/[slug]`.
 

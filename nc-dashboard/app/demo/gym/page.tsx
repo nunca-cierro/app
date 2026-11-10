@@ -209,7 +209,7 @@ export default function GymDemoPage() {
               Ver Planes
             </button>
             <a
-              href="https://wa.me/5215512345678?text=Hola%20quiero%20agendar%20mi%20clase%20gratis%20en%20IRONCORE%20GYM"
+              href="https://wa.me/573124932822?text=Hola%20quiero%20agendar%20mi%20clase%20gratis%20en%20IRONCORE%20GYM"
               target="_blank"
               rel="noreferrer"
               className="rounded-full border border-fuchsia-400/50 bg-fuchsia-500/10 px-5 py-3 text-sm font-semibold text-fuchsia-200 transition hover:bg-fuchsia-500/20 sm:px-7"
@@ -388,7 +388,7 @@ export default function GymDemoPage() {
               </p>
             </div>
             <a
-              href="https://wa.me/5215512345678?text=Hola%20quiero%20reservar%20una%20clase%20en%20IRONCORE%20GYM"
+              href="https://wa.me/573124932822?text=Hola%20quiero%20reservar%20una%20clase%20en%20IRONCORE%20GYM"
               target="_blank"
               rel="noreferrer"
               className="neon-btn mt-6 inline-flex w-full items-center justify-center rounded-xl px-5 py-3 text-center text-sm font-semibold"
@@ -769,7 +769,7 @@ export default function GymDemoPage() {
             </ul>
 
             <a
-              href="https://wa.me/5215512345678?text=Hola%2C%20vi%20la%20demo%20IRONCORE%20GYM%20y%20quiero%20cotizar%20una%20p%C3%A1gina%20web%20para%20mi%20gimnasio."
+              href="https://wa.me/573124932822?text=Hola%2C%20vi%20la%20demo%20IRONCORE%20GYM%20y%20quiero%20cotizar%20una%20p%C3%A1gina%20web%20para%20mi%20gimnasio."
               target="_blank"
               rel="noreferrer"
               className="neon-btn mt-7 inline-flex w-full items-center justify-center rounded-xl px-5 py-3 text-center font-semibold"
@@ -805,7 +805,7 @@ export default function GymDemoPage() {
             Comienza hoy. Tu primera sesión puede cambiarlo todo.
           </p>
           <a
-            href="https://wa.me/5215512345678?text=Hola%20quiero%20mi%20clase%20gratis%20en%20IRONCORE%20GYM"
+            href="https://wa.me/573124932822?text=Hola%20quiero%20mi%20clase%20gratis%20en%20IRONCORE%20GYM"
             target="_blank"
             rel="noreferrer"
             className="neon-btn w-full shrink-0 rounded-xl px-4 py-2 text-center text-sm font-semibold md:w-auto md:px-6"
@@ -816,7 +816,7 @@ export default function GymDemoPage() {
       </div>
 
       <a
-        href="https://wa.me/5215512345678?text=Hola%2C%20vi%20la%20demo%20IRONCORE%20GYM%20y%20quiero%20cotizar%20una%20p%C3%A1gina%20web%20para%20mi%20gimnasio."
+        href="https://wa.me/573124932822?text=Hola%2C%20vi%20la%20demo%20IRONCORE%20GYM%20y%20quiero%20cotizar%20una%20p%C3%A1gina%20web%20para%20mi%20gimnasio."
         target="_blank"
         rel="noreferrer"
         className="neon-float fixed bottom-32 right-3 z-50 rounded-full px-5 py-3 text-sm font-bold text-black md:bottom-24 md:right-8"

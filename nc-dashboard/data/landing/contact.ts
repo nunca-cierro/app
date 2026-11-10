@@ -1,3 +1,5 @@
+import { siteContactInfo } from "@/data/site";
+
 export const landingContact = {
   sectionId: "contacto",
   label: "Contacto",
@@ -14,8 +16,10 @@ export const landingContact = {
     {
       icon: "MessageCircle",
       label: "WhatsApp",
-      href: "https://wa.me/573102079572",
-      text: "+57 3102079572",
+      get href() {
+        return `https://wa.me/${siteContactInfo.whatsappNumber}`;
+      },
+      text: "+57 312 4932822",
     },
   ],
   quickResponseText: "Respuesta inmediata — leemos tu mensaje al instante",
