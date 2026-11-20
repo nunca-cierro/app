@@ -51,21 +51,11 @@ describe("home swap — automation is the PRIMARY offer on the home", () => {
     expect(html).toContain("Desde $1.590.000/mes + IVA");
   });
 
-  it("positions the web service as a secondary add-on linked to /inicio", async () => {
+  it("does not render web design add-on section or links to /inicio", async () => {
     const html = await renderToHtml(React.createElement(AutomationContent));
-    expect(html).toContain("Sitios web");
-    expect(html).toContain("Ver planes de sitios web");
-    expect(html).toContain('href="/inicio"');
-    expect(html).toContain("Desde $699.900");
-  });
-
-  it("renders the automation plans BEFORE the web add-on section", async () => {
-    const html = await renderToHtml(React.createElement(AutomationContent));
-    const plansAt = html.indexOf('id="planes"');
-    const webAt = html.indexOf('id="sitios-web"');
-    expect(plansAt).toBeGreaterThan(-1);
-    expect(webAt).toBeGreaterThan(-1);
-    expect(plansAt).toBeLessThan(webAt);
+    expect(html).not.toContain('id="sitios-web"');
+    expect(html).not.toContain("Ver planes de sitios web");
+    expect(html).not.toContain('href="/inicio"');
   });
 });
 

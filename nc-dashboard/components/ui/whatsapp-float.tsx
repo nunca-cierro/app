@@ -3,25 +3,14 @@
 import { FaWhatsapp } from "react-icons/fa";
 import { siteBanner, siteWhatsappFloat } from "@/data/site";
 
-export type Mode = "automation" | "landing";
-
 const automationMessage = encodeURIComponent(
   "Hola, vi NuncaCierro y quiero información sobre los planes de automatización.\n\nMi negocio es: \nCiudad: \n¿Qué problema tengo?: \n\n¿Qué información necesita de mí?",
 );
-const landingMessage = encodeURIComponent(
-  "Hola, vi NuncaCierro y quiero información sobre los precios de los sitios web.\n\nMi negocio es: \nCiudad: \n¿Qué tipo de sitio necesito?: \n\n¿Qué información necesita de mí?",
-);
 
-type Props = {
-  mode?: Mode;
-};
-
-export function WhatsappFloat({ mode = "automation" }: Props) {
-  const message = mode === "landing" ? landingMessage : automationMessage;
-
+export function WhatsappFloat() {
   return (
     <a
-      href={`https://wa.me/${siteBanner.whatsappNumber}?text=${message}`}
+      href={`https://wa.me/${siteBanner.whatsappNumber}?text=${automationMessage}`}
       target="_blank"
       rel="noopener noreferrer"
       aria-label={siteWhatsappFloat.ariaLabel}

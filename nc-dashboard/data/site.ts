@@ -29,12 +29,8 @@ export const siteBanner = siteContactInfo;
 export const siteWhatsAppMessages = {
   automation:
     "Hola, quiero información sobre los planes de automatización de WhatsApp.",
-  landing: "Hola, quiero información sobre los precios de los sitios web.",
   get automationUrl() {
     return `https://wa.me/${siteContactInfo.whatsappNumber}?text=${encodeURIComponent(this.automation)}`;
-  },
-  get landingUrl() {
-    return `https://wa.me/${siteContactInfo.whatsappNumber}?text=${encodeURIComponent(this.landing)}`;
   },
 };
 
@@ -64,9 +60,7 @@ export const headerData = {
     href: "/",
   },
   navItems: [
-    { name: "WhatsApp", href: "/" },
     { name: "Planes", href: "/#planes" },
-    { name: "Sitios web", href: "/inicio" },
     { name: "Contacto", href: "/#contacto" },
   ],
   mobileMenu: {
@@ -90,9 +84,7 @@ export const footerData = {
   },
   description: "Automatización WhatsApp para negocios en Colombia.",
   navItems: [
-    { name: "WhatsApp", href: "/" },
     { name: "Planes", href: "/#planes" },
-    { name: "Sitios web", href: "/inicio" },
     { name: "Contacto", href: "/#contacto" },
   ],
   socialLinks: [
@@ -431,22 +423,6 @@ export const siteContact = {
   },
   footerText: "Te respondemos de lunes a viernes, de 9:00 a 18:00.",
   confidenceText: "Si no sabes qué plan elegir, te orientamos sin compromiso.",
-};
-
-// ============================================================
-// LANDING PAGE SERVICE DATA (Páginas web con WhatsApp)
-// ============================================================
-
-// Secondary offer (web design) shown on the automation-first home — the web
-// product is a separate, one-time-payment line (data/landing/pricing.ts), NOT
-// part of the monthly SaaS. Price reference kept in sync with landingPricing.
-export const siteWebSecondary = {
-  label: "Sitios web",
-  title: "¿También necesitas una página web profesional?",
-  description:
-    "Servicio aparte, con entrega única: diseñamos tu sitio para que más clientes lleguen por WhatsApp. Desde $699.900.",
-  ctaLabel: "Ver planes de sitios web",
-  href: "/inicio",
 };
 
 export const siteWhatsappFloat = {

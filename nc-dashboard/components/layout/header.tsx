@@ -1,33 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { headerData, siteWhatsAppMessages } from "@/data/site";
+import { headerData, siteContactInfo } from "@/data/site";
 import { cn } from "@/lib/utils";
 
-// Automation home (/) is the PRIMARY offer. Nav anchors are relative to the
-// automation home; the web landing (/inicio) keeps its own section anchors.
-const automationNav = [
+const navItems = [
   { name: "Planes", href: "/#planes" },
   { name: "Contacto", href: "/#contacto" },
 ];
 
-const landingNav = [
-  { name: "Precios", href: "/inicio#precios" },
-  { name: "Contacto", href: "/inicio#contacto" },
-];
-
 export function Header() {
-  const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const { brand, mobileMenu } = headerData;
-
-  const isLanding = pathname === "/inicio";
-  const navItems = isLanding ? landingNav : automationNav;
-  const whatsappUrl = isLanding ? siteWhatsAppMessages.landingUrl : siteWhatsAppMessages.automationUrl;
+  const whatsappUrl = siteContactInfo.whatsappUrl;
 
   // Smooth scroll handler
   const handleSmoothScroll = (
@@ -76,10 +64,10 @@ export function Header() {
             : undefined
         }
       >
-        <div className="flex justify-between md:grid md:grid-cols-3 items-center h-20 px-4 sm:px-6">
-          <a
-            href={isLanding ? "/inicio" : "/"}
-            className="flex items-center gap-2 px-3 py-1 shrink-0 justify-self-start group"
+        <div className="flex justify-between items-center h-20 px-4 sm:px-6">
+          <Link
+            href="/"
+            className="flex items-center gap-2 px-3 py-1 shrink-0 group"
             style={{ letterSpacing: "0.01em" }}
           >
             <span
@@ -89,38 +77,10 @@ export function Header() {
               <span className="text-white">{brand.name}</span>
               <span className="text-amber-400 transition-all duration-300 group-hover:drop-shadow-[0_0_10px_rgba(251,191,36,0.5)]">{brand.accent}</span>
             </span>
-          </a>
+          </Link>
 
-          {/* Segmented Control - Centrado (WhatsApp primero, oferta principal) */}
-          <div className="hidden md:flex justify-center">
-            <div className="inline-flex items-center rounded-lg border border-white/15 bg-white/5 p-0.5">
-              <Link
-                href="/"
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-200 no-underline",
-                  !isLanding
-                    ? "bg-amber-500 text-stone-950 shadow-sm"
-                    : "text-white/70 hover:text-white",
-                )}
-              >
-                WhatsApp
-              </Link>
-              <a
-                href="/inicio"
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-medium transition-all duration-200 no-underline",
-                  isLanding
-                    ? "bg-amber-500 text-stone-950 shadow-sm"
-                    : "text-white/70 hover:text-white",
-                )}
-              >
-                Sitio web
-              </a>
-            </div>
-          </div>
-
-          {/* Desktop Nav + Mobile Hamburguesa — misma celda col 3 */}
-          <div className="flex items-center gap-4 justify-self-end">
+          {/* Desktop Nav + Mobile Hamburguesa */}
+          <div className="flex items-center gap-4">
             {/* Desktop */}
             <nav className="hidden md:flex items-center gap-4">
               {navItems.map((item) => (
@@ -149,7 +109,7 @@ export function Header() {
               </a>
             </nav>
 
-            {/* Mobile — solo hamburguesa, al final */}
+            {/* Mobile — solo hamburguesa */}
             <div className="flex md:hidden items-center">
               <button
                 type="button"
@@ -175,34 +135,6 @@ export function Header() {
         {isMenuOpen && (
           <nav className="md:hidden mt-2 px-4 py-6 border-t border-white/10 bg-[rgba(15,15,15,0.85)] backdrop-blur-xl rounded-b-2xl shadow-lg">
             <div className="flex flex-col gap-3">
-              {/* Mobile segmented control */}
-              <div className="flex items-center rounded-lg border border-white/15 bg-white/5 p-0.5 mb-2">
-                <Link
-                  href="/"
-                  onClick={() => setIsMenuOpen(false)}
-                  className={cn(
-                    "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 text-center no-underline",
-                    !isLanding
-                      ? "bg-amber-500 text-stone-950 shadow-sm"
-                      : "text-white/70 hover:text-white",
-                  )}
-                >
-                  WhatsApp
-                </Link>
-                <a
-                  href="/inicio"
-                  onClick={() => setIsMenuOpen(false)}
-                  className={cn(
-                    "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 text-center no-underline",
-                    isLanding
-                      ? "bg-amber-500 text-stone-950 shadow-sm"
-                      : "text-white/70 hover:text-white",
-                  )}
-                >
-                  Sitio web
-                </a>
-              </div>
-
               {navItems.map((item) => (
                 <a
                   key={item.name}
@@ -217,7 +149,7 @@ export function Header() {
                 </a>
               ))}
 
-              {/* Escríbenos dentro del menú mobile, al final */}
+              {/* Escríbenos dentro del menú mobile */}
               <a
                 href={whatsappUrl}
                 target="_blank"

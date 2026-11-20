@@ -5,7 +5,6 @@ import {
   siteFaq,
   siteHero,
   siteContact,
-  siteWebSecondary,
   headerData,
   footerData,
 } from "@/data/site";
@@ -261,33 +260,26 @@ describe("anti-barrio tone on the home plans copy", () => {
   });
 });
 
-// ── HOME SWAP — WhatsApp automation is the PRIMARY offer; web is secondary ──
+// ── NAV & HERO — WhatsApp automation is the offer ──
 
 describe("home swap — nav leads with the automation home", () => {
-  it("header nav has the automation home ('WhatsApp' → '/') as the primary item", () => {
-    expect(headerData.navItems[0]).toEqual({ name: "WhatsApp", href: "/" });
+  it("header nav has Planes and Contacto", () => {
+    expect(headerData.navItems).toEqual([
+      { name: "Planes", href: "/#planes" },
+      { name: "Contacto", href: "/#contacto" },
+    ]);
   });
 
-  it("web design appears as a secondary nav item pointing to /inicio", () => {
+  it("web design is no longer in nav items", () => {
     const web = headerData.navItems.find((i) => i.name === "Sitios web");
-    expect(web).toEqual({ name: "Sitios web", href: "/inicio" });
+    expect(web).toBeUndefined();
   });
 
-  it("footer nav also leads with the automation home", () => {
-    expect(footerData.navItems[0]).toEqual({ name: "WhatsApp", href: "/" });
-  });
-});
-
-describe("home swap — web product is positioned as an add-on", () => {
-  it("the secondary strip links to /inicio with the 'Sitios web' label", () => {
-    expect(siteWebSecondary.label).toBe("Sitios web");
-    expect(siteWebSecondary.href).toBe("/inicio");
-    expect(siteWebSecondary.ctaLabel).toMatch(/sitios web/i);
-  });
-
-  it("describes the web service as separate, one-time, not part of the SaaS", () => {
-    expect(siteWebSecondary.description).toContain("Servicio aparte");
-    expect(siteWebSecondary.description).toContain("Desde $699.900");
+  it("footer nav also matches the automation home", () => {
+    expect(footerData.navItems).toEqual([
+      { name: "Planes", href: "/#planes" },
+      { name: "Contacto", href: "/#contacto" },
+    ]);
   });
 });
 

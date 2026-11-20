@@ -7,7 +7,7 @@ describe("sitemap", () => {
     const entries = sitemap();
     const urls = entries.map((e) => e.url);
     expect(urls).toContain("https://nuncacierro.com");
-    expect(urls).toContain("https://nuncacierro.com/inicio");
+    expect(urls).not.toContain("https://nuncacierro.com/inicio");
     expect(urls).toContain("https://nuncacierro.com/legal");
     expect(entries[0].priority).toBe(1);
   });
