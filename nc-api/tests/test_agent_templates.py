@@ -547,18 +547,17 @@ class TestSeedTemplateShape:
         counts = Counter(t["category"] for t in SEED_TEMPLATES)
         assert all(count == 1 for count in counts.values()), counts
 
-    def test_seed_has_six_templates(self):
-        assert len(SEED_TEMPLATES) == 6
+    def test_seed_has_all_templates(self):
+        assert len(SEED_TEMPLATES) == 10
 
     def test_seed_names_are_unique(self):
         names = [t["name"] for t in SEED_TEMPLATES]
         assert len(names) == len(set(names))
 
-    def test_no_plain_variant_duplicates(self):
-        """The emoji/plain duplicate pairs must be gone (plain variants removed)."""
-        names = [t["name"] for t in SEED_TEMPLATES]
-        for plain in ["Restaurante", "Panadería", "Hamburguesería", "Barbería", "Clínica"]:
-            assert plain not in names, plain
+    def test_seed_template_names_are_clean_without_emojis(self):
+        """Rule AGENTS.md 2.1: Zero emojis in UI and templates."""
+        for tpl in SEED_TEMPLATES:
+            assert all(ord(char) < 0x1F000 for char in tpl["name"]), f"Emoji found in {tpl['name']}"
 
     def test_all_seed_templates_are_system(self):
         assert all(t.get("is_system") is True for t in SEED_TEMPLATES)
@@ -569,8 +568,7 @@ class TestSeedTemplateShape:
         for tpl in SEED_TEMPLATES:
             assert is_known_category(tpl["category"]), tpl["category"]
 
-    def test_seed_template_names_keep_emoji_for_ux(self):
-        """Decision: emoji lives in the display name, not in the instructions."""
+    def test_seed_template_instructions_clean(self):
         for tpl in SEED_TEMPLATES:
             assert "{{business_name}}" in tpl["content"]["instructions"]
             # instructions keep the plain wording (no emoji noise for the LLM)
@@ -615,10 +613,10 @@ class TestSeedPrune:
     ):
         from app.seed import _prune_system_templates, _seed_templates
 
-        # A stale system template (plain variant, NOT in SEED_TEMPLATES)
+        # A stale system template (NOT in SEED_TEMPLATES)
         stale = AgentTemplate(
             category="restaurante",
-            name="Restaurante",
+            name="Plantilla Antigua Inexistente",
             description="old duplicate",
             content={"instructions": "old"},
             is_system=True,
@@ -630,7 +628,7 @@ class TestSeedPrune:
         await _prune_system_templates(db_session)
 
         result = await db_session.execute(
-            select(AgentTemplate).where(AgentTemplate.name == "Restaurante")
+            select(AgentTemplate).where(AgentTemplate.name == "Plantilla Antigua Inexistente")
         )
         assert result.scalar_one_or_none() is None
 
@@ -676,13 +674,10 @@ class TestSeedPrune:
         """seed + prune twice leaves the same system template set."""
         from app.seed import _prune_system_templates, _seed_templates
 
-        # stale leftovers from the old seed (5 plain variants)
+        # stale leftovers from an obsolete seed
         for category, name in [
-            ("restaurante", "Restaurante"),
-            ("panaderia", "Panadería"),
-            ("hamburgueseria", "Hamburguesería"),
-            ("barberia", "Barbería"),
-            ("clinica", "Clínica"),
+            ("restaurante", "Restaurante Antiguo"),
+            ("panaderia", "Panadería Antigua"),
         ]:
             db_session.add(
                 AgentTemplate(
@@ -706,7 +701,7 @@ class TestSeedPrune:
         assert first == second
         # Exactly the canonical templates remain (stale variants gone)
         assert len(first) == len(SEED_TEMPLATES)
-        assert "Restaurante" not in first
+        assert "Restaurante Antiguo" not in first
 
     @pytest.mark.asyncio
     async def test_seed_does_not_update_custom_template_with_same_key(

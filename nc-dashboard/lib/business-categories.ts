@@ -18,6 +18,10 @@ export const BUSINESS_CATEGORIES: Record<string, string> = {
   hamburgueseria: "Hamburguesería",
   barberia: "Barbería",
   clinica: "Clínica",
+  inmobiliaria: "Inmobiliaria",
+  abogados: "Abogados",
+  ortopedia: "Ortopedia",
+  servicios: "Servicios",
   nuncacierro: "NuncaCierro",
   belleza: "Belleza",
   gimnasio: "Gimnasio",
@@ -32,6 +36,10 @@ export const TEMPLATE_CATEGORIES: readonly string[] = [
   "hamburgueseria",
   "barberia",
   "clinica",
+  "inmobiliaria",
+  "abogados",
+  "ortopedia",
+  "servicios",
 ];
 
 /** Categories whose system templates are internal (superadmin-only) and must

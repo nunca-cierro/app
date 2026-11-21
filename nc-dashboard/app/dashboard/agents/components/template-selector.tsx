@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useAgentTemplates } from "@/hooks/use-agent-templates";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ChefHat, Sparkles, Utensils, Scissors, Stethoscope, Briefcase } from "lucide-react";
+import { Loader2, ChefHat, Sparkles, Utensils, Scissors, Stethoscope, Briefcase, Building, Scale, HeartPulse } from "lucide-react";
 import type { AgentTemplate } from "@/lib/types";
 import {
   templateCategoryEntries,
@@ -21,6 +21,10 @@ const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>
   hamburgueseria: Sparkles,
   barberia: Scissors,
   clinica: Stethoscope,
+  inmobiliaria: Building,
+  abogados: Scale,
+  ortopedia: HeartPulse,
+  servicios: Briefcase,
   nuncacierro: Briefcase,
 };
 

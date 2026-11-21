@@ -27,6 +27,10 @@ BUSINESS_CATEGORIES: dict[str, str] = {
     "hamburgueseria": "Hamburguesería",
     "barberia": "Barbería",
     "clinica": "Clínica",
+    "inmobiliaria": "Inmobiliaria",
+    "abogados": "Abogados",
+    "ortopedia": "Ortopedia",
+    "servicios": "Servicios",
     "nuncacierro": "NuncaCierro",
     "belleza": "Belleza",
     "gimnasio": "Gimnasio",
@@ -43,6 +47,10 @@ TEMPLATE_CATEGORIES: tuple[str, ...] = (
     "hamburgueseria",
     "barberia",
     "clinica",
+    "inmobiliaria",
+    "abogados",
+    "ortopedia",
+    "servicios",
 )
 
 # Categories whose system templates are internal (superadmin-only) and must be

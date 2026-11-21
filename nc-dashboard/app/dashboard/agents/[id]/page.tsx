@@ -4,13 +4,9 @@ import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAgent } from "@/hooks/use-agent";
-import { useTenants } from "@/hooks/use-tenants";
-import { AgentInfo } from "@/app/dashboard/agents/components/agent-info";
-import { AgentForm } from "@/app/dashboard/agents/components/agent-form";
-import { BusinessConfigForm } from "@/app/dashboard/agents/components/business-config-form";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,20 +20,18 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   ArrowLeft,
-  Pencil,
   Trash2,
   Loader2,
   AlertCircle,
-  Building2,
   BookOpen,
+  Bot,
 } from "lucide-react";
 import { KnowledgeManager } from "@/app/dashboard/knowledge/components/knowledge-manager";
+import { AgentSettingsForm } from "@/app/dashboard/agents/components/agent-settings-form";
 import { ApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { CAPABILITIES, hasCapability } from "@/lib/capabilities";
-import type { AgentEditFormValues } from "@/lib/schemas/agent";
-import type { BusinessConfig } from "@/lib/types/agent";
 
 export default function AgentDetailPage() {
   const params = useParams();
@@ -52,28 +46,16 @@ export default function AgentDetailPage() {
     updateBusinessConfig,
   } = useAgent(id);
 
-  const { tenants, isLoading: loadingTenants } = useTenants();
   const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState("info");
+  const [activeTab, setActiveTab] = useState("config");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isSavingBusiness, setIsSavingBusiness] = useState(false);
 
-  /* ── Capability gates (same source as the main dashboard; backend is authority) ── */
+  /* ── Capability gates ── */
   const effectiveRole = user?.current_role ?? user?.role;
   const isOperator = effectiveRole === "admin" || effectiveRole === "superadmin";
   const canManageAgents = isOperator && hasCapability(user, CAPABILITIES.agentsManage);
-  const canEditBusiness = isOperator && hasCapability(user, CAPABILITIES.businessEdit);
-
-  // If the active tab is no longer permitted (e.g. after switching tenant),
-  // fall back to the read-only Info tab.
-  const resolvedTab =
-    activeTab === "edit" && !canManageAgents
-      ? "info"
-      : activeTab === "business" && !canEditBusiness
-        ? "info"
-        : activeTab;
 
   /* ── Loading ── */
   if (isLoading) {
@@ -124,25 +106,7 @@ export default function AgentDetailPage() {
     );
   }
 
-  /* ── Handle update ── */
-  const handleUpdate = async (data: AgentEditFormValues) => {
-    setIsSubmitting(true);
-    try {
-      await updateAgent(data);
-      toast.success("Agente actualizado exitosamente");
-      setActiveTab("info");
-    } catch (err) {
-      if (err instanceof ApiError) {
-        toast.error("Error al actualizar. Intente de nuevo.");
-      } else {
-        toast.error("Error de conexión.");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  /* ── Handle delete ── */
+  /* ── Handle Delete ── */
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
@@ -156,25 +120,46 @@ export default function AgentDetailPage() {
     }
   };
 
-  /* ── Handle save business config ── */
-  const handleSaveBusinessConfig = async (config: BusinessConfig) => {
+  /* ── Handle Unified Save ── */
+  const handleSaveSettings = async (data: {
+    name: string;
+    provider: "openai" | "groq";
+    model: string;
+    instructions: string;
+    keywords_to_escalate: string[];
+    fallback_message: string;
+  }) => {
     if (!agent) return;
-    setIsSavingBusiness(true);
+    setIsSubmitting(true);
     try {
-      await updateBusinessConfig(config);
-      toast.success("Configuración del negocio guardada");
+      await updateAgent({
+        name: data.name,
+        provider: data.provider,
+        model: data.model,
+        temperature: agent.temperature,
+        max_tokens: agent.max_tokens,
+      });
+
+      await updateBusinessConfig({
+        ...(agent.business_config || {}),
+        instructions: data.instructions,
+        keywords_to_escalate: data.keywords_to_escalate,
+        fallback_message: data.fallback_message,
+      });
+
+      toast.success("Configuración del agente guardada correctamente");
     } catch (err) {
       const message =
-        err instanceof ApiError ? err.message : "Error de conexión.";
+        err instanceof ApiError ? err.message : "Error al guardar cambios.";
       toast.error(message);
     } finally {
-      setIsSavingBusiness(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* ── Navigation ── */}
+      {/* ── Navigation & Actions ── */}
       <div className="flex items-center justify-between">
         <Button asChild variant="ghost" size="sm">
           <Link href="/dashboard/agents">
@@ -183,116 +168,70 @@ export default function AgentDetailPage() {
           </Link>
         </Button>
 
-        <AlertDialog>
-          {canManageAgents && (
+        {canManageAgents && (
+          <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" size="sm">
                 <Trash2 className="mr-2 size-4" />
-                Eliminar
+                Eliminar Agente
               </Button>
             </AlertDialogTrigger>
-          )}
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar agente?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Esta acción no se puede deshacer. Se eliminará permanentemente{" "}
-                {agent.name} y todos sus prompts asociados.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                {isDeleting ? (
-                  <>
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                    Eliminando...
-                  </>
-                ) : (
-                  "Eliminar"
-                )}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Eliminar agente?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta acción no se puede deshacer. Se eliminará permanentemente{" "}
+                  {agent.name} y sus configuraciones asociadas.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      Eliminando...
+                    </>
+                  ) : (
+                    "Eliminar"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       {/* ── Tabs ── */}
-      <Tabs value={resolvedTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="info">Información</TabsTrigger>
+          <TabsTrigger value="config">
+            <Bot className="mr-2 size-4" />
+            Configuración y Tono
+          </TabsTrigger>
           <TabsTrigger value="knowledge">
             <BookOpen className="mr-2 size-4" />
-            Conocimiento
+            Base de Conocimiento
           </TabsTrigger>
-          {canEditBusiness && (
-            <TabsTrigger value="business">
-              <Building2 className="mr-2 size-4" />
-              Negocio
-            </TabsTrigger>
-          )}
-          {canManageAgents && (
-            <TabsTrigger value="edit">
-              <Pencil className="mr-2 size-4" />
-              Editar
-            </TabsTrigger>
-          )}
         </TabsList>
 
-        {/* ── Tab: Info ── */}
-        <TabsContent value="info" className="mt-6">
-          <AgentInfo agent={agent} plan={tenants.find(t => t.id === agent.tenant_id)?.plan} />
+        {/* ── Tab 1: Configuración y Tono ── */}
+        <TabsContent value="config" className="mt-6">
+          <AgentSettingsForm
+            agent={agent}
+            onSave={handleSaveSettings}
+            isSaving={isSubmitting}
+          />
         </TabsContent>
 
-        {/* ── Tab: Knowledge / Base de Conocimiento ── */}
+        {/* ── Tab 2: Base de Conocimiento ── */}
         <TabsContent value="knowledge" className="mt-6">
           <KnowledgeManager />
         </TabsContent>
-
-        {/* ── Tab: Negocio (business.edit capability) ── */}
-        {canEditBusiness && (
-          <TabsContent value="business" className="mt-6">
-            <BusinessConfigForm
-              config={agent.business_config}
-              onSave={handleSaveBusinessConfig}
-              isSaving={isSavingBusiness}
-            />
-          </TabsContent>
-        )}
-
-        {/* ── Tab: Edit (agents.manage capability) ── */}
-        {canManageAgents && (
-          <TabsContent value="edit" className="mt-6">
-            <Card className="max-w-2xl">
-              <CardHeader>
-                <CardTitle className="text-xl font-bold tracking-tight">
-                  Editar Agente
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <AgentForm
-                  defaultValues={{
-                    name: agent.name,
-                    provider: agent.provider as "openai" | "groq",
-                    model: agent.model,
-                    temperature: agent.temperature,
-                    max_tokens: agent.max_tokens,
-                  }}
-                  onSubmit={handleUpdate}
-                  isSubmitting={isSubmitting}
-                  mode="edit"
-                  tenants={tenants}
-                  tenantsLoading={loadingTenants}
-                  selectedPlan={tenants.find(t => t.id === agent.tenant_id)?.plan}
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
       </Tabs>
     </div>
   );
