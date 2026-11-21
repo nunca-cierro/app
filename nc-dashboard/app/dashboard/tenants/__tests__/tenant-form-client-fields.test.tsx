@@ -82,20 +82,19 @@ describe("TenantForm — business-card fields only for client (T5)", () => {
     expect(html).not.toContain("Nombre comercial");
   });
 
-  it("admin keeps the form but still no plan selector", async () => {
+  it("admin keeps the form but still no plan selector and no obsolete business profile", async () => {
     const html = await renderForm("admin");
 
     expect(html).toContain("Nombre del negocio");
     expect(html).not.toContain('id="plan"');
-    // admin CAN edit business_profile (backend allows it) — keep it visible
-    expect(html).toContain("Perfil de negocio");
+    expect(html).not.toContain("Perfil de negocio");
   });
 
-  it("superadmin sees plan selector and business profile", async () => {
+  it("superadmin sees plan selector and no obsolete business profile", async () => {
     const html = await renderForm("superadmin");
 
     expect(html).toContain('id="plan"');
     expect(html).toContain("Plan");
-    expect(html).toContain("Perfil de negocio");
+    expect(html).not.toContain("Perfil de negocio");
   });
 });
