@@ -29,7 +29,9 @@ import {
   Loader2,
   AlertCircle,
   Building2,
+  BookOpen,
 } from "lucide-react";
+import { KnowledgeManager } from "@/app/dashboard/knowledge/components/knowledge-manager";
 import { ApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
@@ -223,6 +225,10 @@ export default function AgentDetailPage() {
       <Tabs value={resolvedTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="info">Información</TabsTrigger>
+          <TabsTrigger value="knowledge">
+            <BookOpen className="mr-2 size-4" />
+            Conocimiento
+          </TabsTrigger>
           {canEditBusiness && (
             <TabsTrigger value="business">
               <Building2 className="mr-2 size-4" />
@@ -240,6 +246,11 @@ export default function AgentDetailPage() {
         {/* ── Tab: Info ── */}
         <TabsContent value="info" className="mt-6">
           <AgentInfo agent={agent} plan={tenants.find(t => t.id === agent.tenant_id)?.plan} />
+        </TabsContent>
+
+        {/* ── Tab: Knowledge / Base de Conocimiento ── */}
+        <TabsContent value="knowledge" className="mt-6">
+          <KnowledgeManager />
         </TabsContent>
 
         {/* ── Tab: Negocio (business.edit capability) ── */}

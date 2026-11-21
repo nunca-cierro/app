@@ -118,6 +118,18 @@ async def test_create_and_list_documents(mock_admin_user, db_session):
         docs = list_resp.json()
         assert any(d["id"] == doc_id for d in docs)
 
+        # Update document
+        update_resp = await client.put(
+            f"/api/v1/knowledge/documents/{doc_id}",
+            json={
+                "title": "Catálogo Estética Actualizado",
+                "raw_markdown": "# Catálogo Actualizado\n\n## Limpieza Facial\nPrecio $95.000 COP.",
+            },
+            headers={"X-CSRF-Token": "test"},
+        )
+        assert update_resp.status_code == 200
+        assert update_resp.json()["title"] == "Catálogo Estética Actualizado"
+
         # Delete document
         del_resp = await client.delete(
             f"/api/v1/knowledge/documents/{doc_id}",

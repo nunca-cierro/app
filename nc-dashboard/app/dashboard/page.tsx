@@ -32,6 +32,7 @@ import {
   Bot,
   PlusCircle,
   CalendarDays,
+  BookOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
@@ -530,15 +531,22 @@ function ClientDashboard() {
               <Building2 className="size-4 text-primary" />
               Información del Negocio
             </CardTitle>
-            {canEdit && !isEditing && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsEditing(true)}
-              >
-                <Pencil className="mr-1 size-3" /> Editar
+            <div className="flex items-center gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link href="/dashboard/knowledge">
+                  <BookOpen className="mr-1 size-3" /> Base de Conocimiento
+                </Link>
               </Button>
-            )}
+              {canEdit && !isEditing && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Pencil className="mr-1 size-3" /> Editar
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             {isEditing && canEdit && myAgent ? (

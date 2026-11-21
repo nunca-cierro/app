@@ -67,6 +67,59 @@ class KnowledgeService:
         )
         return doc
 
+    async def update_document(
+        self,
+        document_id: str | uuid.UUID,
+        tenant_id: str | uuid.UUID,
+        title: str,
+        raw_markdown: str,
+        db: AsyncSession,
+    ) -> KnowledgeDocument | None:
+        """Update an existing document, re-generate chunks, and replace old ones."""
+        d_uuid = uuid.UUID(str(document_id)) if isinstance(document_id, str) else document_id
+        t_uuid = uuid.UUID(str(tenant_id)) if isinstance(tenant_id, str) else tenant_id
+
+        stmt = select(KnowledgeDocument).where(
+            KnowledgeDocument.id == d_uuid,
+            KnowledgeDocument.tenant_id == t_uuid,
+        )
+        result = await db.execute(stmt)
+        doc = result.scalar_one_or_none()
+        if not doc:
+            return None
+
+        doc.title = title
+        doc.raw_markdown = raw_markdown
+
+        # Delete existing chunks
+        del_stmt = select(KnowledgeChunk).where(KnowledgeChunk.document_id == d_uuid)
+        res_chunks = await db.execute(del_stmt)
+        for old_ch in res_chunks.scalars().all():
+            await db.delete(old_ch)
+        await db.flush()
+
+        # Generate fresh chunks
+        chunks_data = self.chunker.chunk(raw_markdown, document_title=title)
+        for c in chunks_data:
+            chunk_record = KnowledgeChunk(
+                document_id=doc.id,
+                tenant_id=t_uuid,
+                breadcrumb=c.breadcrumb,
+                content=c.content,
+                chunk_index=c.chunk_index,
+            )
+            db.add(chunk_record)
+
+        await db.commit()
+        await db.refresh(doc)
+        logger.info(
+            "Updated and re-indexed knowledge document | tenant={tid} | id={id} | chunks={count}",
+            tid=t_uuid,
+            id=d_uuid,
+            count=len(chunks_data),
+        )
+        return doc
+
     async def search_chunks(
         self,
         tenant_id: str | uuid.UUID,
