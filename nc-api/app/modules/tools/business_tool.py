@@ -33,9 +33,11 @@ async def consult_business_info(
     context: ToolContext,
 ) -> str:
     """Execute dynamic tenant knowledge lookup."""
+    db_session = context.metadata.get("db") if context.metadata else None
     return await knowledge_service.query_knowledge(
         tenant_id=context.tenant_id,
         query=args.query,
         category=args.category,
         biz_config=context.business_config,
+        db=db_session,
     )

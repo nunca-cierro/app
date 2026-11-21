@@ -1,19 +1,100 @@
 """Dynamic multi-tenant knowledge retrieval service.
 
 Provides factual, isolated, per-tenant knowledge lookups for hours, services,
-catalog, pricing, policies, and FAQs without monolithic prompt dumping.
+catalog, pricing, policies, and FAQs, plus Markdown-aware semantic chunk search.
 """
 
 from __future__ import annotations
 
 import typing as t
+import uuid
 from loguru import logger
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.agents.utils import _significant_words, _fold_accents
+from app.modules.knowledge.chunker import MarkdownSemanticChunker
+from app.modules.knowledge.models import KnowledgeDocument, KnowledgeChunk
 
 
 class KnowledgeService:
     """Service to query structured and semantic knowledge for any tenant."""
+
+    def __init__(self) -> None:
+        self.chunker = MarkdownSemanticChunker()
+
+    async def create_document(
+        self,
+        tenant_id: str | uuid.UUID,
+        title: str,
+        source_type: str,
+        raw_markdown: str,
+        db: AsyncSession,
+        source_url: str | None = None,
+    ) -> KnowledgeDocument:
+        """Parse, store, and chunk a Markdown knowledge document for a tenant."""
+        t_uuid = uuid.UUID(str(tenant_id)) if isinstance(tenant_id, str) else tenant_id
+        chunks_data = self.chunker.chunk(raw_markdown, document_title=title)
+
+        doc = KnowledgeDocument(
+            tenant_id=t_uuid,
+            title=title,
+            source_type=source_type,
+            source_url=source_url,
+            raw_markdown=raw_markdown,
+            status="indexed",
+        )
+        db.add(doc)
+        await db.flush()
+
+        for c in chunks_data:
+            chunk_record = KnowledgeChunk(
+                document_id=doc.id,
+                tenant_id=t_uuid,
+                breadcrumb=c.breadcrumb,
+                content=c.content,
+                chunk_index=c.chunk_index,
+            )
+            db.add(chunk_record)
+
+        await db.commit()
+        await db.refresh(doc)
+        logger.info(
+            "Indexed knowledge document | tenant={tid} | title={title} | chunks={count}",
+            tid=t_uuid,
+            title=title,
+            count=len(chunks_data),
+        )
+        return doc
+
+    async def search_chunks(
+        self,
+        tenant_id: str | uuid.UUID,
+        query: str,
+        db: AsyncSession,
+        top_k: int = 3,
+    ) -> list[str]:
+        """Retrieve the most relevant semantic chunks for a query within a tenant."""
+        t_uuid = uuid.UUID(str(tenant_id)) if isinstance(tenant_id, str) else tenant_id
+        q_words = _significant_words(query)
+        if not q_words:
+            return []
+
+        stmt = select(KnowledgeChunk).where(KnowledgeChunk.tenant_id == t_uuid)
+        result = await db.execute(stmt)
+        chunks = result.scalars().all()
+
+        scored: list[tuple[float, str]] = []
+        for ch in chunks:
+            text = f"{ch.breadcrumb} {ch.content}"
+            ch_words = _significant_words(text)
+            overlap = len(q_words & ch_words)
+            if overlap > 0:
+                score = overlap / len(q_words)
+                scored.append((score, ch.content))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [c for _, c in scored[:top_k]]
 
     async def query_knowledge(
         self,
@@ -21,17 +102,11 @@ class KnowledgeService:
         query: str,
         category: str | None = None,
         biz_config: dict[str, t.Any] | None = None,
+        db: AsyncSession | None = None,
     ) -> str:
         """Retrieve factual, targeted knowledge for a tenant based on user query.
 
-        Args:
-            tenant_id: Unique tenant identifier for tenant isolation.
-            query: The user query or topic being investigated.
-            category: Optional domain filter ("hours", "services", "pricing", "faq", "info").
-            biz_config: Business configuration dict holding structured tenant data.
-
-        Returns:
-            Formatted, concise factual knowledge string.
+        Combines structured business profile data with indexed semantic chunks.
         """
         config = biz_config or {}
         cat_lower = (category or "").lower().strip()
@@ -84,7 +159,6 @@ class KnowledgeService:
                 desc = item.get("description", "")
                 cat = item.get("category", "")
 
-                # Score relevance if query words are present
                 item_text = f"{name} {desc} {cat}"
                 item_words = _significant_words(item_text)
                 if not q_words or (q_words & item_words) or cat_lower in ("services", "pricing"):
@@ -116,6 +190,15 @@ class KnowledgeService:
 
             if matching_faqs:
                 results.append("Preguntas frecuentes oficiales:\n" + "\n\n".join(matching_faqs[:3]))
+
+        # ── 5. Indexed Document Chunks (RAG) ─────────────────────────────────
+        if db is not None:
+            try:
+                matched_chunks = await self.search_chunks(tenant_id, query, db, top_k=2)
+                if matched_chunks:
+                    results.append("Base de conocimiento (documentos indexados):\n" + "\n\n".join(matched_chunks))
+            except Exception as e:
+                logger.warning("Error searching document chunks | tenant={tid} | err={err}", tid=tenant_id, err=e)
 
         if not results:
             logger.debug(
