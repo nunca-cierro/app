@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { Check, Pause, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 import { updatePaymentStatus } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
@@ -31,7 +33,9 @@ export function PaymentStatusToggle({
 
   const isActive = currentStatus === "active";
 
-  async function handleToggle() {
+  async function handleToggle(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
     if (isLoading) return;
 
     const newStatus = isActive ? "inactive" : "active";
@@ -41,33 +45,56 @@ export function PaymentStatusToggle({
       const updated = await updatePaymentStatus(tenantId, newStatus);
       toast.success(
         newStatus === "active"
-          ? "Pago activado correctamente"
-          : "Pago desactivado correctamente",
+          ? "Plan activado por 1 mes calendario"
+          : "Suscripción pausada correctamente",
       );
       onSuccess(updated);
     } catch {
-      toast.error("Error al cambiar el estado de pago");
+      toast.error("Error al actualizar la suscripción");
     } finally {
       setIsLoading(false);
     }
   }
 
+  if (isActive) {
+    return (
+      <Button
+        type="button"
+        size="sm"
+        variant="ghost"
+        disabled={isLoading}
+        onClick={handleToggle}
+        className="h-7 text-xs px-2 text-muted-foreground hover:text-destructive"
+        title="Pausar suscripción"
+      >
+        {isLoading ? (
+          <Loader2 className="size-3 animate-spin" />
+        ) : (
+          <>
+            <Pause className="mr-1 size-3" />
+            Pausar
+          </>
+        )}
+      </Button>
+    );
+  }
+
   return (
-    <button
+    <Button
       type="button"
-      role="switch"
-      aria-checked={isActive}
+      size="sm"
+      variant="default"
       disabled={isLoading}
       onClick={handleToggle}
-      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed ${
-        isActive ? "bg-green-600" : "bg-input"
-      }`}
+      className="h-7 text-xs px-2.5 font-medium bg-amber-600 hover:bg-amber-700 text-white"
+      title="Activar plan por 1 mes calendario"
     >
-      <span
-        className={`pointer-events-none block size-5 rounded-full bg-white shadow-lg ring-0 transition-transform ${
-          isActive ? "translate-x-5" : "translate-x-0"
-        }`}
-      />
-    </button>
+      {isLoading ? (
+        <Loader2 className="mr-1 size-3 animate-spin" />
+      ) : (
+        <Check className="mr-1 size-3" />
+      )}
+      Activar Mes
+    </Button>
   );
 }

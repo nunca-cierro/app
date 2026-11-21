@@ -28,4 +28,5 @@ export interface Tenant {
   updated_at: string;
   payment_status?: string | null;
   plan_activated_at?: string | null;
+  plan_expires_at?: string | null;
 }

@@ -112,6 +112,7 @@ class TenantResponse(BaseModel):
     business_profile: dict[str, Any] | None = None
     payment_status: str | None = None
     plan_activated_at: datetime | None = None
+    plan_expires_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -37,13 +37,14 @@ const STATUS_CONFIG: Record<string, StatusStyle> = {
 
 interface PaymentStatusBadgeProps {
   status: string | null | undefined;
+  expiresAt?: string | null;
 }
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-export function PaymentStatusBadge({ status }: PaymentStatusBadgeProps) {
+export function PaymentStatusBadge({ status, expiresAt }: PaymentStatusBadgeProps) {
   if (!status) {
     return <span className="text-xs text-muted-foreground">—</span>;
   }
@@ -51,9 +52,27 @@ export function PaymentStatusBadge({ status }: PaymentStatusBadgeProps) {
   const config = STATUS_CONFIG[status];
   if (!config) return null;
 
+  let displayLabel = config.label;
+  if (status === "active") {
+    if (expiresAt) {
+      try {
+        const d = new Date(expiresAt);
+        const formatted = d.toLocaleDateString("es-CO", {
+          day: "numeric",
+          month: "short",
+        });
+        displayLabel = `Al día · Vence ${formatted}`;
+      } catch {
+        displayLabel = "Al día";
+      }
+    } else {
+      displayLabel = "Al día";
+    }
+  }
+
   return (
     <Badge variant="outline" className={cn(config.className)}>
-      {config.label}
+      {displayLabel}
     </Badge>
   );
 }

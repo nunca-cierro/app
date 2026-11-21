@@ -112,7 +112,10 @@ export function ConfirmPaymentDialog({
               <Badge variant="outline">
                 {PLAN_LABELS[tenant.plan] ?? tenant.plan}
               </Badge>
-              <PaymentStatusBadge status={tenant.payment_status} />
+              <PaymentStatusBadge
+                status={tenant.payment_status}
+                expiresAt={tenant.plan_expires_at}
+              />
             </div>
           </div>
         </div>

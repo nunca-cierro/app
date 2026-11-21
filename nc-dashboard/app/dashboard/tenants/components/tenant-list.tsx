@@ -146,7 +146,10 @@ export function TenantList({ tenants, isLoading, error, onTenantUpdate }: Tenant
                     </span>
                     <TenantStatusBadge status={tenant.status} />
                     <TenantPlanBadge plan={tenant.plan} createdAt={tenant.created_at} />
-                    <PaymentStatusBadge status={tenant.payment_status} />
+                    <PaymentStatusBadge
+                      status={tenant.payment_status}
+                      expiresAt={tenant.plan_expires_at}
+                    />
                     {onTenantUpdate && (
                       <PaymentStatusToggle
                         tenantId={tenant.id}
