@@ -14,8 +14,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BusinessConfigForm } from "@/app/dashboard/agents/components/business-config-form";
-import { ExpiredTrialOverlay } from "@/app/dashboard/components/expired-trial-overlay";
-import { PaymentScreen } from "@/app/dashboard/components/payment-screen";
 import { cn } from "@/lib/utils";
 import { TRIAL_DAYS, daysRemaining } from "@/lib/trial";
 import { buildAdminStats, type AdminStat } from "@/lib/dashboard-stats";
@@ -34,12 +32,10 @@ import {
   Bot,
   PlusCircle,
   CalendarDays,
-  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
 import { PLAN_LABELS } from "@/lib/plans";
-import { INTERNAL_TENANT_SLUG } from "@/lib/config";
 import { CAPABILITIES, hasCapability } from "@/lib/capabilities";
 import { canSeeQuickActions } from "@/lib/rbac";
 import type { UserRole } from "@/lib/types";
@@ -230,10 +226,7 @@ function AdminDashboard({
     (t) =>
       t.plan === "trial" && new Date(t.created_at).getTime() + _trialMs < _now,
   );
-  const pendingPayments = (tenants ?? []).filter(
-    (t) => t.payment_status === "pending" && t.slug !== INTERNAL_TENANT_SLUG,
-  );
-  const needsAttention = expiredTrials.length + pendingPayments.length > 0;
+  const needsAttention = expiredTrials.length > 0;
 
   const stats = buildAdminStats(metrics, conversations.length);
   const todayLabel = new Date().toLocaleDateString("es-CO", {
@@ -264,22 +257,6 @@ function AdminDashboard({
                     Prueba vencida
                   </div>
                   <p className="mt-0.5 text-muted-foreground">{t.name}</p>
-                </CardContent>
-              </Card>
-            ))}
-            {pendingPayments.map((t) => (
-              <Card key={t.id} className="shrink-0 border-warning/40">
-                <CardContent className="px-4 py-3 text-sm">
-                  <div className="flex items-center gap-2 font-medium text-warning-foreground">
-                    <Wallet className="size-3.5" />
-                    Pago pendiente
-                  </div>
-                  <p className="mt-0.5 text-muted-foreground">
-                    {t.name} · Plan {PLAN_LABELS[t.plan] ?? t.plan}
-                  </p>
-                  <p className="mt-0.5 text-xs text-warning-foreground/80">
-                    Esperando confirmación de pago
-                  </p>
                 </CardContent>
               </Card>
             ))}
@@ -396,7 +373,7 @@ function AdminDashboard({
 
 function ClientDashboard() {
   const { user } = useAuth();
-  const { tenants, isLoading: isLoadingTenants } = useTenants();
+  const { tenants } = useTenants();
   const { agents } = useAgents();
   const plan = user?.plan ?? null;
   const tid = user?.current_tenant_id ?? user?.tenant_id;
@@ -428,24 +405,6 @@ function ClientDashboard() {
   } = usePlanUsage(tid);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
-
-  // Payment status handling
-  const paymentStatus = myTenant?.payment_status;
-  if (!isLoadingTenants) {
-    if (showPayment && plan) {
-      return (
-        <PaymentScreen planKey={plan} onBack={() => setShowPayment(false)} />
-      );
-    }
-    // Pending payment — show banner instead of blocking
-    if (paymentStatus === "pending" && plan !== "trial") {
-      // Show banner below, don't block dashboard access
-    } else if (paymentStatus !== "active" && paymentStatus !== "pending") {
-      // Overdue, suspended, trial expired, or null — block with overlay
-      return <ExpiredTrialOverlay />;
-    }
-  }
 
   const handleSaveConfig = async (config: BusinessConfig) => {
     if (!myAgent?.id) return;
@@ -482,27 +441,6 @@ function ClientDashboard() {
           </Button>
         }
       />
-
-      {/* Pending payment banner — shown only when payment is pending and plan is not trial */}
-      {paymentStatus === "pending" && plan !== "trial" && (
-        <div className="rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm">
-          <p className="font-medium text-warning-foreground">
-            ⏳ Pago pendiente
-          </p>
-          <p className="mt-1 text-muted-foreground">
-            Su pago está siendo verificado. Le activaremos el plan apenas se
-            confirme.
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3 border-warning/50 text-warning-foreground hover:bg-warning/15"
-            onClick={() => setShowPayment(true)}
-          >
-            Ver opciones de pago
-          </Button>
-        </div>
-      )}
 
       {/* Plan card */}
       <Card>
@@ -569,13 +507,11 @@ function ClientDashboard() {
         </CardContent>
       </Card>
 
-      {/* Plan usage widget — informativo, tras "Plan Actual" (Slice 3).
-          CTA a upgrade abre el payment-screen; nunca bloquea. */}
+      {/* Plan usage widget — informativo, tras "Plan Actual" */}
       <PlanUsageWidget
         data={planUsage}
         isLoading={usageLoading}
         error={usageError}
-        onUpgrade={() => setShowPayment(true)}
       />
 
       {/* Nota: qué pasa al agotar cupo IA */}
@@ -586,55 +522,12 @@ function ClientDashboard() {
         tu cupo de IA.
       </p>
 
-      {/* Business info */}
-      {myTenant && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-sm font-medium">
-              <Building2 className="size-4 text-primary" />
-              Información del Negocio
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Estado</span>
-              <Badge
-                variant={myTenant.status === "active" ? "default" : "secondary"}
-              >
-                {myTenant.status === "active" ? "Activo" : "Inactivo"}
-              </Badge>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Creado</span>
-              <span>
-                {new Date(myTenant.created_at).toLocaleDateString("es-CO", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </span>
-            </div>
-            {plan === "trial" && (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">
-                  <Clock className="mr-1 inline size-3" />
-                  Fin de la prueba
-                </span>
-                <span className="font-medium text-warning-foreground">
-                  {remaining > 0 ? `${remaining} días` : "Finalizada"}
-                </span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Business info — Professional sees read-only, Enterprise can edit */}
-      {canView && myAgent && (
+      {/* Información del Negocio (Unificada) */}
+      {(myTenant || (canView && myAgent)) && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium">
-              <Building2 className="mr-2 inline size-4 text-primary" />
+            <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <Building2 className="size-4 text-primary" />
               Información del Negocio
             </CardTitle>
             {canEdit && !isEditing && (
@@ -647,52 +540,96 @@ function ClientDashboard() {
               </Button>
             )}
           </CardHeader>
-          {isEditing && canEdit ? (
-            <CardContent>
-              <BusinessConfigForm
-                config={myAgent.business_config}
-                onSave={handleSaveConfig}
-                isSaving={isSaving}
-                canAdd={canEdit}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-2"
-                onClick={() => setIsEditing(false)}
-              >
-                Cancelar
-              </Button>
-            </CardContent>
-          ) : myAgent.business_config ? (
-            <CardContent className="text-sm text-muted-foreground">
-              {myAgent.business_config.business_info?.description && (
-                <p>{myAgent.business_config.business_info.description}</p>
-              )}
-              {myAgent.business_config.products_services &&
-                myAgent.business_config.products_services.length > 0 && (
-                  <p className="mt-1">
-                    {myAgent.business_config.products_services.length}{" "}
-                    productos/servicios ·{" "}
-                    {myAgent.business_config.faq?.length ?? 0} preguntas
-                    frecuentes
-                  </p>
+          <CardContent className="space-y-4 text-sm">
+            {isEditing && canEdit && myAgent ? (
+              <div>
+                <BusinessConfigForm
+                  config={myAgent.business_config}
+                  onSave={handleSaveConfig}
+                  isSaving={isSaving}
+                  canAdd={canEdit}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => setIsEditing(false)}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            ) : (
+              <>
+                {myTenant && (
+                  <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted/40 p-3">
+                    <div>
+                      <span className="text-xs text-muted-foreground">Estado</span>
+                      <p className="mt-0.5">
+                        <Badge
+                          variant={myTenant.status === "active" ? "default" : "secondary"}
+                        >
+                          {myTenant.status === "active" ? "Activo" : "Inactivo"}
+                        </Badge>
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-xs text-muted-foreground">Creado</span>
+                      <p className="mt-0.5 text-xs font-medium">
+                        {new Date(myTenant.created_at).toLocaleDateString("es-CO", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </p>
+                    </div>
+                    {plan === "trial" && (
+                      <div className="col-span-2">
+                        <span className="text-xs text-muted-foreground">
+                          <Clock className="mr-1 inline size-3" />
+                          Fin de la prueba
+                        </span>
+                        <p className="mt-0.5 text-xs font-medium text-warning-foreground">
+                          {remaining > 0 ? `${remaining} días restantes` : "Finalizada"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 )}
-              {!myAgent.business_config.business_info?.description && (
-                <p>Sin información configurada.</p>
-              )}
-              {!canEdit && (
-                <p className="mt-2 text-xs text-muted-foreground/70">
-                  Solo lectura. Contacte a su administrador para realizar
-                  cambios.
-                </p>
-              )}
-            </CardContent>
-          ) : (
-            <CardContent className="text-sm text-muted-foreground">
-              Sin configuración.
-            </CardContent>
-          )}
+
+                {canView && myAgent && (
+                  <div className="space-y-2 border-t pt-3">
+                    {myAgent.business_config?.business_info?.description && (
+                      <p className="text-muted-foreground">
+                        {myAgent.business_config.business_info.description}
+                      </p>
+                    )}
+                    {myAgent.business_config?.products_services &&
+                      myAgent.business_config.products_services.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {myAgent.business_config.products_services.length}{" "}
+                          productos/servicios ·{" "}
+                          {myAgent.business_config.faq?.length ?? 0} preguntas
+                          frecuentes
+                        </p>
+                      )}
+                    {!myAgent.business_config?.business_info?.description &&
+                      (!myAgent.business_config?.products_services ||
+                        myAgent.business_config.products_services.length === 0) && (
+                        <p className="text-xs text-muted-foreground">
+                          Sin configuración adicional cargada.
+                        </p>
+                      )}
+                    {!canEdit && (
+                      <p className="mt-2 text-xs text-muted-foreground/70">
+                        Solo lectura. Contacte a su administrador para realizar
+                        cambios.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
         </Card>
       )}
 

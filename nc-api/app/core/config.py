@@ -183,6 +183,7 @@ class Settings(BaseSettings):
 
     # ── Redis (debounce, caching) ───────────────────────────────────────
     cache_redis_url: str = "redis://redis:6379/6"
+    debounce_window_seconds: int = 3
 
     # ── Anti-Spam ────────────────────────────────────────────────────────
     anti_spam_enabled: bool = True
@@ -218,6 +219,10 @@ class Settings(BaseSettings):
     payment_breb_number: str = ""
     payment_account_holder: str = ""
     payment_dashboard_url: str = "https://nuncacierro.com/dashboard"
+
+    # ── Telegram Escalation / Handoff ────────────────────────────────────
+    telegram_handoff_bot_token: str = ""
+    telegram_handoff_chat_id: str = ""
 
 
 settings = Settings()

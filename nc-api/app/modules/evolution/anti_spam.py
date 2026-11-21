@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 
 from loguru import logger
 
-from app.core.rate_limiter import MemoryRateLimiter
+from app.core.rate_limiter import MemoryRateLimiter, RedisRateLimiter
 
 # ── Types ───────────────────────────────────────────────────────────────────
 
@@ -112,6 +112,11 @@ class SpamDetector:
             max_requests=resolved["flood_threshold"],
             window_seconds=resolved["flood_window_seconds"],
         )
+        self._redis_flood_limiter = RedisRateLimiter(
+            max_requests=resolved["flood_threshold"],
+            window_seconds=resolved["flood_window_seconds"],
+            prefix="rl:antispam",
+        )
         self._patterns = patterns if patterns is not None else AUTO_REPLY_PATTERNS
 
     # ── Layer 1: Auto-reply ──────────────────────────────────────────────
@@ -164,6 +169,29 @@ class SpamDetector:
         """
         key = f"{user_id}:{connection_id}"
         if not self._flood_limiter.is_allowed(key):
+            return SpamResult(
+                is_spam=True,
+                spam_reason="flood",
+                spam_score=90,
+                detection_layers=["flood"],
+                action="block",
+            )
+
+        return SpamResult()
+
+    async def check_flood_async(
+        self,
+        user_id: str,
+        connection_id: str,
+    ) -> SpamResult:
+        """Check if *user_id* on *connection_id* is flooding using Redis.
+
+        Uses distributed ``RedisRateLimiter`` with sliding window sorted sets.
+        Key is ``{user_id}:{connection_id}``.
+        """
+        key = f"{user_id}:{connection_id}"
+        allowed = await self._redis_flood_limiter.is_allowed(key)
+        if not allowed:
             return SpamResult(
                 is_spam=True,
                 spam_reason="flood",
@@ -278,6 +306,60 @@ class SpamDetector:
             return flood_result
 
         # If auto-reply was logged but flood passed
+        if result.is_spam and result.action == "log":
+            return result
+
+        return SpamResult()
+
+    async def full_check_async(
+        self,
+        text: str,
+        user_id: str,
+        conn_id: str,
+        config: dict[str, t.Any] | None = None,
+    ) -> SpamResult:
+        """Asynchronously run auto-reply and Redis flood checks.
+
+        Same behavior as full_check but uses distributed RedisRateLimiter.
+        """
+        resolved = _resolve_anti_spam_config(config)
+        if not resolved.get("enabled", True):
+            return SpamResult()
+
+        self._flood_limiter.max_requests = resolved["flood_threshold"]
+        self._flood_limiter.window_seconds = resolved["flood_window_seconds"]
+        self._redis_flood_limiter.max_requests = resolved["flood_threshold"]
+        self._redis_flood_limiter.window_seconds = resolved["flood_window_seconds"]
+
+        mode = resolved.get("mode", "log")
+
+        # Layer 1: Auto-reply
+        result = self.check_auto_reply(text)
+        if result.is_spam:
+            if mode == "block":
+                return result
+            result.action = "log"
+            logger.info(
+                "Spam detected (auto_reply) in log mode | score={score}",
+                score=result.spam_score,
+            )
+
+        # Layer 2: Flood in Redis
+        flood_result = await self.check_flood_async(user_id, conn_id)
+        if flood_result.is_spam:
+            if result.detection_layers:
+                flood_result.detection_layers = (
+                    result.detection_layers + flood_result.detection_layers
+                )
+            if mode == "block":
+                return flood_result
+            flood_result.action = "log"
+            logger.info(
+                "Spam detected (flood) in log mode | score={score}",
+                score=flood_result.spam_score,
+            )
+            return flood_result
+
         if result.is_spam and result.action == "log":
             return result
 

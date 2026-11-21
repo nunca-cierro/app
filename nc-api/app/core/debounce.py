@@ -33,29 +33,9 @@ _DEBOUNCE_PREFIX: str = "debounce"
 _MAX_BUFFER_AGE: int = 30
 
 
-# ── Redis client (lazy singleton) ────────────────────────────────────────────
+# ── Redis client (re-exported from shared pool) ─────────────────────────────
 
-_redis: aioredis.Redis | None = None
-
-
-async def get_redis() -> aioredis.Redis:
-    """Get or create the async Redis client (singleton)."""
-    global _redis
-    if _redis is None:
-        _redis = aioredis.from_url(
-            settings.cache_redis_url,
-            decode_responses=True,
-            socket_connect_timeout=5,
-        )
-    return _redis
-
-
-async def close_redis() -> None:
-    """Close the Redis client (call on shutdown)."""
-    global _redis
-    if _redis is not None:
-        await _redis.close()
-        _redis = None
+from app.core.redis_client import get_redis, close_redis
 
 
 # ── Buffer operations ────────────────────────────────────────────────────────

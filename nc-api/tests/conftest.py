@@ -22,6 +22,7 @@ os.environ.setdefault("OPENAI_API_KEY", "test-openai-api-key-dummy")
 # AUTH_COOKIE_SECURE=false (local http), but tests must verify the
 # production Secure-on behavior deterministically (Slice B, AS-1).
 os.environ.setdefault("AUTH_COOKIE_SECURE", "true")
+os.environ.setdefault("DEBOUNCE_WINDOW_SECONDS", "0")
 
 import asyncpg
 import pytest

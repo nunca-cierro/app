@@ -1,262 +1,70 @@
-"""Evolution API message handler — end-to-end message processing pipeline.
+"""Evolution API message handler — channel adapter and ingress routing.
 
-Receives a raw Evolution API webhook event, extracts the text message,
-resolves the tenant from the ``PlatformConnection``, saves the message,
-generates an AI response via Groq, and sends it back through Evolution API.
-
-This handler follows the exact same pattern as ``telegram/handler.py``
-and reuses the same Groq pipeline and conversation logic.
+Delegates core message processing to the agnostic EngineService while preserving
+channel-specific connection update handlers, SSE notifications, and backward-compatible
+helper signatures.
 """
 
 from __future__ import annotations
 
-import asyncio
-import re
 import typing as t
-import uuid as uuid_pkg
-from datetime import UTC, datetime, timedelta
-
 from loguru import logger
-from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.rate_limiter import rate_limiter
-from app.core.debounce import push_message, flush_buffer, get_redis
 from app.modules.conversations.models import Conversation, Message
-from app.modules.agents.utils import format_business_config, universal_format_block
-from app.modules.integrations.llm.provider import llm_client
-from app.modules.platform_connections.models import PlatformConnection
-from app.modules.evolution.webhook import (
-    extract_evolution_message,
-    extract_evolution_connection_update,
+from app.modules.engine.schemas import InboundMessage
+from app.modules.engine.service import (
+    ADMIN_CHAT_COOLDOWNS_KEY,
+    ADMIN_COOLDOWN_HOURS,
+    PAYMENT_KEYWORDS,
+    _count_ai_responses_this_month,
+    _faq_answer_for,
+    _fold_accents,
+    _has_payment_keyword,
+    _insert_message_dedup,
+    _matches_escalation_keyword,
+    _normalize_jid,
+    _significant_words,
+    engine_service,
 )
 from app.modules.evolution.adapter import EvolutionAdapter
 from app.modules.evolution.anti_spam import _resolve_anti_spam_config, spam_detector
+from app.modules.evolution.webhook import (
+    extract_evolution_connection_update,
+    extract_evolution_message,
+)
+from app.modules.integrations.llm.provider import llm_client
+from app.modules.platform_connections.models import PlatformConnection
 from app.modules.platform_connections.sse import (
     EVENT_CONNECTION_STATE_CHANGED,
     notify_subscribers,
 )
 
-# ── Constants ────────────────────────────────────────────────────────────────
-
-# After the admin sends a message, the bot stays silent for this many hours.
-# During this cooldown, incoming customer messages are saved but NOT answered
-# by the AI, giving the admin space to handle the conversation manually.
-ADMIN_COOLDOWN_HOURS: int = 72
-
-PAYMENT_KEYWORDS: list[str] = [
-    "pago", "pagar", "qr", "daviplata", "bre-b",
-]
-
-# Extra-data key for per-chat admin cooldown timestamps (dict[str, str]).
-# Maps normalized chat JID → ISO timestamp of last admin message.
-ADMIN_CHAT_COOLDOWNS_KEY: str = "admin_chat_cooldowns"
-
-# Debounce: aggregate rapid-fire messages before processing.
-# When a user sends multiple short messages, wait this long after the
-# last message before calling the LLM (prevents N calls for N messages).
-DEBOUNCE_WINDOW_SECONDS: int = 3
-
-# ── Helpers ──────────────────────────────────────────────────────────────────
-
-
-def _has_payment_keyword(text: str) -> bool:
-    """Check if *text* contains any payment-related keyword (case-insensitive)."""
-    lower = text.lower().strip()
-    return any(kw in lower for kw in PAYMENT_KEYWORDS)
-
-
-def _normalize_jid(jid: str) -> str:
-    """Normalize a WhatsApp JID to a bare phone number for stable matching.
-
-    Evolution API delivers JIDs in different shapes depending on context:
-    - ``573102079572@s.whatsapp.net`` (standard)
-    - ``201442656784510@lid`` (linked device ID)
-
-    Both forms refer to the same chat when the numeric prefix matches.
-    Strip the ``@domain`` suffix so cooldown lookups work across formats.
-    """
-    return jid.split("@")[0] if "@" in jid else jid
-
-
-async def _insert_message_dedup(
-    session: AsyncSession, **values: t.Any
-) -> uuid_pkg.UUID | None:
-    """Insert a Message row honoring ``uq_messages_conn_external_msg``.
-
-    Write-time dedup: ``INSERT ... ON CONFLICT DO NOTHING`` is atomic, so
-    concurrent deliveries of the same external message (webhook retries,
-    two uvicorn workers) cannot both persist it — the old SELECT-then-INSERT
-    guard raced under concurrency.
-
-    Returns the new ``Message.id``, or ``None`` when a message with the same
-    ``(platform_connection_id, external_message_id)`` already exists —
-    callers must treat ``None`` as a REPLAY and exit without replying.
-    """
-    from sqlalchemy.dialects.postgresql import insert as pg_insert
-
-    stmt = (
-        pg_insert(Message)
-        .values(**values)
-        .on_conflict_do_nothing(constraint="uq_messages_conn_external_msg")
-        .returning(Message.id)
-    )
-    result = await session.execute(stmt)
-    return result.scalar_one_or_none()
-
-
-async def _count_ai_responses_this_month(
-    session: AsyncSession, tenant_id: uuid_pkg.UUID
-) -> int:
-    """Outbound AI messages persisted for the tenant since the UTC month start.
-
-    Same counting convention as ``GET /plans/usage`` (``origin='ai'`` +
-    ``direction='out'``) — the soft-cap unit is "AI responses" per tenant per
-    month. Programmed FAQ and escalation outbounds never count.
-    """
-    month_start = datetime.now(UTC).replace(
-        day=1, hour=0, minute=0, second=0, microsecond=0
-    )
-    result = await session.execute(
-        select(func.count())
-        .select_from(Message)
-        .where(
-            Message.tenant_id == tenant_id,
-            Message.origin == "ai",
-            Message.direction == "out",
-            Message.created_at >= month_start,
-        )
-    )
-    return int(result.scalar_one() or 0)
-
-
-# ── Text-matching helpers (programmed responses) ──────────────────────────────
-# Every plan carries CAP_AI, but the programmed keyword/FAQ matcher is the
-# soft-cap fallback path (and the ONLY reply path once a plan's monthly AI
-# cap is exhausted), so matching quality here IS product quality. All matchers
-# normalize Spanish accents and ignore function words; the ORIGINAL text is
-# always kept for sending — normalization only happens for scoring.
-
-# Accent folding map: á→a, é→e, í→i, ó→o, ú→u, ü→u, ñ→n (upper + lower).
-_ACCENT_FOLD: dict[int, int] = str.maketrans(
-    "áéíóúüñÁÉÍÓÚÜÑ",
-    "aeiouunAEIOUUN",
-)
-
-# Function words that must never count as a match — prevents "dónde"+"están"
-# from falsely matching unrelated messages and lets short questions like
-# "Precios" match their FAQ entry. Includes the interrogative pronouns
-# (cuál/cómo/dónde/cuándo) AND the present-tense copula "estar" forms
-# (esta/estas/estan/estamos/estoy/hay) — a question like "¿Dónde están?"
-# is reduced to zero significant words and therefore never false-matches a
-# message that merely happens to contain those words.
-SPANISH_STOPWORDS: frozenset[str] = frozenset(
-    {
-        "de", "la", "el", "los", "las", "y", "o", "a", "en", "que",
-        "cual", "cuál", "como", "cómo", "donde", "dónde", "cuando", "cuándo",
-        "para", "por", "con", "es", "un", "una", "al", "del", "mi", "su",
-        "me", "se", "te",
-        "esta", "estas", "estan", "estamos", "estoy", "hay",
-    }
-)
-
-# Word tokenizer — after accent folding everything is ASCII, so a simple
-# [a-z0-9]+ pass cleanly strips punctuation (¿ ? ¡ ! , hyphens, etc).
-_WORD_RE: re.Pattern[str] = re.compile(r"[a-z0-9]+")
-
-
-def _fold_accents(text: str) -> str:
-    """Return *text* lowercased with Spanish accents folded.
-
-    "atención" → "atencion", "¿Dónde están?" → "¿donde estan?". Only used for
-    matching — the original text is kept for sending.
-    """
-    return text.translate(_ACCENT_FOLD).lower()
-
-
-def _significant_words(text: str) -> set[str]:
-    """Accent-folded, punctuation-stripped, stopword-free word set.
-
-    This is the token space for FAQ scoring and escalation phrase matching.
-    """
-    return set(_WORD_RE.findall(_fold_accents(text))) - SPANISH_STOPWORDS
-
-
-def _faq_answer_for(user_text: str, faq: list[dict]) -> str | None:
-    """Best FAQ answer for *user_text*, or None when nothing matches.
-
-    Matching rule (deterministic, unit-tested):
-    - User text and each FAQ question are reduced to their significant words
-      (accent-folded, punctuation stripped, stopwords removed).
-    - A question with 1 significant word matches when that word appears in the
-      user message (score >= 1) — "Precios" hits the "precios" FAQ.
-    - A question with 2+ significant words matches when at least 2 words
-      overlap OR the overlap covers >= 50% of the question's significant
-      words — so a 2-word question like "¿Cuál es el horario de atención?"
-      (significant words: horario, atencion) matches a one-word query like
-      "atencion", while longer questions still need a real 2-word overlap.
-    - Questions reduced to zero significant words (pure function words, e.g.
-      "¿Dónde están?") NEVER match — avoids stopword-collision false positives.
-    - Ties broken by highest overlap; equal scores keep the first entry.
-      The answer is returned verbatim (original spelling, not folded).
-    """
-    if not faq:
-        return None
-    user_words = _significant_words(user_text)
-    best_answer: str | None = None
-    best_score = 0
-
-    for item in faq:
-        if not isinstance(item, dict):
-            continue
-        q = item.get("question") or item.get("q", "")
-        a = item.get("answer") or item.get("a", "")
-        if not q or not a:
-            continue
-        q_words = _significant_words(q)
-        if not q_words:
-            continue
-        overlap = len(user_words & q_words)
-        # 1 word → 1; 2+ words → at least 2, unless 50% of the question words
-        # is lower (a 2-word question matches on a single overlap).
-        required = 1 if len(q_words) == 1 else min(2, (len(q_words) + 1) // 2)
-        if overlap >= required and overlap > best_score:
-            best_score = overlap
-            best_answer = a
-
-    return best_answer
-
-
-def _matches_escalation_keyword(user_text: str, keyword: str) -> bool:
-    """True when *user_text* triggers the escalation *keyword*.
-
-    - Single-word keywords match on word boundaries (accent-folded), so
-      "queja" hits "tengo una queja" but not "quejarnos".
-    - Multi-word phrase keywords match when EVERY significant word of the
-      phrase appears as a whole word in the user text, so "hablar con asesor"
-      (significant words: hablar, asesor) matches "quiero hablar un asesor"
-      but NOT "hablar de fútbol".
-    - A keyword made only of function words falls back to a word-boundary
-      match of the full folded phrase.
-    """
-    if not isinstance(keyword, str):
-        return False
-    folded_user = _fold_accents(user_text)
-    kw_words = _significant_words(keyword)
-    if kw_words:
-        return all(
-            re.search(rf"\b{re.escape(w)}\b", folded_user) is not None
-            for w in kw_words
-        )
-    return re.search(
-        rf"\b{re.escape(_fold_accents(keyword).strip())}\b", folded_user
-    ) is not None
-
-
-# ── Types ───────────────────────────────────────────────────────────────────
-
 EvolutionEventT = dict[str, t.Any]
+
+# Re-export constants for backward compatibility
+__all__ = [
+    "ADMIN_CHAT_COOLDOWNS_KEY",
+    "ADMIN_COOLDOWN_HOURS",
+    "EvolutionAdapter",
+    "EvolutionEventT",
+    "PAYMENT_KEYWORDS",
+    "_count_ai_responses_this_month",
+    "_faq_answer_for",
+    "_fold_accents",
+    "_has_payment_keyword",
+    "_insert_message_dedup",
+    "_matches_escalation_keyword",
+    "_normalize_jid",
+    "_significant_words",
+    "handle_evolution_connection_update",
+    "handle_evolution_incoming",
+    "llm_client",
+    "rate_limiter",
+    "spam_detector",
+]
 
 
 async def handle_evolution_connection_update(
@@ -281,7 +89,6 @@ async def handle_evolution_connection_update(
 
     state = parsed["connection_state"]
 
-    # Map Evolution state to our status vocabulary
     status_map = {
         "open": "connected",
         "connecting": "connecting",
@@ -293,18 +100,12 @@ async def handle_evolution_connection_update(
     extra["connection_status"] = mapped
     connection.extra_data = extra
 
-    # If connected, also set connection status to active
     if mapped == "connected":
         connection.status = "active"
 
     session.add(connection)
-    # Persist the change — without this, the state update is rolled back
-    # when the webhook request's session closes and the dashboard never
-    # sees the new status.
     await session.commit()
 
-    # Push to any SSE subscribers so the dashboard updates instantly
-    # instead of polling.
     await notify_subscribers(
         str(connection.id),
         EVENT_CONNECTION_STATE_CHANGED,
@@ -328,23 +129,7 @@ async def handle_evolution_incoming(
     connection: PlatformConnection | None,
     session: AsyncSession,
 ) -> None:
-    """Process a raw Evolution API webhook event.
-
-    Pipeline (race-condition-safe order):
-    1. Route ``connection.update`` events to separate handler
-    2. Extract message
-    3. PostgreSQL advisory lock — serialize concurrent webhooks per chat
-       (deterministic ``hashtext`` key shared by ALL workers)
-    4. Admin message (``from_me``) → save, mark 72h cooldown, return
-    5. **Admin cooldown check** (BEFORE conversation creation) → silent save
-    6. Find or create conversation
-    7. Escalation gate → if escalated+responded, silent save and stop
-    8. Anti-spam, rate limiting
-    9. Inbound insert — write-time dedup (conflict → replay, exit early)
-       then EARLY COMMIT before any external I/O
-    10. Escalation check → if keyword matched, send fallback and stop
-    11. Build system prompt, generate via LLM, send, save outbound
-    """
+    """Process a raw Evolution API webhook event via EngineService."""
     # ── 0. Route connection.update events ───────────────────────────────
     if event.get("event") == "connection.update":
         await handle_evolution_connection_update(event, connection, session)
@@ -357,901 +142,32 @@ async def handle_evolution_incoming(
         return
 
     if connection is None:
-        logger.warning(
-            "No connection provided for Evolution event — skipping"
-        )
+        logger.warning("No connection provided for Evolution event — skipping")
         return
 
-    # ── 1b. Advisory lock — serialize concurrent webhooks per chat ─────
-    # Prevents the race condition where client webhook creates a conversation
-    # BEFORE the admin webhook sets admin_last_active_at. The key is hashed
-    # SQL-side (``hashtext``) so both uvicorn workers derive the SAME lock
-    # for a chat — a Python ``hash()`` is per-process randomized and would
-    # let the two workers process the same chat concurrently.
-    tenant_id = connection.tenant_id
-    lock_key = f"{connection.id}:{parsed['external_user_id']}"
-    await session.execute(
-        text("SELECT pg_advisory_xact_lock(hashtext(:key))"), {"key": lock_key}
-    )
-
-    logger.info(
-        "Processing Evolution message | conn={conn} | from={user} | text={text}",
-        conn=connection.id,
-        user=parsed["external_user_id"],
-        text=parsed["content"][:80],
-    )
-
-    # ── 2. Admin message handler (from_me) ──────────────────────────────
-    # Messages sent FROM the business number. Need to differentiate:
-    #   - Bot messages → Evolution fires a webhook for messages the bot
-    #     itself sent via the API. These already have a matching Message
-    #     row in DB → skip them.
-    #   - Admin messages → manually written from the WhatsApp app → no
-    #     matching row → save and mark 72h cooldown.
-    if parsed.get("from_me"):
-        # Look up existing conversation (or create one)
-        conv_result = await session.execute(
-            select(Conversation).where(
-                Conversation.tenant_id == tenant_id,
-                Conversation.platform_connection_id == connection.id,
-                Conversation.external_user_id == parsed["external_user_id"],
-                Conversation.status.in_(["open", "escalated"]),
-            )
-        )
-        conversation = conv_result.scalar_one_or_none()
-        if conversation is None:
-            conversation = Conversation(
-                tenant_id=tenant_id,
-                platform_connection_id=connection.id,
-                external_user_id=parsed["external_user_id"],
-                status="open",
-            )
-            session.add(conversation)
-            await session.flush()
-
-        # Write-time dedup: if this message_id already exists, the row is
-        # the bot echoing its own API send (or a concurrent duplicate
-        # delivery) — the INSERT conflicts and we skip without double-
-        # marking the admin cooldown.
-        admin_msg_id = await _insert_message_dedup(
-            session,
-            tenant_id=tenant_id,
-            conversation_id=conversation.id,
-            platform_connection_id=connection.id,
-            direction="out",
-            external_user_id=parsed["external_user_id"],
-            external_message_id=parsed["external_message_id"],
-            platform="evolution",
-            message_type="text",
-            content=parsed["content"],
-            status="sent",
-            payload={"source": "admin"},
-        )
-        if admin_msg_id is None:
-            logger.debug(
-                "Skipping bot's own fromMe message | id={mid}",
-                mid=parsed["external_message_id"],
-            )
-            return
-
-        extra = dict(conversation.extra_data or {})
-        extra["admin_last_active_at"] = datetime.now(UTC).isoformat()
-        conversation.extra_data = extra
-
-        # Store per-chat cooldown on the CONNECTION so it survives the
-        # LID ↔ phone number mismatch between admin and client webhooks.
-        # Key: normalized remote_jid (the chat partner's JID).
-        chat_jid = _normalize_jid(parsed.get("remote_jid", ""))
-        if chat_jid:
-            conn_extra = dict(connection.extra_data or {})
-            cooldowns: dict = dict(conn_extra.get(ADMIN_CHAT_COOLDOWNS_KEY) or {})
-            cooldowns[chat_jid] = datetime.now(UTC).isoformat()
-            conn_extra[ADMIN_CHAT_COOLDOWNS_KEY] = cooldowns
-            connection.extra_data = conn_extra
-
-        conversation.last_message_at = datetime.now(UTC)
-        await session.commit()
-        logger.info(
-            "Admin message saved — bot cooldown 72h | conv={cid} | chat_jid={jid}",
-            cid=conversation.id,
-            jid=chat_jid,
-        )
-        return
-
-    # ── 2b. Message debounce (non-admin only) ──────────────────────────
-    # Aggregate rapid-fire messages (e.g. "Hola" + "quiero" + "una cita")
-    # into a single LLM call. Uses Redis sorted set + SET NX lock.
-    # The first message in a burst acquires the lock, sleeps for the
-    # debounce window, then flushes and processes all buffered messages.
-    # Subsequent messages within the window just buffer and return.
-    try:
-        redis = await get_redis()
-        debounce_key = f"debounce:{parsed['external_user_id']}:{connection.id}"
-        lock_key = f"debounce_lock:{parsed['external_user_id']}:{connection.id}"
-
-        # Buffer the current message
-        await push_message(parsed["external_user_id"], str(connection.id), parsed)
-
-        # Try to acquire the debounce lock (NX = only if not exists, EX = TTL)
-        acquired = await redis.set(
-            lock_key, "1", nx=True, ex=DEBOUNCE_WINDOW_SECONDS
-        )
-
-        if acquired:
-            # First message in the burst — wait for the debounce window
-            logger.debug(
-                "Debounce: first message, waiting {w}s | user={uid}",
-                w=DEBOUNCE_WINDOW_SECONDS, uid=parsed["external_user_id"],
-            )
-            await asyncio.sleep(DEBOUNCE_WINDOW_SECONDS)
-
-            # Flush all buffered messages
-            messages = await flush_buffer(parsed["external_user_id"], str(connection.id))
-            if not messages:
-                logger.debug("Debounce: buffer empty after flush, skipping")
-                return
-
-            # If multiple messages were buffered, merge them into one
-            if len(messages) > 1:
-                merged_text = " ".join(
-                    m.get("content", "") for m in messages if m.get("content")
-                )
-                parsed["content"] = merged_text
-                logger.info(
-                    "Debounce: merged {n} messages into one | user={uid} | text={text}",
-                    n=len(messages), uid=parsed["external_user_id"],
-                    text=merged_text[:80],
-                )
-            # else: single message, use it as-is (already in parsed)
-        else:
-            # Another message already triggered the debounce timer — just
-            # buffer and return. The first message's handler will process all.
-            logger.debug(
-                "Debounce: buffered, waiting for flush | user={uid}",
-                uid=parsed["external_user_id"],
-            )
-            return
-    except Exception as exc:
-        # Redis failure is non-fatal — fall through to process immediately
-        logger.warning("Debounce failed (non-fatal), processing immediately: {e}", e=exc)
-
-    # ── 3. Admin cooldown check (BEFORE conversation creation) ──────────
-    # This MUST run before find-or-create to prevent the race condition
-    # where client webhook creates a new conversation and the bot responds
-    # before the admin webhook arrives to set the cooldown.
-    #
-    # Two-level check:
-    #   a) Connection-level cooldowns (set by normalized remote_jid) —
-    #      handles the LID ↔ phone mismatch between admin and client.
-    #   b) Conversation-level cooldown (legacy) — backward compat.
-
-    # ── 3a. Connection-level per-chat cooldown ─────────────────────────
-    chat_jid = _normalize_jid(parsed["external_user_id"])
-    conn_extra = dict(connection.extra_data or {})
-    conn_cooldowns: dict = dict(conn_extra.get(ADMIN_CHAT_COOLDOWNS_KEY) or {})
-    conn_admin_ts = conn_cooldowns.get(chat_jid)
-    if conn_admin_ts:
-        try:
-            admin_time = datetime.fromisoformat(conn_admin_ts)
-            elapsed = datetime.now(UTC) - admin_time
-            if elapsed < timedelta(hours=ADMIN_COOLDOWN_HOURS):
-                # Find or create conversation for silent save
-                conv_result = await session.execute(
-                    select(Conversation).where(
-                        Conversation.tenant_id == tenant_id,
-                        Conversation.platform_connection_id == connection.id,
-                        Conversation.external_user_id == parsed["external_user_id"],
-                        Conversation.status.in_(["open", "escalated"]),
-                    )
-                )
-                conversation = conv_result.scalar_one_or_none()
-                if conversation is None:
-                    conversation = Conversation(
-                        tenant_id=tenant_id,
-                        platform_connection_id=connection.id,
-                        external_user_id=parsed["external_user_id"],
-                        status="open",
-                    )
-                    session.add(conversation)
-                    await session.flush()
-
-                remaining_h = int(
-                    (timedelta(hours=ADMIN_COOLDOWN_HOURS) - elapsed).total_seconds() / 3600
-                )
-                silent_inbound_id = await _insert_message_dedup(
-                    session,
-                    tenant_id=tenant_id,
-                    conversation_id=conversation.id,
-                    platform_connection_id=connection.id,
-                    direction="in",
-                    external_user_id=parsed["external_user_id"],
-                    external_message_id=parsed["external_message_id"],
-                    platform="evolution",
-                    message_type="text",
-                    content=parsed["content"],
-                    status="received",
-                )
-                if silent_inbound_id is None:
-                    return
-                conversation.last_message_at = datetime.now(UTC)
-                await session.commit()
-                logger.info(
-                    "Admin cooldown (conn-level) — silent save ({h}h remaining) | conv={cid} | jid={jid}",
-                    h=remaining_h,
-                    cid=conversation.id,
-                    jid=chat_jid,
-                )
-                return
-        except (ValueError, TypeError):
-            pass
-
-    # ── 3b. Conversation-level cooldown (legacy) ───────────────────────
-    conv_result = await session.execute(
-        select(Conversation).where(
-            Conversation.tenant_id == tenant_id,
-            Conversation.platform_connection_id == connection.id,
-            Conversation.external_user_id == parsed["external_user_id"],
-            Conversation.status.in_(["open", "escalated"]),
-        )
-    )
-    conversation = conv_result.scalar_one_or_none()
-
-    if conversation is not None:
-        conv_extra = conversation.extra_data or {}
-        admin_last_active = conv_extra.get("admin_last_active_at")
-        if admin_last_active:
-            try:
-                admin_time = datetime.fromisoformat(admin_last_active)
-                elapsed = datetime.now(UTC) - admin_time
-                if elapsed < timedelta(hours=ADMIN_COOLDOWN_HOURS):
-                    remaining_h = int(
-                        (timedelta(hours=ADMIN_COOLDOWN_HOURS) - elapsed).total_seconds() / 3600
-                    )
-                    silent_inbound_id = await _insert_message_dedup(
-                        session,
-                        tenant_id=tenant_id,
-                        conversation_id=conversation.id,
-                        platform_connection_id=connection.id,
-                        direction="in",
-                        external_user_id=parsed["external_user_id"],
-                        external_message_id=parsed["external_message_id"],
-                        platform="evolution",
-                        message_type="text",
-                        content=parsed["content"],
-                        status="received",
-                    )
-                    if silent_inbound_id is None:
-                        # Replay of an already-stored message — nothing to do
-                        return
-                    conversation.last_message_at = datetime.now(UTC)
-                    await session.commit()
-                    logger.info(
-                        "Admin cooldown — silent save ({h}h remaining) | conv={cid}",
-                        h=remaining_h,
-                        cid=conversation.id,
-                    )
-                    return
-            except (ValueError, TypeError):
-                pass
-
-    # ── 4. Find or create conversation ──────────────────────────────────
-    if conversation is None:
-        conversation = Conversation(
-            tenant_id=tenant_id,
-            platform_connection_id=connection.id,
-            external_user_id=parsed["external_user_id"],
-            status="open",
-        )
-        session.add(conversation)
-        await session.flush()
-
-    # ── 5. Escalation silence gate ──────────────────────────────────────
-    if conversation.status == "escalated":
-        extra = conversation.extra_data or {}
-        if extra.get("escalation_responded"):
-            silent_inbound_id = await _insert_message_dedup(
-                session,
-                tenant_id=tenant_id,
-                conversation_id=conversation.id,
-                platform_connection_id=connection.id,
-                direction="in",
-                external_user_id=parsed["external_user_id"],
-                external_message_id=parsed["external_message_id"],
-                platform="evolution",
-                message_type="text",
-                content=parsed["content"],
-                status="received",
-            )
-            if silent_inbound_id is None:
-                # Replay of an already-stored message — nothing to do
-                return
-            conversation.last_message_at = datetime.now(UTC)
-            await session.commit()
-            logger.info(
-                "Escalated conversation — silent save | conv={cid}",
-                cid=conversation.id,
-            )
-            return
-
-    # ── 2. Anti-spam check (auto-reply + flood) ─────────────────────────
-    spam_payload: dict | None = None
-    conn_spam_config = (connection.extra_data or {}).get("anti_spam", {})
-
-    spam_result = spam_detector.full_check(
-        text=parsed["content"],
-        user_id=parsed["external_user_id"],
-        conn_id=str(connection.id),
-        config=conn_spam_config,
-    )
-
-    if spam_result.is_spam and spam_result.action == "block":
-        blocked_inbound_id = await _insert_message_dedup(
-            session,
-            tenant_id=tenant_id,
-            conversation_id=conversation.id,
-            platform_connection_id=connection.id,
-            direction="in",
-            external_user_id=parsed["external_user_id"],
-            external_message_id=parsed["external_message_id"],
-            platform="evolution",
-            message_type="text",
-            content=parsed["content"],
-            status="received",
-            payload=spam_result.to_dict(),
-        )
-        if blocked_inbound_id is None:
-            # Replay of an already-stored (blocked) message — nothing to do
-            return
-        conversation.last_message_at = datetime.now(UTC)
-        await session.commit()
-        logger.info(
-            "Spam blocked (auto_reply/flood) | reason={reason} | score={score}",
-            reason=spam_result.spam_reason,
-            score=spam_result.spam_score,
-        )
-        return
-
-    if spam_result.is_spam:
-        spam_payload = spam_result.to_dict()
-        logger.info(
-            "Spam logged (auto_reply/flood) | reason={reason} | score={score}",
-            reason=spam_result.spam_reason,
-            score=spam_result.spam_score,
-        )
-
-    # ── Rate limiting check ─────────────────────────────────────────────
-    rl_key = f"{parsed['external_user_id']}:{connection.id}"
-    if not rate_limiter.is_allowed(rl_key):
-        logger.warning(
-            "Rate limit exceeded | user={user} | conn={conn}",
-            user=parsed["external_user_id"],
-            conn=connection.id,
-        )
-        await session.commit()
-        return
-
-    # ── 4. Save inbound message (write-time dedup) ──────────────────────
-    # The INSERT ... ON CONFLICT DO NOTHING against
-    # ``uq_messages_conn_external_msg`` is the authoritative dedup: a
-    # conflict means this message was already processed — REPLAY: exit
-    # early with success (no Groq call, no send).
-    inbound_msg_id = await _insert_message_dedup(
-        session,
-        tenant_id=tenant_id,
-        conversation_id=conversation.id,
+    inbound = InboundMessage(
         platform_connection_id=connection.id,
-        direction="in",
+        platform="evolution",
         external_user_id=parsed["external_user_id"],
         external_message_id=parsed["external_message_id"],
-        platform="evolution",
-        message_type="text",
         content=parsed["content"],
-        status="received",
-        payload=spam_payload,
+        from_me=parsed.get("from_me", False),
+        remote_jid=parsed.get("remote_jid"),
+        raw_payload=event,
     )
-    if inbound_msg_id is None:
-        logger.info(
-            "Replay — message already processed, skipping | id={mid}",
-            mid=parsed["external_message_id"],
-        )
-        return
 
-    # ── 4a. Commit EARLY — before Groq and Evolution send ───────────────
-    # External I/O must not run inside the transaction holding the
-    # advisory lock: this commit persists the inbound message and releases
-    # the lock, so concurrent webhooks for the same chat are not blocked
-    # for the whole duration of the LLM call + platform send. It also
-    # makes the stored message immediately visible to the other worker,
-    # so webhook retries hit the replay exit above.
-    await session.commit()
+    import sys
+    evo_mod = sys.modules.get(__name__)
+    adapter_cls = getattr(evo_mod, "EvolutionAdapter", EvolutionAdapter) if evo_mod else EvolutionAdapter
+    active_llm = getattr(evo_mod, "llm_client", llm_client) if evo_mod else llm_client
+    active_count_fn = getattr(evo_mod, "_count_ai_responses_this_month", None) if evo_mod else None
 
-    # ── 4b. Load conversation history ──────────────────────────────────
-    history_result = await session.execute(
-        select(Message)
-        .where(
-            Message.conversation_id == conversation.id,
-            Message.id != inbound_msg_id,
-        )
-        .order_by(Message.created_at.desc())
-        .limit(30)
+    adapter = adapter_cls()
+    await engine_service.process_inbound(
+        inbound=inbound,
+        connection=connection,
+        session=session,
+        adapter=adapter,
+        llm=active_llm,
+        count_ai_responses_fn=active_count_fn,
     )
-    past_messages = list(reversed(history_result.scalars().all()))
-    # Filter out admin-sent messages from LLM context — the LLM should not
-    # see manually-written admin messages as "assistant" responses, since it
-    # never generated them and would hallucinate context.
-    conversation_history = [
-        {
-            "role": "user" if m.direction == "in" else "assistant",
-            "content": m.content or "",
-        }
-        for m in past_messages
-        if not (m.direction == "out" and (m.payload or {}).get("source") == "admin")
-    ]
-
-    # ── First message detection ────────────────────────────────────
-    is_first_message = len(past_messages) == 0
-
-    # ── 4c. Repetitive check ───────────────────────────────────────────
-    rep_result = spam_detector.check_repetitive(
-        text=parsed["content"],
-        history=[m.content or "" for m in past_messages],
-    )
-    if rep_result.is_spam:
-        # The inbound row is already committed — merge the repetitive
-        # detection into its payload via UPDATE (the dedup insert is a
-        # Core INSERT, so there is no ORM instance to mutate).
-        merged_payload = dict(spam_payload) if spam_payload else {}
-        merged_payload.update(rep_result.to_dict())
-        # Merge detection layers (deduplicate)
-        all_layers = merged_payload.get("detection_layers", [])
-        merged_payload["detection_layers"] = list(dict.fromkeys(all_layers))
-        await session.execute(
-            update(Message)
-            .where(Message.id == inbound_msg_id)
-            .values(payload=merged_payload)
-        )
-
-        # Resolve mode for this connection
-        rep_mode_config = _resolve_anti_spam_config(conn_spam_config)
-        if rep_mode_config.get("mode") == "block" and rep_mode_config.get("enabled", True):
-            conversation.last_message_at = datetime.now(UTC)
-            await session.commit()
-            logger.info(
-                "Spam blocked (repetitive) | score={score}",
-                score=rep_result.spam_score,
-            )
-            return
-
-        logger.info(
-            "Spam logged (repetitive) | score={score}",
-            score=rep_result.spam_score,
-        )
-
-    # ── 4d. Load tenant (early, needed for payment guard + escalation) ──
-    from app.modules.tenants.models import Tenant
-
-    tenant = await session.get(Tenant, tenant_id)
-    if tenant is None:
-        logger.warning(
-            "Tenant {tid} not found for Evolution message", tid=tenant_id
-        )
-        await session.commit()
-        return
-
-    # ── 4d2. Status guard — inactive/suspended tenants never reply ────────
-    # A suspended/inactive business must not keep auto-responding to
-    # WhatsApp. The inbound message was already persisted; we halt the reply
-    # with a clear log. Connections are NOT disconnected or deleted here —
-    # only message processing is skipped.
-    if tenant.status in ("inactive", "suspended"):
-        logger.info(
-            "Inbound ignored | tenant={tid} | status={status} | user={user}",
-            tid=tenant_id,
-            status=tenant.status,
-            user=parsed["external_user_id"],
-        )
-        await session.commit()
-        return
-
-    # ── 4e. Payment keyword pre-processing ───────────────────────────────
-    # The platform's own payment info (Bre-B account, dashboard) is sent ONLY
-    # in conversations of the internal tenant (Settings.internal_tenant_slug,
-    # default "nuncacierro"). It must NEVER leak to end customers of client
-    # tenants — their payment keywords flow through their own FAQ/AI pipeline.
-    from app.modules.tenants.internal import is_internal_tenant
-
-    if is_internal_tenant(tenant.slug, settings.internal_tenant_slug) and _has_payment_keyword(
-        parsed["content"]
-    ):
-        payment_msg = (
-            "¡Claro! Puedes pagar tu plan por:\n"
-            f"• Bre-B: {settings.payment_breb_number}\n"
-            f"Titular: {settings.payment_account_holder}\n\n"
-            "También puedes ver los QR y gestionar tu pago desde el dashboard:\n"
-            f"{settings.payment_dashboard_url}\n\n"
-            "Envíame el comprobante por aquí cuando hayas pagado y activo tu plan enseguida."
-        )
-
-        adapter = EvolutionAdapter()
-        try:
-            evo_response = await adapter.send_message(
-                connection=connection,
-                to=parsed["remote_jid"],
-                text=payment_msg,
-            )
-            evo_msg_id = evo_response.get("key", {}).get("id") or evo_response.get("id")
-            outbound_status = "sent"
-        except Exception:
-            evo_msg_id = None
-            outbound_status = "failed"
-
-        outbound_msg = Message(
-            tenant_id=tenant_id,
-            conversation_id=conversation.id,
-            platform_connection_id=connection.id,
-            direction="out",
-            external_user_id=parsed["external_user_id"],
-            external_message_id=evo_msg_id,
-            platform="evolution",
-            message_type="text",
-            content=payment_msg,
-            status=outbound_status,
-        )
-        session.add(outbound_msg)
-
-        # Mark escalation as responded ONLY if the courtesy credit was actually
-        # delivered — a failed send must not silence the bot.
-        if conversation.status == "escalated" and outbound_status == "sent":
-            extra = dict(conversation.extra_data or {})
-            extra["escalation_responded"] = True
-            conversation.extra_data = extra
-
-        conversation.last_message_at = datetime.now(UTC)
-        await session.commit()
-        logger.info(
-            "Payment info sent | conn={conn} | user={user} | matched_keyword={kw}",
-            conn=connection.id,
-            user=parsed["external_user_id"],
-            kw=parsed["content"][:80],
-        )
-        return
-
-    # ── 5a. Resolve agent (needed for both AI and programmed plans) ────
-    from app.modules.agents.models import AiAgent
-
-    agent = None
-    if connection.agent_id:
-        agent_result = await session.execute(
-            select(AiAgent).where(
-                AiAgent.id == connection.agent_id,
-                AiAgent.tenant_id == tenant.id,
-                AiAgent.enabled == True,
-            )
-        )
-        agent = agent_result.scalar_one_or_none()
-
-    if agent is None:
-        # Fallback must be DETERMINISTIC: scalar_one_or_none() raises
-        # MultipleResultsFound with 2+ enabled agents (every webhook 500s).
-        agent_result = await session.execute(
-            select(AiAgent)
-            .where(
-                AiAgent.tenant_id == tenant.id,
-                AiAgent.enabled == True,
-            )
-            .order_by(AiAgent.created_at, AiAgent.id)
-            .limit(2)
-        )
-        candidates = list(agent_result.scalars().all())
-        if len(candidates) > 1:
-            logger.warning(
-                "Tenant {tid} has {n} enabled agents — no connection link, "
-                "using oldest (created_at, id). Link the connection to an "
-                "agent for deterministic routing.",
-                tid=tenant.id,
-                n=len(candidates),
-            )
-        agent = candidates[0] if candidates else None
-
-    # ── 5b. Trial expiration check ──────────────────────────────────────
-    from app.modules.plans.capabilities import TRIAL_DAYS, get_plan_limits
-
-    if tenant.plan == "trial":
-        trial_end = tenant.created_at.replace(tzinfo=UTC) + timedelta(days=TRIAL_DAYS)
-        if datetime.now(UTC) >= trial_end:
-            if tenant.status != "inactive":
-                tenant.status = "inactive"
-                session.add(tenant)
-            await session.commit()
-            logger.info("Trial expired for tenant {tid}, message ignored", tid=tenant_id)
-            return
-
-    # ── 5c. Soft AI cap → programmed responses ────────────────────────────
-    # Every plan now carries CAP_AI. The reply path is gated by the monthly AI
-    # cap (soft/consumable): when exhausted the bot falls back to programmed
-    # FAQ/keyword responses so it never dies and never keeps burning LLM calls.
-    # Every plan has a cap (500/2000/10000/100000): enterprise caps at 100.000
-    # AI responses/month (fair use) and degrades soft to programmed responses
-    # at/over the cap — no hard block, no billing.
-    ai_cap = get_plan_limits(tenant.plan)["max_conversations_per_month"]
-    ai_cap_reached = False
-    if ai_cap is not None:
-        ai_usage = await _count_ai_responses_this_month(session, tenant_id)
-        ai_cap_reached = ai_usage >= ai_cap
-        if ai_cap_reached:
-            logger.info(
-                "AI cap reached for tenant {tid} ({used}/{cap}), falling back to programmed responses",
-                tid=tenant_id, used=ai_usage, cap=ai_cap,
-            )
-
-    if ai_cap_reached:
-        # Use agent's business_config FAQ + keywords for matching
-        biz_config = (agent.business_config or {}) if agent else {}
-        faq = biz_config.get("faq") or []
-        keywords_to_escalate = biz_config.get("keywords_to_escalate") or []
-        user_text = parsed["content"]
-        matched_answer = None
-
-        # 1. Check FAQ: match user message against FAQ questions
-        # Accent-folded + stopword-free scoring — see _faq_answer_for.
-        if faq:
-            matched_answer = _faq_answer_for(user_text, faq)
-
-        # 2. Check escalate keywords (human handoff)
-        if not matched_answer and keywords_to_escalate:
-            if any(
-                _matches_escalation_keyword(user_text, kw)
-                for kw in keywords_to_escalate
-            ):
-                conversation.status = "escalated"
-                matched_answer = (
-                    "Un asesor nuestro revisará tu mensaje y te contactará "
-                    "pronto. Mientras tanto, ¿hay algo más en lo que pueda ayudarte?"
-                )
-
-        # 3. Default response
-        if not matched_answer:
-            # First message → welcome, subsequent → short helper
-            if is_first_message:
-                matched_answer = (
-                    "¡Hola! 👋 Bienvenido/a a {name}. "
-                    "Soy tu asistente automático y estoy aquí para atenderte. "
-                    "Puedo ayudarte con información sobre horarios, "
-                    "productos, precios y servicios. "
-                    "¿En qué puedo ayudarte hoy?"
-                )
-            else:
-                matched_answer = (
-                    "¡Hola! 👋 Soy el asistente de {name}. "
-                    "¿En qué más puedo ayudarte?"
-                )
-            matched_answer = matched_answer.format(name=tenant.name)
-
-        # Send and return
-        adapter = EvolutionAdapter()
-        try:
-            evo_response = await adapter.send_message(
-                connection=connection,
-                to=parsed["remote_jid"],
-                text=matched_answer,
-            )
-            evo_msg_id = evo_response.get("key", {}).get("id") or evo_response.get("id")
-            outbound_status = "sent"
-        except Exception:
-            evo_msg_id = None
-            outbound_status = "failed"
-
-        outbound_msg = Message(
-            tenant_id=tenant_id,
-            conversation_id=conversation.id,
-            platform_connection_id=connection.id,
-            direction="out",
-            external_user_id=parsed["external_user_id"],
-            external_message_id=evo_msg_id,
-            platform="evolution",
-            message_type="text",
-            content=matched_answer,
-            status=outbound_status,
-            origin="programmed",  # FAQ/keyword answer — not an AI response
-        )
-        session.add(outbound_msg)
-
-        # Mark escalation as responded ONLY if the courtesy credit was actually
-        # delivered — a failed send must not silence the bot.
-        if conversation.status == "escalated" and outbound_status == "sent":
-            extra = dict(conversation.extra_data or {})
-            extra["escalation_responded"] = True
-            conversation.extra_data = extra
-
-        conversation.last_message_at = datetime.now(UTC)
-        await session.commit()
-        logger.info(
-            "Programmed response sent | tenant={t} | plan={p}",
-            t=tenant_id, p=tenant.plan,
-        )
-        return
-
-    # ── 6. Build system prompt from tenant config ──────────────────────
-
-    # agent already resolved in step 5a — reused here
-
-    # Priority: business_config is the ONLY source of truth.
-    # No more custom prompt fallback or first_message_hint.
-    system_prompt = ""
-
-    model = None
-    provider = None
-    temperature = None
-    max_tokens = None
-    if agent:
-        model = agent.model
-        provider = agent.provider
-        temperature = agent.temperature
-        max_tokens = agent.max_tokens
-
-        biz_text = format_business_config(agent.business_config)
-        if biz_text:
-            system_prompt = biz_text
-        else:
-            # Agent exists but has no business_config — log and use emergency fallback
-            logger.warning(
-                "Agent {aid} has no business_config — using emergency fallback | tenant={tid}",
-                aid=agent.id, tid=tenant_id,
-            )
-            system_prompt = (
-                f"Eres un asistente de atención al cliente para {tenant.name}. "
-                "Responde con amabilidad y guía al cliente hacia la acción."
-            )
-
-    if not system_prompt:
-        # No agent configured — emergency fallback
-        logger.warning(
-            "No agent found for tenant {tid} — using emergency fallback",
-            tid=tenant_id,
-        )
-        system_prompt = (
-            f"Eres un asistente de atención al cliente para {tenant.name}. "
-            "Responde con amabilidad y guía al cliente hacia la acción."
-        )
-
-    # ── Universal formatting rules (business instructions win) ─────────
-    system_prompt += f"\n\n{universal_format_block()}"
-
-    # ── 6a. Escalation check — BEFORE AI (Professional+ plans) ─────────────
-    # If the incoming message matches escalation keywords, send the
-    # fallback message immediately and stop — don't let the AI respond.
-    if agent and agent.business_config:
-        esc_keywords = agent.business_config.get("keywords_to_escalate") or []
-        fallback = agent.business_config.get("fallback_message") or (
-            "Un asesor humano te atenderá en breve. "
-            "Por favor espera mientras te conectamos."
-        )
-        if any(
-            _matches_escalation_keyword(parsed["content"], kw)
-            for kw in esc_keywords
-        ):
-            conversation.status = "escalated"
-
-            adapter = EvolutionAdapter()
-            try:
-                evo_response = await adapter.send_message(
-                    connection=connection,
-                    to=parsed["remote_jid"],
-                    text=fallback,
-                )
-                evo_msg_id = evo_response.get("key", {}).get("id") or evo_response.get("id")
-                outbound_status = "sent"
-            except Exception:
-                evo_msg_id = None
-                outbound_status = "failed"
-
-            outbound_msg = Message(
-                tenant_id=tenant_id,
-                conversation_id=conversation.id,
-                platform_connection_id=connection.id,
-                direction="out",
-                external_user_id=parsed["external_user_id"],
-                external_message_id=evo_msg_id,
-                platform="evolution",
-                message_type="text",
-                content=fallback,
-                status=outbound_status,
-                origin="escalation",  # human-handoff fallback — not an AI response
-            )
-            session.add(outbound_msg)
-
-            # Mark escalation as responded ONLY if the courtesy credit was
-            # actually delivered — a failed send must not silence the bot.
-            if conversation.status == "escalated" and outbound_status == "sent":
-                extra = dict(conversation.extra_data or {})
-                extra["escalation_responded"] = True
-                conversation.extra_data = extra
-
-            conversation.last_message_at = datetime.now(UTC)
-            await session.commit()
-            logger.info(
-                "Escalation — fallback sent, AI skipped | conv={cid} | tenant={tid}",
-                cid=conversation.id, tid=tenant_id,
-            )
-            return
-
-    # ── 6. Generate response via LLM ────────────────────────────────────
-    try:
-        response = await llm_client.generate(
-            system_prompt=system_prompt,
-            user_message=f"<user_query>\n{parsed['content']}\n</user_query>",
-            conversation_history=conversation_history,
-            provider=provider,
-            model=model,
-            max_tokens=max_tokens,
-            temperature=temperature,
-        )
-    except RuntimeError:
-        response = (
-            "En este momento tengo problemas técnicos. "
-            "Por favor intenta de nuevo en unos minutos. ¡Gracias!"
-        )
-
-    # ── 6b. Empty-response guard ─────────────────────────────────────────
-    # Groq occasionally returns an empty/whitespace-only completion. Sending
-    # blank text to Evolution fails with 400 "Text is required" and the
-    # customer receives NO reply. Substitute a fallback so the outbound
-    # message always carries content.
-    if not response.strip():
-        logger.warning(
-            "LLM returned empty response — using fallback | conn={conn}",
-            conn=connection.id,
-        )
-        response = (
-            "Disculpa, no pude procesar tu mensaje. "
-            "¿Podrías intentarlo de nuevo?"
-        )
-
-    # ── 7. Send via EvolutionAdapter (composing + delay + text) ─────────
-    adapter = EvolutionAdapter()
-    try:
-        evo_response = await adapter.send_message(
-            connection=connection,
-            to=parsed["remote_jid"],
-            text=response,
-        )
-        # Evolution API returns the message key in the response
-        evo_msg_id = (
-            evo_response.get("key", {}).get("id", None)
-        )
-        if evo_msg_id is None:
-            evo_msg_id = evo_response.get("id", None)
-        outbound_status = "sent"
-    except Exception:
-        evo_msg_id = None
-        outbound_status = "failed"
-
-    # ── 8. Save outbound message ────────────────────────────────────────
-    outbound_msg = Message(
-        tenant_id=tenant_id,
-        conversation_id=conversation.id,
-        platform_connection_id=connection.id,
-        direction="out",
-        external_user_id=parsed["external_user_id"],
-        external_message_id=evo_msg_id,
-        platform="evolution",
-        message_type="text",
-        content=response,
-        status=outbound_status,
-        origin="ai",  # LLM response — the primary usage-meter metric (D1)
-    )
-    session.add(outbound_msg)
-
-    # Mark escalation as responded ONLY if the courtesy credit was actually
-    # delivered — a failed send must not silence the bot.
-    if conversation.status == "escalated" and outbound_status == "sent":
-        extra = dict(conversation.extra_data or {})
-        extra["escalation_responded"] = True
-        conversation.extra_data = extra
-
-    # ── Update conversation ─────────────────────────────────────────────
-    conversation.last_message_at = datetime.now(UTC)
-    if conversation.status != "escalated":
-        conversation.status = "open"
-
-    await session.commit()

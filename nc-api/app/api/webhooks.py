@@ -15,21 +15,28 @@ import json
 import typing as t
 import uuid as uuid_pkg
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.db.session import get_session
+from app.modules.engine.debounce import schedule_debounced_processing
+from app.modules.engine.schemas import InboundMessage
+from app.modules.evolution.adapter import EvolutionAdapter
+from app.modules.evolution.handler import (
+    handle_evolution_connection_update,
+    handle_evolution_incoming,
+)
+from app.modules.evolution.webhook import extract_evolution_message
 from app.modules.integrations.meta.client import verify_webhook
 from app.modules.integrations.webhook import handle_incoming
 from app.modules.platform_connections.service import get_connection
 from app.modules.platforms.adapter import WhatsAppAdapter
 from app.modules.telegram.adapter import TelegramAdapter
 from app.modules.telegram.handler import handle_telegram_incoming
-from app.modules.evolution.adapter import EvolutionAdapter
-from app.modules.evolution.handler import handle_evolution_incoming
+from app.modules.telegram.webhook import extract_telegram_message
 
 router = APIRouter(tags=["webhook"])
 
@@ -74,6 +81,7 @@ async def webhook_platform_post(
     platform: str,
     connection_id: str,
     request: Request,
+    background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_session),
 ) -> dict[str, str]:
     """Receive and route an incoming webhook for any supported platform.
@@ -177,9 +185,31 @@ async def webhook_platform_post(
                 detail="Webhook validation failed",
             )
 
-        # ── 5. Dispatch ─────────────────────────────────────────────────
+        # ── 5. Dispatch (non-blocking debounce with fallback) ───────────
         try:
-            await handle_telegram_incoming(payload, connection, session)
+            tg_msg = extract_telegram_message(payload)
+            if tg_msg:
+                inbound = InboundMessage(
+                    platform_connection_id=connection.id,
+                    platform="telegram",
+                    external_user_id=tg_msg["external_user_id"],
+                    external_message_id=tg_msg["external_message_id"],
+                    content=tg_msg["content"],
+                    from_me=False,
+                    remote_jid=tg_msg["external_user_id"],
+                    raw_payload=payload,
+                )
+                try:
+                    await schedule_debounced_processing(
+                        inbound=inbound,
+                        adapter=adapter,
+                        background_tasks=background_tasks,
+                    )
+                except Exception as db_exc:
+                    logger.debug("Telegram debounce failed, falling back to direct handling: {e}", e=db_exc)
+                    await handle_telegram_incoming(payload, connection, session)
+            else:
+                await handle_telegram_incoming(payload, connection, session)
         except Exception:
             logger.exception("Unhandled error in Telegram handler")
             raise HTTPException(status_code=500, detail="Internal processing error")
@@ -197,9 +227,34 @@ async def webhook_platform_post(
                 detail="Webhook validation failed",
             )
 
-        # ── 4. Dispatch ─────────────────────────────────────────────────
+        # ── 4. Dispatch (non-blocking debounce with fallback) ───────────
         try:
-            await handle_evolution_incoming(payload, connection, session)
+            if payload.get("event") == "connection.update":
+                await handle_evolution_connection_update(payload, connection, session)
+            else:
+                evo_msg = extract_evolution_message(payload)
+                if evo_msg and not evo_msg.get("from_me"):
+                    inbound = InboundMessage(
+                        platform_connection_id=connection.id,
+                        platform="evolution",
+                        external_user_id=evo_msg["external_user_id"],
+                        external_message_id=evo_msg["external_message_id"],
+                        content=evo_msg["content"],
+                        from_me=False,
+                        remote_jid=evo_msg.get("remote_jid"),
+                        raw_payload=payload,
+                    )
+                    try:
+                        await schedule_debounced_processing(
+                            inbound=inbound,
+                            adapter=adapter,
+                            background_tasks=background_tasks,
+                        )
+                    except Exception as db_exc:
+                        logger.debug("Evolution debounce failed, falling back to direct handling: {e}", e=db_exc)
+                        await handle_evolution_incoming(payload, connection, session)
+                else:
+                    await handle_evolution_incoming(payload, connection, session)
         except Exception:
             logger.exception("Unhandled error in Evolution handler")
             raise HTTPException(
