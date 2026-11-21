@@ -230,7 +230,7 @@ export default function AgentDetailPage() {
 
         {/* ── Tab 2: Base de Conocimiento ── */}
         <TabsContent value="knowledge" className="mt-6">
-          <KnowledgeManager />
+          <KnowledgeManager tenantId={agent.tenant_id} />
         </TabsContent>
       </Tabs>
     </div>

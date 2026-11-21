@@ -138,3 +138,31 @@ async def test_create_and_list_documents(mock_admin_user, db_session):
         assert del_resp.status_code == 204
 
     app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_list_documents_without_tenant_does_not_500(db_session: AsyncSession):
+    """Regression test: User without active tenant does not crash with 500."""
+    user = User(
+        id=uuid.uuid4(),
+        email="superadmin@nuncacierro.com",
+        password_hash="fake_hash",
+        name="Super Admin",
+        role=UserRole.SUPERADMIN,
+    )
+    # current_tenant_id is not set
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_session] = lambda: db_session
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/v1/knowledge/documents")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+        some_tid = str(uuid.uuid4())
+        resp2 = await client.get(f"/api/v1/knowledge/documents?tenant_id={some_tid}")
+        assert resp2.status_code == 200
+        assert resp2.json() == []
+
+    app.dependency_overrides.clear()
+

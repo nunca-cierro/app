@@ -20,7 +20,7 @@ export interface ExtractResponse {
   source: string;
 }
 
-export function useKnowledge() {
+export function useKnowledge(tenantId?: string) {
   const [documents, setDocuments] = useState<KnowledgeDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +29,11 @@ export function useKnowledge() {
   useEffect(() => {
     let cancelled = false;
 
-    apiClient<KnowledgeDocument[]>("/api/v1/knowledge/documents")
+    const url = tenantId
+      ? `/api/v1/knowledge/documents?tenant_id=${encodeURIComponent(tenantId)}`
+      : "/api/v1/knowledge/documents";
+
+    apiClient<KnowledgeDocument[]>(url)
       .then((data) => {
         if (cancelled) return;
         setDocuments(data || []);
@@ -47,7 +51,7 @@ export function useKnowledge() {
     return () => {
       cancelled = true;
     };
-  }, [refetchCount]);
+  }, [tenantId, refetchCount]);
 
   const refetch = useCallback(() => {
     setIsLoading(true);
@@ -78,7 +82,10 @@ export function useKnowledge() {
   }): Promise<void> => {
     await apiClient("/api/v1/knowledge/documents", {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        ...payload,
+        ...(tenantId ? { tenant_id: tenantId } : {}),
+      }),
     });
     toast.success("Documento indexado exitosamente");
     refetch();
@@ -90,20 +97,29 @@ export function useKnowledge() {
   ): Promise<void> => {
     await apiClient(`/api/v1/knowledge/documents/${id}`, {
       method: "PUT",
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        ...payload,
+        ...(tenantId ? { tenant_id: tenantId } : {}),
+      }),
     });
     toast.success("Documento actualizado e indexado exitosamente");
     refetch();
   };
 
   const resyncDocument = async (id: string): Promise<ExtractResponse> => {
-    return apiClient<ExtractResponse>(`/api/v1/knowledge/documents/${id}/resync`, {
+    const url = tenantId
+      ? `/api/v1/knowledge/documents/${id}/resync?tenant_id=${encodeURIComponent(tenantId)}`
+      : `/api/v1/knowledge/documents/${id}/resync`;
+    return apiClient<ExtractResponse>(url, {
       method: "POST",
     });
   };
 
   const deleteDocument = async (id: string): Promise<void> => {
-    await apiClient(`/api/v1/knowledge/documents/${id}`, {
+    const url = tenantId
+      ? `/api/v1/knowledge/documents/${id}?tenant_id=${encodeURIComponent(tenantId)}`
+      : `/api/v1/knowledge/documents/${id}`;
+    await apiClient(url, {
       method: "DELETE",
     });
     toast.success("Documento eliminado");

@@ -1,15 +1,38 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { TenantStatusBadge } from "@/app/dashboard/tenants/components/tenant-status-badge";
 import { TenantPlanBadge } from "@/app/dashboard/tenants/components/tenant-plan-badge";
 import { PaymentStatusBadge } from "@/app/dashboard/tenants/components/payment-status-badge";
 import { PaymentStatusToggle } from "@/app/dashboard/tenants/components/payment-status-toggle";
-import { Plus, ExternalLink } from "lucide-react";
+import { TenantForm } from "@/app/dashboard/tenants/components/tenant-form";
+import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import type { Tenant } from "@/lib/types";
+import type { TenantFormValues } from "@/lib/schemas/tenant";
 import { useAuth } from "@/hooks/use-auth";
+import { buildTenantPatchBody } from "@/hooks/use-tenant";
+import { apiClient, ApiError } from "@/lib/api";
+import { toast } from "sonner";
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -19,7 +42,7 @@ interface TenantListProps {
   tenants: Tenant[];
   isLoading: boolean;
   error: string | null;
-  onTenantUpdate?: (updated: Tenant) => void;
+  onTenantUpdate?: (updated?: Tenant) => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -103,10 +126,66 @@ function TableHeader({ canCreate = true }: { canCreate?: boolean }) {
 /*  List                                                               */
 /* ------------------------------------------------------------------ */
 
-export function TenantList({ tenants, isLoading, error, onTenantUpdate }: TenantListProps) {
+export function TenantList({
+  tenants,
+  isLoading,
+  error,
+  onTenantUpdate,
+}: TenantListProps) {
   const { user } = useAuth();
   const role = user?.current_role ?? user?.role;
-  const canCreate = role === "superadmin";
+  const isSuperadmin = role === "superadmin";
+  const canCreate = isSuperadmin;
+  const canEdit = isSuperadmin || role === "admin";
+  const canDelete = isSuperadmin;
+
+  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deletingTenant, setDeletingTenant] = useState<Tenant | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleUpdate = async (data: TenantFormValues) => {
+    if (!editingTenant) return;
+    setIsSubmitting(true);
+    try {
+      const updated = await apiClient<Tenant>(`/api/v1/tenants/${editingTenant.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(buildTenantPatchBody(data, role)),
+      });
+      toast.success("Negocio actualizado exitosamente");
+      setEditingTenant(null);
+      onTenantUpdate?.(updated);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.status === 409) {
+          toast.error("El slug ya está en uso.");
+        } else {
+          toast.error("Error al actualizar el negocio.");
+        }
+      } else {
+        toast.error("Error de conexión.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deletingTenant) return;
+    setIsDeleting(true);
+    try {
+      await apiClient(`/api/v1/tenants/${deletingTenant.id}`, {
+        method: "DELETE",
+      });
+      toast.success("Negocio eliminado exitosamente");
+      setDeletingTenant(null);
+      onTenantUpdate?.();
+    } catch {
+      toast.error("Error al eliminar el negocio.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -136,38 +215,130 @@ export function TenantList({ tenants, isLoading, error, onTenantUpdate }: Tenant
 
       <div className="space-y-2">
         {tenants.map((tenant) => (
-          <Link key={tenant.id} href={`/dashboard/tenants/${tenant.id}`}>
-            <Card className="transition-colors hover:bg-accent/50">
-              <CardContent className="flex items-center justify-between py-4">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium">
-                      {tenant.name}
-                    </span>
-                    <TenantStatusBadge status={tenant.status} />
-                    <TenantPlanBadge plan={tenant.plan} createdAt={tenant.created_at} />
-                    <PaymentStatusBadge
-                      status={tenant.payment_status}
-                      expiresAt={tenant.plan_expires_at}
+          <Card key={tenant.id} className="transition-colors hover:bg-accent/30">
+            <CardContent className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 py-3.5 px-4">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="truncate text-sm font-semibold">
+                    {tenant.name}
+                  </span>
+                  <TenantStatusBadge status={tenant.status} />
+                  <TenantPlanBadge
+                    plan={tenant.plan}
+                    createdAt={tenant.created_at}
+                  />
+                  <PaymentStatusBadge
+                    status={tenant.payment_status}
+                    expiresAt={tenant.plan_expires_at}
+                  />
+                  {onTenantUpdate && (
+                    <PaymentStatusToggle
+                      tenantId={tenant.id}
+                      currentStatus={tenant.payment_status ?? "inactive"}
+                      onSuccess={onTenantUpdate}
                     />
-                    {onTenantUpdate && (
-                      <PaymentStatusToggle
-                        tenantId={tenant.id}
-                        currentStatus={tenant.payment_status ?? "inactive"}
-                        onSuccess={onTenantUpdate}
-                      />
-                    )}
-                  </div>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {tenant.slug}
-                  </p>
+                  )}
                 </div>
-                <ExternalLink className="ml-4 size-4 shrink-0 text-muted-foreground" />
-              </CardContent>
-            </Card>
-          </Link>
+                <p className="mt-1 truncate text-xs text-muted-foreground">
+                  {tenant.slug} • {tenant.timezone} • {tenant.locale}
+                </p>
+              </div>
+
+              {/* Inline actions right on the same screen */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {canEdit && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => setEditingTenant(tenant)}
+                  >
+                    <Pencil className="mr-1.5 size-3.5" />
+                    Editar
+                  </Button>
+                )}
+                {canDelete && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => setDeletingTenant(tenant)}
+                  >
+                    <Trash2 className="size-3.5" />
+                    <span className="sr-only sm:not-sr-only sm:ml-1.5">
+                      Eliminar
+                    </span>
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
+
+      {/* Edit Tenant Dialog (in-page) */}
+      <Dialog
+        open={!!editingTenant}
+        onOpenChange={(open) => !open && setEditingTenant(null)}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar Negocio</DialogTitle>
+            <DialogDescription>
+              Modifica la configuración de {editingTenant?.name}.
+            </DialogDescription>
+          </DialogHeader>
+          {editingTenant && (
+            <TenantForm
+              defaultValues={{
+                name: editingTenant.name,
+                plan: editingTenant.plan as TenantFormValues["plan"],
+                timezone: editingTenant.timezone,
+                locale: editingTenant.locale,
+                notes: editingTenant.notes ?? "",
+              }}
+              onSubmit={handleUpdate}
+              isSubmitting={isSubmitting}
+              mode="edit"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Tenant AlertDialog (in-page) */}
+      <AlertDialog
+        open={!!deletingTenant}
+        onOpenChange={(open) => !open && setDeletingTenant(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar negocio?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará permanentemente{" "}
+              {deletingTenant?.name} y todos sus datos asociados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Eliminando...
+                </>
+              ) : (
+                "Eliminar"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

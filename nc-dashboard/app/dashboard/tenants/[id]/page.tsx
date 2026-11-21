@@ -23,7 +23,6 @@ import { ArrowLeft, Pencil, Trash2, Loader2, AlertCircle } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
-import { ConfirmPaymentDialog } from "@/app/dashboard/tenants/components/confirm-payment-dialog";
 import type { TenantFormValues } from "@/lib/schemas/tenant";
 
 export default function TenantDetailPage() {
@@ -31,7 +30,7 @@ export default function TenantDetailPage() {
   const router = useRouter();
   const id = params.id as string;
   const { user } = useAuth();
-  const { tenant, isLoading, error, updateTenant, deleteTenant, refetch } =
+  const { tenant, isLoading, error, updateTenant, deleteTenant } =
     useTenant(id);
   // Backend authorizes activate-plan by the JWT current_role — gate the
   // action with the same source so it never shows a button that 403s after
@@ -149,10 +148,6 @@ export default function TenantDetailPage() {
               <Pencil className="mr-2 size-4" />
               Editar
             </Button>
-          )}
-
-          {!isEditing && isSuperadmin && (
-            <ConfirmPaymentDialog tenant={tenant} onSuccess={refetch} />
           )}
 
           {/* Eliminar is superadmin-only (backend DELETE is superadmin-only).

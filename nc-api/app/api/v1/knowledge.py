@@ -3,10 +3,17 @@
 from __future__ import annotations
 
 import uuid
-from typing import Annotated
+from typing import Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
-from pydantic import BaseModel, HttpUrl
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    UploadFile,
+    status,
+)
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,11 +36,13 @@ class CreateDocumentRequest(BaseModel):
     source_type: str = "manual"
     source_url: str | None = None
     raw_markdown: str
+    tenant_id: str | None = None
 
 
 class UpdateDocumentRequest(BaseModel):
     title: str
     raw_markdown: str
+    tenant_id: str | None = None
 
 
 class ExtractResponse(BaseModel):
@@ -51,6 +60,19 @@ class DocumentResponse(BaseModel):
     created_at: str
 
 
+def _get_target_tenant_id(
+    current_user: User,
+    explicit_tenant_id: str | uuid.UUID | None = None,
+) -> uuid.UUID | None:
+    tid = explicit_tenant_id or getattr(current_user, "current_tenant_id", None)
+    if not tid:
+        return None
+    try:
+        return uuid.UUID(str(tid)) if isinstance(tid, str) else tid
+    except (ValueError, TypeError):
+        return None
+
+
 @router.post("/extract-url", response_model=ExtractResponse)
 async def extract_url_content(
     body: ExtractUrlRequest,
@@ -58,15 +80,19 @@ async def extract_url_content(
 ) -> ExtractResponse:
     """Fetch a public URL and convert its main body into clean Markdown."""
     url_str = body.url.strip()
-    if not url_str.startswith(("http://", "https://")):
-        raise HTTPException(status_code=400, detail="URL debe iniciar con http:// o https://")
+    if not url_str.startswith("http://") and not url_str.startswith("https://"):
+        raise HTTPException(
+            status_code=400,
+            detail="La URL debe comenzar con http:// o https://",
+        )
 
     try:
         title, markdown = await extract_from_url(url_str)
         return ExtractResponse(title=title, markdown=markdown, source=url_str)
     except Exception as e:
         raise HTTPException(
-            status_code=422, detail=f"No se pudo extraer contenido de la URL: {str(e)}"
+            status_code=422,
+            detail=f"Error al extraer contenido de la URL: {str(e)}",
         )
 
 
@@ -75,23 +101,27 @@ async def extract_file_content(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
 ) -> ExtractResponse:
-    """Extract and format text from an uploaded PDF, TXT, or Markdown file."""
+    """Extract content from uploaded PDF or TXT/MD file and convert to Markdown."""
     filename = file.filename or "archivo"
     content_bytes = await file.read()
-    if not content_bytes:
-        raise HTTPException(status_code=400, detail="El archivo subido está vacío.")
 
-    lower_name = filename.lower()
+    if len(content_bytes) == 0:
+        raise HTTPException(status_code=400, detail="El archivo está vacío.")
+
+    # Max 10MB limit
+    if len(content_bytes) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="El archivo excede el tamaño máximo permitido (10MB).")
+
     try:
-        if lower_name.endswith(".pdf"):
+        if filename.lower().endswith(".pdf"):
             title, markdown = extract_from_pdf(content_bytes, default_title=filename)
-        elif lower_name.endswith((".txt", ".md", ".markdown")):
-            text = content_bytes.decode("utf-8", errors="replace")
-            title, markdown = extract_from_text(text, default_title=filename)
+        elif filename.lower().endswith((".txt", ".md", ".markdown")):
+            text_content = content_bytes.decode("utf-8", errors="replace")
+            title, markdown = extract_from_text(text_content, default_title=filename)
         else:
             raise HTTPException(
                 status_code=400,
-                detail="Formato no soportado. Por favor sube un archivo .pdf, .txt o .md",
+                detail="Formato de archivo no soportado. Suba un archivo .pdf, .txt o .md",
             )
         return ExtractResponse(title=title, markdown=markdown, source=filename)
     except HTTPException:
@@ -107,7 +137,7 @@ async def create_knowledge_document(
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     """Save an approved Markdown document and chunk it for semantic search."""
-    tenant_id = current_user.current_tenant_id or current_user.tenant_id
+    tenant_id = _get_target_tenant_id(current_user, body.tenant_id)
     if not tenant_id:
         raise HTTPException(
             status_code=400, detail="El usuario no tiene un tenant activo seleccionado."
@@ -137,15 +167,15 @@ async def create_knowledge_document(
 
 @router.get("/documents")
 async def list_knowledge_documents(
+    tenant_id: str | None = None,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> list[dict]:
     """List all indexed knowledge documents for the active tenant."""
-    tenant_id = current_user.current_tenant_id or current_user.tenant_id
-    if not tenant_id:
+    t_uuid = _get_target_tenant_id(current_user, tenant_id)
+    if not t_uuid:
         return []
 
-    t_uuid = uuid.UUID(str(tenant_id)) if isinstance(tenant_id, str) else tenant_id
     stmt = (
         select(KnowledgeDocument)
         .where(KnowledgeDocument.tenant_id == t_uuid)
@@ -176,7 +206,7 @@ async def update_knowledge_document(
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     """Update an existing knowledge document, replace chunks and re-index."""
-    tenant_id = current_user.current_tenant_id or current_user.tenant_id
+    tenant_id = _get_target_tenant_id(current_user, body.tenant_id)
     if not tenant_id:
         raise HTTPException(
             status_code=400, detail="Tenant no especificado."
@@ -208,17 +238,17 @@ async def update_knowledge_document(
 @router.post("/documents/{document_id}/resync", response_model=ExtractResponse)
 async def resync_knowledge_document(
     document_id: uuid.UUID,
+    tenant_id: str | None = None,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> ExtractResponse:
     """Re-scrape the source URL of an existing document for preview and update."""
-    tenant_id = current_user.current_tenant_id or current_user.tenant_id
-    t_uuid = uuid.UUID(str(tenant_id)) if isinstance(tenant_id, str) else tenant_id
+    t_uuid = _get_target_tenant_id(current_user, tenant_id)
 
-    stmt = select(KnowledgeDocument).where(
-        KnowledgeDocument.id == document_id,
-        KnowledgeDocument.tenant_id == t_uuid,
-    )
+    stmt = select(KnowledgeDocument).where(KnowledgeDocument.id == document_id)
+    if t_uuid:
+        stmt = stmt.where(KnowledgeDocument.tenant_id == t_uuid)
+
     result = await session.execute(stmt)
     doc = result.scalar_one_or_none()
     if not doc:
@@ -237,17 +267,17 @@ async def resync_knowledge_document(
 @router.delete("/documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_knowledge_document(
     document_id: uuid.UUID,
+    tenant_id: str | None = None,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> None:
     """Delete a knowledge document and its semantic chunks."""
-    tenant_id = current_user.current_tenant_id or current_user.tenant_id
-    t_uuid = uuid.UUID(str(tenant_id)) if isinstance(tenant_id, str) else tenant_id
+    t_uuid = _get_target_tenant_id(current_user, tenant_id)
 
-    stmt = select(KnowledgeDocument).where(
-        KnowledgeDocument.id == document_id,
-        KnowledgeDocument.tenant_id == t_uuid,
-    )
+    stmt = select(KnowledgeDocument).where(KnowledgeDocument.id == document_id)
+    if t_uuid:
+        stmt = stmt.where(KnowledgeDocument.tenant_id == t_uuid)
+
     result = await session.execute(stmt)
     doc = result.scalar_one_or_none()
     if not doc:

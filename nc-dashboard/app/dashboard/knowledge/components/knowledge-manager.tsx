@@ -26,7 +26,11 @@ import { ApiError } from "@/lib/api";
 
 type IngestionSource = "url" | "file" | "manual";
 
-export function KnowledgeManager() {
+interface KnowledgeManagerProps {
+  tenantId?: string;
+}
+
+export function KnowledgeManager({ tenantId }: KnowledgeManagerProps = {}) {
   const {
     documents,
     isLoading,
@@ -37,7 +41,7 @@ export function KnowledgeManager() {
     updateDocument,
     resyncDocument,
     deleteDocument,
-  } = useKnowledge();
+  } = useKnowledge(tenantId);
 
   const [sourceType, setSourceType] = useState<IngestionSource>("url");
   const [urlInput, setUrlInput] = useState("");

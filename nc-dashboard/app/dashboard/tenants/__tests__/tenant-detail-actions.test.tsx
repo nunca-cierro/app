@@ -52,10 +52,6 @@ vi.mock("sonner", () => ({
   },
 }));
 
-vi.mock("@/app/dashboard/tenants/components/confirm-payment-dialog", () => ({
-  ConfirmPaymentDialog: () => null,
-}));
-
 import TenantDetailPage from "@/app/dashboard/tenants/[id]/page";
 
 function makeTenant() {
