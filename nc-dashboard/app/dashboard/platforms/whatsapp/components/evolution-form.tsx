@@ -8,7 +8,6 @@ import {
   evolutionFormSchema,
   type EvolutionFormValues,
 } from "@/lib/schemas/evolution";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import type { Tenant } from "@/lib/types";
@@ -17,7 +16,7 @@ interface EvolutionFormProps {
   defaultValues?: Partial<EvolutionFormValues>;
   onSubmit: (data: EvolutionFormValues) => Promise<void>;
   isSubmitting: boolean;
-  mode: "create" | "edit";
+  mode?: "create" | "edit";
   tenants: Tenant[];
   tenantsLoading: boolean;
 }
@@ -26,7 +25,6 @@ export function EvolutionForm({
   defaultValues,
   onSubmit,
   isSubmitting,
-  mode,
   tenants,
   tenantsLoading,
 }: EvolutionFormProps) {
@@ -40,14 +38,13 @@ export function EvolutionForm({
     resolver: zodResolver(evolutionFormSchema),
     defaultValues: {
       tenant_id: "",
-      display_name: "WhatsApp Evolution",
+      display_name: "WhatsApp",
       status: "active",
       ...defaultValues,
     },
   });
 
   const watchedTenantId = useWatch({ control, name: "tenant_id" });
-  const watchedDisplayName = useWatch({ control, name: "display_name" });
   const { agents, isLoading: agentsLoading } = useAgents(
     0,
     100,
@@ -58,11 +55,10 @@ export function EvolutionForm({
   useEffect(() => {
     const tenant = tenants.find((t) => t.id === watchedTenantId);
     if (tenant) {
-      if (!watchedDisplayName || watchedDisplayName === "WhatsApp Evolution") {
-        setValue("display_name", tenant.name);
-      }
+      setValue("display_name", `${tenant.name} - WhatsApp`);
+      setValue("status", "active");
     }
-  }, [watchedTenantId, watchedDisplayName, tenants, setValue]);
+  }, [watchedTenantId, tenants, setValue]);
 
   // Auto-select agent if only one exists for this tenant
   useEffect(() => {
@@ -73,8 +69,7 @@ export function EvolutionForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {/* ── 1. Internal Mapping (Negocio) ── */
-      /* La URL de Evolution y API Key se auto-completan desde el backend. */}
+      {/* ── 1. Negocio ── */}
       <div className="space-y-2">
         <label htmlFor="tenant_id" className="text-sm font-medium">
           ¿A qué negocio pertenece esta conexión?
@@ -103,9 +98,10 @@ export function EvolutionForm({
         )}
       </div>
 
+      {/* ── 2. Agente Vinculado ── */}
       <div className="space-y-2">
         <label htmlFor="agent_id" className="text-sm font-medium">
-          Agente vinculado (Opcional)
+          Agente vinculado (Asistente de IA)
         </label>
         {agentsLoading ? (
           <div className="flex h-10 items-center gap-2 text-sm text-muted-foreground">
@@ -121,7 +117,7 @@ export function EvolutionForm({
           >
             <option value="">
               {watchedTenantId
-                ? "Selecciona un agente (predeterminado del negocio)"
+                ? "Selecciona el agente para responder mensajes"
                 : "Selecciona un negocio primero"}
             </option>
             {agents.map((agent) => (
@@ -134,50 +130,25 @@ export function EvolutionForm({
         {errors.agent_id && (
           <p className="text-xs text-destructive">{errors.agent_id.message}</p>
         )}
-      </div>
-
-      <div className="space-y-2">
-        <label htmlFor="display_name" className="text-sm font-medium">
-          Nombre amigable
-        </label>
-        <Input
-          id="display_name"
-          {...register("display_name")}
-          placeholder="Ej: WhatsApp Local de Don Pepe"
-        />
-      </div>
-
-      {/* ── Status ── */}
-      <div className="space-y-2 pt-2">
-        <label htmlFor="status" className="text-sm font-medium">
-          Estado
-        </label>
-        <select
-          id="status"
-          {...register("status")}
-          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <option value="active">Activo</option>
-          <option value="inactive">Inactivo</option>
-        </select>
+        <p className="text-xs text-muted-foreground">
+          Este agente de IA responderá automáticamente las conversaciones entrantes de este número.
+        </p>
       </div>
 
       {/* ── Submit ── */}
-      <div className="pt-4">
+      <div className="pt-2">
         <Button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || !watchedTenantId}
           className="w-full sm:w-auto"
         >
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" />
-              {mode === "create" ? "Conectando..." : "Guardando..."}
+              Conectando...
             </>
-          ) : mode === "create" ? (
-            "Conectar Evolution API"
           ) : (
-            "Guardar Cambios"
+            "Conectar WhatsApp y Generar QR"
           )}
         </Button>
       </div>

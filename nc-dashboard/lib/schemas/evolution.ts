@@ -9,10 +9,8 @@ import { z } from "zod";
  */
 export const evolutionFormSchema = z.object({
   tenant_id: z.string().min(1, "Selecciona un negocio"),
-  display_name: z.string().min(1, "El nombre de la conexión es requerido"),
-  status: z.enum(["active", "inactive"], {
-    message: "Selecciona un estado válido",
-  }),
+  display_name: z.string(),
+  status: z.enum(["active", "inactive"]),
   agent_id: z.string().uuid().optional().nullable(),
 });
 
