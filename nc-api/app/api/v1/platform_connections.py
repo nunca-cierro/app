@@ -36,7 +36,12 @@ from app.modules.platform_connections.service import (
     list_connections,
     update_connection,
 )
-from app.modules.platform_connections.sse import subscribe, unsubscribe
+from app.modules.platform_connections.sse import (
+    EVENT_CONNECTION_STATE_CHANGED,
+    notify_subscribers,
+    subscribe,
+    unsubscribe,
+)
 from app.modules.telegram.client import TelegramClient
 
 router = APIRouter(prefix="/platform-connections", tags=["platform-connections"])
@@ -344,6 +349,32 @@ async def evolution_connection_state(
                 "qrread": "connecting",
             }
             mapped_status = status_map.get(raw_state, "unknown")
+
+            # Auto-heal / sync: if Evolution reports connected, ensure local connection
+            # is marked active and subscribers are notified (in case webhook was dropped/delayed)
+            if mapped_status == "connected":
+                extra = dict(connection.extra_data or {})
+                needs_update = False
+                if extra.get("connection_status") != "connected":
+                    extra["connection_status"] = "connected"
+                    connection.extra_data = extra
+                    needs_update = True
+                if connection.status != "active":
+                    connection.status = "active"
+                    needs_update = True
+
+                if needs_update:
+                    session.add(connection)
+                    await session.commit()
+                    await notify_subscribers(
+                        str(connection.id),
+                        EVENT_CONNECTION_STATE_CHANGED,
+                        {
+                            "connection_id": str(connection.id),
+                            "state": raw_state,
+                            "status": "connected",
+                        },
+                    )
 
             return EvolutionConnectionStateResponse(
                 instance_name=instance_name,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef } from "react";
-import { Download, Share2, Smartphone, Loader2, Check } from "lucide-react";
+import { Download, Share2, Smartphone, Loader2, Clock, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -19,6 +19,12 @@ interface QrDisplayProps {
   size?: string;
   /** Name to use for the downloaded file (e.g. client/connection name). */
   connectionName?: string;
+  /** Optional remaining seconds before the QR expires. */
+  expiresInSeconds?: number;
+  /** Optional callback to refresh / regenerate the QR code. */
+  onRefresh?: () => void;
+  /** Whether the QR is currently being refreshed / regenerated. */
+  isRefreshing?: boolean;
 }
 
 export function QrDisplay({
@@ -26,6 +32,9 @@ export function QrDisplay({
   isPolling = false,
   size = "size-72",
   connectionName = "whatsapp-qr",
+  expiresInSeconds,
+  onRefresh,
+  isRefreshing = false,
 }: QrDisplayProps) {
   const imgRef = useRef<HTMLImageElement>(null);
 
@@ -111,6 +120,52 @@ export function QrDisplay({
         </p>
       </div>
 
+      {/* ── Expiration indicator & progress ── */}
+      {expiresInSeconds !== undefined && (
+        <div className="flex flex-col items-center gap-2 w-full max-w-xs">
+          <div className="flex items-center justify-between w-full text-xs">
+            <span
+              className={`flex items-center gap-1.5 font-medium ${
+                expiresInSeconds === 0 ? "text-destructive" : "text-muted-foreground"
+              }`}
+            >
+              <Clock className="size-3.5" />
+              {expiresInSeconds > 0
+                ? `Expira en ${expiresInSeconds}s`
+                : "Código QR expirado"}
+            </span>
+            {onRefresh && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                className="h-6 px-2 text-xs gap-1 text-primary hover:text-primary"
+              >
+                <RefreshCw
+                  className={`size-3 ${isRefreshing ? "animate-spin" : ""}`}
+                />
+                {isRefreshing ? "Generando..." : "Regenerar QR"}
+              </Button>
+            )}
+          </div>
+          <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+            <div
+              className={`h-full transition-all duration-1000 ${
+                expiresInSeconds > 15
+                  ? "bg-primary"
+                  : expiresInSeconds > 0
+                  ? "bg-amber-500"
+                  : "bg-destructive"
+              }`}
+              style={{
+                width: `${Math.min(100, Math.max(0, (expiresInSeconds / 50) * 100))}%`,
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* ── Action Buttons ── */}
       <div className="flex w-full flex-col gap-2 sm:flex-row">
         <Button
@@ -134,12 +189,8 @@ export function QrDisplay({
       {/* ── Polling indicator ── */}
       {isPolling && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" />
-          Esperando que el cliente escanee...
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-            <Check className="size-3" />
-            QR activo por 30 escaneos
-          </span>
+          <Loader2 className="size-4 animate-spin text-primary" />
+          <span>Esperando escaneo con WhatsApp...</span>
         </div>
       )}
     </div>

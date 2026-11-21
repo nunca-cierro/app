@@ -12,7 +12,7 @@ import { EvolutionForm } from "@/app/dashboard/platforms/whatsapp/components/evo
 import { QrDisplay } from "@/app/dashboard/platforms/evolution/components/qr-display";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, RefreshCw, AlertCircle } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { openSseStream } from "@/lib/sse";
 import { toast } from "sonner";
@@ -27,44 +27,123 @@ export default function PlatformsNewEvolutionPage() {
   const { user } = useAuth();
   const [step, setStep] = useState<Step>("form");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const QR_LIFESPAN = 50; // WhatsApp Web QR lifespan in seconds
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number>(QR_LIFESPAN);
+  const [isRegenerating, setIsRegenerating] = useState<boolean>(false);
 
-  // SSE subscription for real-time connection state updates
+  // Transition to connected and redirect
+  const handleConnected = useCallback(() => {
+    setStep("connected");
+    toast.success("WhatsApp conectado exitosamente");
+    setTimeout(() => {
+      if (connectionId) {
+        router.push(`/dashboard/platforms/evolution/${connectionId}`);
+      }
+    }, 1500);
+  }, [connectionId, router]);
+
+  // Countdown timer for QR expiration
+  useEffect(() => {
+    if (step !== "qr") return;
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [step]);
+
+  // Dual detection: SSE stream + fallback HTTP polling every 2.5s
   useEffect(() => {
     if (step !== "qr" || !connectionId) return;
 
-    // The httpOnly session cookie authenticates the stream
-    // (credentials:"include" — Slice B, AS-7).
+    let isDone = false;
+
+    // 1. SSE subscription for real-time push
     const closeStream = openSseStream(
       `/api/v1/platform-connections/${connectionId}/events`,
       {
         onMessage: (msg) => {
           if (
+            !isDone &&
             msg.type === "connection_state_changed" &&
             msg.data?.status === "connected"
           ) {
-            setStep("connected");
-            toast.success("WhatsApp conectado exitosamente");
+            isDone = true;
             closeStream();
-            // Redirect after a brief pause so user sees the success
-            setTimeout(() => {
-              router.push(`/dashboard/platforms/evolution/${connectionId}`);
-            }, 1500);
+            handleConnected();
           }
         },
         onError: () => {
-          // Stream ended or failed — stop listening; the detail page
-          // handles reconnection.
+          // Fallback polling continues regardless of SSE health
         },
       },
     );
 
+    // 2. Active fallback polling (checks direct Evolution state)
+    const pollInterval = setInterval(async () => {
+      if (isDone) return;
+      try {
+        const evoState = await apiClient<{
+          state: string;
+          status: string;
+        }>(`/api/v1/platform-connections/${connectionId}/evolution-connection-state`);
+
+        if (
+          !isDone &&
+          (evoState.state === "open" || evoState.status === "connected")
+        ) {
+          isDone = true;
+          clearInterval(pollInterval);
+          closeStream();
+          handleConnected();
+        }
+      } catch {
+        // Ignore transient poll failures
+      }
+    }, 2500);
+
     return () => {
+      isDone = true;
       closeStream();
+      clearInterval(pollInterval);
     };
-  }, [step, connectionId, router]);
+  }, [step, connectionId, handleConnected]);
+
+  // Regenerate fresh QR code
+  const handleRegenerateQr = useCallback(async () => {
+    if (!connectionId || isRegenerating) return;
+    setIsRegenerating(true);
+    try {
+      const result = await apiClient<{
+        qrcode?: string;
+        instance_name: string;
+        status: string;
+      }>(`/api/v1/platform-connections/${connectionId}/connect-evolution?regenerate=true`, {
+        method: "POST",
+      });
+
+      if (result.status === "open" || result.status === "connected") {
+        handleConnected();
+        return;
+      }
+
+      if (result.qrcode) {
+        setQrCode(result.qrcode);
+        setTimeLeft(QR_LIFESPAN);
+        toast.success("Nuevo código QR generado");
+      } else {
+        toast.error("No se pudo regenerar el QR. Intente de nuevo.");
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Error al regenerar código QR",
+      );
+    } finally {
+      setIsRegenerating(false);
+    }
+  }, [connectionId, isRegenerating, handleConnected]);
 
   const goToDetail = useCallback(() => {
     if (connectionId) {
@@ -76,6 +155,7 @@ export default function PlatformsNewEvolutionPage() {
     setStep("form");
     setQrCode(null);
     setErrorMsg(null);
+    setTimeLeft(QR_LIFESPAN);
   }, []);
 
   const handleSubmit = async (data: EvolutionFormValues) => {
@@ -109,6 +189,7 @@ export default function PlatformsNewEvolutionPage() {
 
       if (result.qrcode) {
         setQrCode(result.qrcode);
+        setTimeLeft(QR_LIFESPAN);
         setStep("qr");
         toast.info("Escanea el código QR con WhatsApp para conectar");
       } else {
@@ -155,7 +236,34 @@ export default function PlatformsNewEvolutionPage() {
             </p>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-6 pb-8">
-            <QrDisplay qrCode={qrCode} isPolling />
+            <QrDisplay
+              qrCode={qrCode}
+              isPolling
+              expiresInSeconds={timeLeft}
+              onRefresh={handleRegenerateQr}
+              isRefreshing={isRegenerating}
+            />
+
+            {timeLeft === 0 && (
+              <div className="flex flex-col items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-center w-full max-w-xs">
+                <div className="flex items-center gap-1.5 text-xs text-destructive font-medium">
+                  <AlertCircle className="size-4 shrink-0" />
+                  <span>El código QR expiró. Genere uno nuevo para vincular.</span>
+                </div>
+                <Button
+                  onClick={handleRegenerateQr}
+                  disabled={isRegenerating}
+                  size="sm"
+                  className="w-full gap-2 mt-1"
+                >
+                  <RefreshCw
+                    className={`size-3.5 ${isRegenerating ? "animate-spin" : ""}`}
+                  />
+                  {isRegenerating ? "Generando..." : "Generar nuevo código QR"}
+                </Button>
+              </div>
+            )}
+
             <p className="text-xs text-muted-foreground text-center">
               El sistema detectará automáticamente cuando escanee el código
             </p>

@@ -299,3 +299,48 @@ class TestPlatformConnectionsAPI:
         payload = {**self.CREATE_PAYLOAD, "platform_type": "instagram"}
         response = await client.post("/api/v1/platform-connections", json=payload)
         assert response.status_code == 422  # Validation error from Pydantic
+
+    async def test_evolution_connection_state_auto_sync(self, client: Any, db_session: Any, monkeypatch: Any) -> None:
+        """When Evolution returns open state, local connection must auto-heal to active."""
+        from unittest.mock import AsyncMock, MagicMock
+        import httpx
+
+        await self._create_tenant(db_session)
+        # Create an evolution connection with initial status inactive
+        evo_payload = {
+            "tenant_id": "00000000-0000-0000-0000-000000000001",
+            "platform_type": "evolution",
+            "display_name": "Evo Sync Test",
+            "status": "inactive",
+            "credentials": {"instance_name": "test-instance", "api_key": "k"},
+        }
+        create_resp = await client.post("/api/v1/platform-connections", json=evo_payload)
+        assert create_resp.status_code == 201
+        conn_id = create_resp.json()["id"]
+
+        # Mock httpx response from Evolution API returning state "open"
+        mock_response = MagicMock(spec=httpx.Response)
+        mock_response.is_success = True
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"state": "open"}
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+
+        monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: mock_client)
+
+        # Call evolution-connection-state
+        resp = await client.get(f"/api/v1/platform-connections/{conn_id}/evolution-connection-state")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["state"] == "open"
+        assert data["status"] == "connected"
+
+        # Check that local connection was auto-healed to active
+        get_resp = await client.get(f"/api/v1/platform-connections/{conn_id}")
+        assert get_resp.status_code == 200
+        conn_data = get_resp.json()
+        assert conn_data["status"] == "active"
+        assert conn_data["extra_data"]["connection_status"] == "connected"
