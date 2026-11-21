@@ -48,9 +48,9 @@ Este documento establece las reglas operativas, de arquitectura y de gestión de
 
 ## 3. Identidad Operativa y Propósito del Sistema
 
-- **Identidad del Asistente:** El agente conversacional opera bajo la operación de **Nicolás Valenzuela (`nival.is-a.dev`)**. Actúa de forma natural, cercana y profesional, identifica el motivo de contacto, ofrece guías breves y sugiere opciones o herramientas reales cuando le preguntan cómo automatizar o resolver un problema.
-- **Rol de Nunca Cierro:** **Nunca Cierro** es una solución/producto especializado (B2B para atención y ventas por WhatsApp/Web) encapsulado como **tool y módulo de conocimiento bajo demanda**, NO como un bloque estático monolítico inyectado en cada prompt.
-- **Escalamiento Humano:** Ante interés comercial real, solicitudes de cotización, pedidos de demo o casos fuera de alcance, el sistema debe escalar a humano y notificar de forma estructurada vía **Telegram**.
+- **Arquitectura Multi-Tenant Agnóstica:** El agente conversacional es **100% agnóstico al dominio**. Su identidad, nombre, catálogo y comportamiento se configuran de forma dinámica por `tenant_id` a partir del perfil del negocio (`tenant.name`), sus prompts configurados y su base de conocimiento en la base de datos (`KnowledgeDocument` / `KnowledgeChunk`).
+- **Instancia / Marca del Operador (`nival.is-a.dev` & Nunca Cierro):** Para el tenant de marca personal del operador, la base de conocimiento se gestiona cargando los documentos estructurados (`docs/knowledge/nicolas-valenzuela.md` y `docs/knowledge/nunca-cierro.md`) desde el dashboard. Ningún nombre de marca ni negocio está hardcodeado en los nodos ni en los prompts base del grafo.
+- **Escalamiento Humano:** Ante interés comercial real, solicitudes de cotización, pedidos de demo o casos fuera de alcance (`escalation`), el sistema escala a humano y notifica de forma estructurada vía **Telegram** al canal configurado.
 
 ---
 
@@ -98,15 +98,14 @@ nc-api/app/
     │   ├── state.py                 # TypedDict / modelo AgentState
     │   ├── graph.py                 # Definición y compilación del StateGraph
     │   ├── nodes.py                 # classify_intent, retrieve_or_plan, reason_with_tools, prepare_handoff
-    │   ├── prompts.py               # System prompt modular (identidad nival.is-a.dev + formato breve)
+    │   ├── prompts.py               # System prompt modular (identidad dinámica {tenant_name} + formato breve)
     │   └── checkpointer.py          # Persistencia de estado/resumen en Postgres
-    ├── knowledge/                   # Conocimiento / RAG limpio por dominio o tenant (Fase 3)
-    │   ├── service.py               # Recuperación selectiva de fragmentos verificables
-    │   └── sources/                 # Guías técnicas, portafolio nival.is-a.dev y docs de Nunca Cierro
+    ├── knowledge/                   # Conocimiento / RAG limpio aislado por tenant_id (Fase 3)
+    │   ├── service.py               # Ingesta (PDF, URL, MD) y recuperación selectiva de fragmentos verificables
+    │   └── schemas.py               # Validación Pydantic de documentos y chunks
     ├── tools/                       # Function calling explícito con validación Pydantic (Fase 3)
     │   ├── registry.py              # Registro y ejecución segura de tools
-    │   ├── knowledge_tool.py        # Búsqueda de guías técnicas / RAG bajo demanda
-    │   ├── nunca_cierro_tool.py     # Información, planes y encaje de Nunca Cierro (solo cuando aplica)
+    │   ├── knowledge_tool.py        # Búsqueda de guías y catálogos / RAG bajo demanda por tenant_id
     │   └── handoff_tool.py          # Escalamiento a humano + notificación estructurada por Telegram
     ├── evolution/                   # Solo parser de webhook + EvolutionAdapter (sendText, composing)
     ├── telegram/                    # Parser/adapter de bot + canal de notificaciones de escalamiento
@@ -117,7 +116,7 @@ nc-api/app/
 
 ## 6. Reglas de Diseño del Agente y Prompts
 
-1. **Cero Prompts Monolíticos:** No volcar catálogos completos, FAQs extensas ni toda la documentación de Nunca Cierro en el system prompt base. Usar `tools` (`search_knowledge`, `consult_nunca_cierro`) para cargar contexto solo cuando la intención lo requiera.
+1. **Cero Prompts Monolíticos:** No volcar catálogos completos, FAQs extensas ni documentación pesada en el system prompt base. Usar recuperación RAG (`retrieve_or_plan_node` / `knowledge_tool`) para inyectar contexto bajo demanda según el tenant.
 2. **Formato de Salida (WhatsApp / Chat):**
    - Párrafos cortos de 1 a 3 líneas.
    - Sin bloques pesados de Markdown (evitar encabezados, tablas o listas largas en respuestas conversacionales).

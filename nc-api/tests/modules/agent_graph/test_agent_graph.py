@@ -44,23 +44,13 @@ async def test_classify_intent_escalation() -> None:
 
 
 @pytest.mark.asyncio
-async def test_classify_intent_nunca_cierro() -> None:
-    """Queries about WhatsApp automation or pricing should classify as 'nunca_cierro'."""
+async def test_classify_intent_inquiry() -> None:
+    """Queries about pricing, services, or catalog should classify as 'inquiry'."""
     state = {
-        "user_query": "¿Cuáles son los planes de Nunca Cierro para automatizar WhatsApp?",
+        "user_query": "¿Cuáles son los planes y precios disponibles?",
     }
     result = await classify_intent_node(state)
-    assert result["intent"] == "nunca_cierro"
-
-
-@pytest.mark.asyncio
-async def test_classify_intent_technical() -> None:
-    """Queries about software architecture or APIs should classify as 'technical_query'."""
-    state = {
-        "user_query": "Quiero consultar sobre arquitectura backend con FastAPI",
-    }
-    result = await classify_intent_node(state)
-    assert result["intent"] == "technical_query"
+    assert result["intent"] == "inquiry"
 
 
 @pytest.mark.asyncio
@@ -74,10 +64,10 @@ async def test_classify_intent_general() -> None:
 
 
 @pytest.mark.asyncio
-async def test_retrieve_or_plan_node_injects_faq_and_product() -> None:
-    """retrieve_or_plan should inject relevant FAQ answers and product summaries."""
+async def test_retrieve_or_plan_node_injects_faq() -> None:
+    """retrieve_or_plan should inject relevant FAQ answers from business config."""
     state = {
-        "intent": "nunca_cierro",
+        "intent": "inquiry",
         "user_query": "¿Tienen soporte los domingos?",
         "business_config": {
             "faq": [
@@ -88,7 +78,6 @@ async def test_retrieve_or_plan_node_injects_faq_and_product() -> None:
     }
     result = await retrieve_or_plan_node(state)
     snippets = result.get("retrieved_knowledge") or []
-    assert any("Nunca Cierro" in s for s in snippets)
     assert any("horario de soporte" in s for s in snippets)
 
 

@@ -1,8 +1,8 @@
 """Graph node implementations for LangGraph conversational orchestration.
 
-Nodes:
-1. classify_intent — fast deterministic + heuristic classification
-2. retrieve_or_plan — targeted knowledge retrieval & plan preparation
+Domain-agnostic nodes:
+1. classify_intent — fast deterministic & heuristic classification (escalation, inquiry, general)
+2. retrieve_or_plan — targeted knowledge retrieval from database chunks and business config
 3. reason_with_tools — modular LLM generation adhering to chat format rules
 4. prepare_handoff — human escalation packaging
 """
@@ -24,12 +24,12 @@ from app.modules.agents.utils import (
 from app.modules.integrations.llm.provider import llm_client
 from app.modules.knowledge.service import knowledge_service
 
-# Context variable for dynamically passed LLM client instances (e.g. In mocks/tests)
+# Context variable for dynamically passed LLM client instances (e.g. in mocks/tests)
 current_custom_llm: contextvars.ContextVar[t.Any | None] = contextvars.ContextVar(
     "current_custom_llm", default=None
 )
 
-# Keywords that immediately map to human escalation
+# Universal keywords that map to human escalation
 ESCALATION_KEYWORDS = (
     "asesor",
     "humano",
@@ -41,27 +41,46 @@ ESCALATION_KEYWORDS = (
     "soporte tecnico",
 )
 
-# Keywords indicating Nunca Cierro product inquiries
-NUNCA_CIERRO_KEYWORDS = (
-    "nunca cierro",
-    "nuncacierro",
-    "whatsapp",
-    "automatizar",
-    "chatbot",
-    "bot",
-    "atencion 24/7",
-    "planes",
+# Common commercial & operational query keywords across all business types
+INQUIRY_KEYWORDS = (
+    "precio",
     "precios",
+    "costo",
+    "costos",
+    "cuanto vale",
+    "cuanto cuesta",
+    "tarifa",
+    "tarifas",
+    "servicio",
+    "servicios",
+    "producto",
+    "productos",
+    "catalogo",
+    "menu",
+    "horario",
+    "horarios",
+    "abren",
+    "cierran",
+    "ubicacion",
+    "direccion",
+    "donde estan",
+    "telefono",
+    "cita",
+    "citas",
+    "agendar",
+    "planes",
+    "promocion",
+    "garantia",
 )
 
 
 async def classify_intent_node(state: AgentState) -> dict[str, t.Any]:
-    """Node 1: Classify user intent from the latest query and business config."""
+    """Node 1: Classify user intent generically from the latest query and business config."""
     query = (state.get("user_query") or "").strip()
     biz_config = state.get("business_config") or {}
     tenant_escalation = biz_config.get("keywords_to_escalate") or []
 
-    # Check for direct human escalation keywords using word-boundary & accent-folding
+    # 1. Check for human escalation keywords (universal + tenant-custom)
     all_escalation_keywords = list(ESCALATION_KEYWORDS) + [
         k for k in tenant_escalation if isinstance(k, str)
     ]
@@ -75,23 +94,15 @@ async def classify_intent_node(state: AgentState) -> dict[str, t.Any]:
 
     q_lower = query.lower()
 
-    # Check for Nunca Cierro product inquiries
-    if any(k in q_lower for k in NUNCA_CIERRO_KEYWORDS):
-        logger.info("Intent classified as 'nunca_cierro' | query={q}", q=query[:60])
+    # 2. Check for commercial or operational inquiries about the business
+    if any(k in q_lower for k in INQUIRY_KEYWORDS):
+        logger.info("Intent classified as 'inquiry' | query={q}", q=query[:60])
         return {
-            "intent": "nunca_cierro",
+            "intent": "inquiry",
             "intent_confidence": 0.90,
         }
 
-    # Check for technical software development queries
-    tech_keywords = ("software", "api", "backend", "fastapi", "nextjs", "arquitectura", "desarrollo")
-    if any(k in q_lower for k in tech_keywords):
-        logger.info("Intent classified as 'technical_query' | query={q}", q=query[:60])
-        return {
-            "intent": "technical_query",
-            "intent_confidence": 0.85,
-        }
-
+    # 3. Default to general conversation / greeting
     logger.info("Intent classified as 'general' | query={q}", q=query[:60])
     return {
         "intent": "general",
@@ -100,26 +111,14 @@ async def classify_intent_node(state: AgentState) -> dict[str, t.Any]:
 
 
 async def retrieve_or_plan_node(state: AgentState) -> dict[str, t.Any]:
-    """Node 2: Retrieve targeted knowledge snippets according to classified intent."""
-    intent = state.get("intent", "general")
+    """Node 2: Retrieve targeted knowledge strictly from tenant database chunks and config."""
     query = state.get("user_query") or ""
     biz_config = state.get("business_config") or {}
     tenant_id = state.get("tenant_id") or "default_tenant"
     snippets: list[str] = []
 
-    # If asking about Nunca Cierro, inject high-level product knowledge
-    if intent == "nunca_cierro":
-        snippets.append(
-            "Nunca Cierro es un servicio B2B de Nicolás Valenzuela que automatiza la atención "
-            "y ventas por WhatsApp sin requerir que el negocio tenga personal conectado 24/7."
-        )
-        snippets.append(
-            "Planes principales: Básico (automatización esencial y FAQ), "
-            "Profesional (IA completa, catálogo de productos y agendamiento), "
-            "y Enterprise (múltiples agentes y conexiones personalizadas)."
-        )
-
-    # Dynamic lookup via KnowledgeService for tenant-specific hours, catalog, info, and FAQs
+    # Dynamic lookup via KnowledgeService: pulls tenant-specific hours, catalog,
+    # and indexed Markdown document chunks (zero hardcoded strings).
     knowledge_text = await knowledge_service.query_knowledge(
         tenant_id=tenant_id,
         query=query,
@@ -139,7 +138,7 @@ async def reason_with_tools_node(
     custom_llm: t.Any | None = None,
 ) -> dict[str, t.Any]:
     """Node 3: Generate modular conversational response via LLM without heavy prompts."""
-    tenant_name = state.get("tenant_name") or "Nunca Cierro"
+    tenant_name = state.get("tenant_name") or "este negocio"
     biz_config = state.get("business_config") or {}
     biz_text = format_business_config(biz_config) if biz_config else None
     knowledge = state.get("retrieved_knowledge") or []
@@ -162,6 +161,7 @@ async def reason_with_tools_node(
     max_tokens = state.get("max_tokens")
 
     active_llm = custom_llm or current_custom_llm.get() or llm_client
+    node_metadata = dict(state.get("metadata") or {})
 
     try:
         response_text = await active_llm.generate(
@@ -173,49 +173,54 @@ async def reason_with_tools_node(
             temperature=temperature,
             max_tokens=max_tokens,
         )
+        if not response_text or not response_text.strip():
+            fb = biz_config.get("fallback_message")
+            response_text = (
+                fb
+                if fb
+                else "En este momento estamos experimentando alta demanda. En un momento te responderemos."
+            )
     except Exception as exc:
-        logger.warning("LLM generation failed in reason_with_tools_node: {e}", e=exc)
-
-        # ── Rate Limit / Provider Error Circuit Breaker (Graceful Degradation) ──
-        # Check verified FAQs first so user gets official answer during 429/outages
-        faq = biz_config.get("faq") or []
-        fallback_faq_answer = _faq_answer_for(query, faq) if faq else None
-        if fallback_faq_answer:
-            logger.info("Circuit breaker: served verified FAQ answer during LLM failure")
-            return {
-                "final_response": fallback_faq_answer,
-                "is_handoff_requested": False,
-                "metadata": {"fallback_triggered": "rate_limit_faq_fallback"},
-            }
-
-        response_text = (
-            "En este momento presentamos alta demanda en el servicio. "
-            "Por favor intenta de nuevo en unos minutos o déjame tu consulta y un asesor te atenderá."
+        # Anti-429 Circuit Breaker fallback to verified FAQs
+        node_metadata["fallback_triggered"] = "rate_limit_faq_fallback"
+        logger.warning(
+            "reason_with_tools LLM failed, checking FAQ fallback | tenant={tid} | err={err}",
+            tid=state.get("tenant_id"),
+            err=exc,
         )
-
-    clean_response = response_text.strip()
-    if not clean_response:
-        clean_response = "Disculpa, no pude procesar tu mensaje. ¿Podrías indicarme en qué te puedo ayudar?"
+        faqs = biz_config.get("faq") or []
+        fallback_answer = _faq_answer_for(query, faqs) if faqs else None
+        if fallback_answer:
+            logger.info("Circuit breaker matched official FAQ fallback")
+            response_text = fallback_answer
+        else:
+            fb = biz_config.get("fallback_message")
+            response_text = (
+                fb
+                if fb
+                else "En este momento estamos experimentando alta demanda. En un momento te responderemos."
+            )
 
     return {
-        "final_response": clean_response,
+        "final_response": response_text,
         "is_handoff_requested": False,
+        "metadata": node_metadata,
     }
 
 
 async def prepare_handoff_node(state: AgentState) -> dict[str, t.Any]:
-    """Node 4: Prepare structured escalation response and flag for human handoff."""
+    """Node 4: Prepare final response when an agent requests human escalation."""
+    reason = state.get("handoff_reason") or "unspecified_escalation"
+    logger.info("Executing prepare_handoff_node | reason={r}", r=reason)
+
     biz_config = state.get("business_config") or {}
-    fallback = biz_config.get("fallback_message") or (
-        "Un asesor humano te atenderá en breve. "
-        "Por favor espera mientras te conectamos."
+    fallback_msg = (
+        biz_config.get("fallback_message")
+        or "Hemos registrado tu solicitud. Un asesor de nuestro equipo se comunicará contigo a la brevedad."
     )
 
-    reason = state.get("handoff_reason") or "keyword_escalation"
-    logger.info("Human handoff prepared | reason={reason}", reason=reason)
-
     return {
-        "final_response": fallback,
+        "final_response": fallback_msg,
         "is_handoff_requested": True,
         "handoff_reason": reason,
     }
