@@ -26,13 +26,14 @@ import { TenantPlanBadge } from "@/app/dashboard/tenants/components/tenant-plan-
 import { PaymentStatusBadge } from "@/app/dashboard/tenants/components/payment-status-badge";
 import { PaymentStatusToggle } from "@/app/dashboard/tenants/components/payment-status-toggle";
 import { TenantForm } from "@/app/dashboard/tenants/components/tenant-form";
-import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, RefreshCw } from "lucide-react";
 import type { Tenant } from "@/lib/types";
 import type { TenantFormValues } from "@/lib/schemas/tenant";
 import { useAuth } from "@/hooks/use-auth";
 import { buildTenantPatchBody } from "@/hooks/use-tenant";
 import { apiClient, ApiError } from "@/lib/api";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -119,6 +120,73 @@ function TableHeader({ canCreate = true }: { canCreate?: boolean }) {
         </Button>
       )}
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Auto Renew Toggle                                                  */
+/* ------------------------------------------------------------------ */
+
+function AutoRenewToggle({
+  tenant,
+  onUpdate,
+}: {
+  tenant: Tenant;
+  onUpdate: (updated: Tenant) => void;
+}) {
+  const [isUpdating, setIsUpdating] = useState(false);
+  const isAutoRenew = (tenant.notes || "").includes("[auto_renew:true]");
+
+  const handleToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isUpdating) return;
+
+    setIsUpdating(true);
+    const newAutoRenew = !isAutoRenew;
+    const cleanNotes = (tenant.notes || "").replace(/\[auto_renew:(true|false)\]\s*/g, "").trim();
+    const newNotes = newAutoRenew
+      ? `${cleanNotes ? cleanNotes + " " : ""}[auto_renew:true]`
+      : cleanNotes;
+
+    try {
+      const updated = await apiClient<Tenant>(`/api/v1/tenants/${tenant.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ notes: newNotes }),
+      });
+      toast.success(
+        newAutoRenew
+          ? "Renovación automática activada"
+          : "Renovación automática desactivada"
+      );
+      onUpdate(updated);
+    } catch {
+      toast.error("Error al actualizar renovación automática");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleToggle}
+      disabled={isUpdating}
+      className={cn(
+        "inline-flex items-center gap-1.5 h-7 rounded-md px-2 text-xs font-medium border transition-colors",
+        isAutoRenew
+          ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800"
+          : "bg-muted/40 text-muted-foreground border-border hover:bg-muted"
+      )}
+      title={
+        isAutoRenew
+          ? "Renovación automática activa (haz clic para desactivar)"
+          : "Activar renovación automática"
+      }
+    >
+      <RefreshCw className={cn("size-3", isUpdating && "animate-spin")} />
+      <span>{isAutoRenew ? "Auto-renovación" : "Sin auto-renovar"}</span>
+    </button>
   );
 }
 
@@ -232,11 +300,17 @@ export function TenantList({
                     expiresAt={tenant.plan_expires_at}
                   />
                   {onTenantUpdate && (
-                    <PaymentStatusToggle
-                      tenantId={tenant.id}
-                      currentStatus={tenant.payment_status ?? "inactive"}
-                      onSuccess={onTenantUpdate}
-                    />
+                    <>
+                      <PaymentStatusToggle
+                        tenantId={tenant.id}
+                        currentStatus={tenant.payment_status ?? "inactive"}
+                        onSuccess={onTenantUpdate}
+                      />
+                      <AutoRenewToggle
+                        tenant={tenant}
+                        onUpdate={onTenantUpdate}
+                      />
+                    </>
                   )}
                 </div>
                 <p className="mt-1 truncate text-xs text-muted-foreground">

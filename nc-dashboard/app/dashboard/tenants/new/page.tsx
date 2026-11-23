@@ -34,9 +34,9 @@ export default function NewTenantPage() {
     setIsSubmitting(true);
 
     try {
-      const tenant = await createTenant(data);
+      await createTenant(data);
       toast.success("Negocio creado exitosamente");
-      router.push(`/dashboard/tenants/${tenant.id}`);
+      router.push("/dashboard/tenants");
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 409) {

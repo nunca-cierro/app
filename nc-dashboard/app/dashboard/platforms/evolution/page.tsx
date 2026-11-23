@@ -31,7 +31,7 @@ export default function EvolutionPlatformsPage() {
             Gestione sus instancias de Evolution API conectadas.
           </p>
         </div>
-        {canManage && (
+        {canManage && connections.length > 0 && (
           <Button asChild size="sm">
             <Link href="/dashboard/platforms/evolution/new">
               <Plus className="mr-2 size-4" />
@@ -52,12 +52,16 @@ export default function EvolutionPlatformsPage() {
       {connections.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12">
+            <Phone className="size-10 text-muted-foreground/50" />
             <p className="text-muted-foreground text-sm">
               No hay instancias de Evolution configuradas.
             </p>
             {canManage && (
-              <Button asChild variant="outline" size="sm">
-                <Link href="/dashboard/platforms/evolution/new">Configurar primera instancia</Link>
+              <Button asChild size="sm">
+                <Link href="/dashboard/platforms/evolution/new">
+                  <Plus className="mr-2 size-4" />
+                  Conectar WhatsApp
+                </Link>
               </Button>
             )}
           </CardContent>

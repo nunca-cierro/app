@@ -42,7 +42,7 @@ export default function AgentsPage() {
             Gestiona los asistentes de IA de cada negocio.
           </p>
         </div>
-        <NewAgentHeaderButton role={role} />
+        {agents && agents.length > 0 && <NewAgentHeaderButton role={role} />}
       </div>
 
       <AgentList agents={agents} isLoading={isLoading} error={error} />
