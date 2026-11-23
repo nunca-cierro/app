@@ -600,16 +600,10 @@ class EngineService:
                     )
 
             if not matched_answer:
-                if is_first_message:
-                    matched_answer = (
-                        "Hola, bienvenido a {name}. "
-                        "Soy el asistente virtual del negocio y estoy aquí para atenderle. "
-                        "Puedo brindarle información sobre horarios, servicios y consultas generales. "
-                        "¿En qué le puedo colaborar hoy?"
-                    )
-                else:
-                    matched_answer = "Hola, soy el asistente de {name}. ¿En qué más puedo colaborarle?"
-                matched_answer = matched_answer.format(name=tenant.name)
+                matched_answer = (
+                    "Hola, soy el asistente de {name}. Un asesor de nuestro equipo te atenderá "
+                    "en breve para responderte con todo el detalle. ¿Hay algún dato adicional de tu consulta que nos quieras compartir?"
+                ).format(name=tenant.name)
 
             try:
                 resp = await adapter.send_message(
