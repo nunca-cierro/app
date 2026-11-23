@@ -52,7 +52,7 @@ from app.modules.tenants.models import Tenant
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
-ADMIN_COOLDOWN_HOURS: int = 72
+ADMIN_COOLDOWN_HOURS: int = 48
 ADMIN_CHAT_COOLDOWNS_KEY: str = "admin_chat_cooldowns"
 
 PAYMENT_KEYWORDS: list[str] = [
@@ -602,14 +602,13 @@ class EngineService:
             if not matched_answer:
                 if is_first_message:
                     matched_answer = (
-                        "¡Hola! 👋 Bienvenido/a a {name}. "
-                        "Soy tu asistente automático y estoy aquí para atenderte. "
-                        "Puedo ayudarte con información sobre horarios, "
-                        "productos, precios y servicios. "
-                        "¿En qué puedo ayudarte hoy?"
+                        "Hola, bienvenido a {name}. "
+                        "Soy el asistente virtual del negocio y estoy aquí para atenderle. "
+                        "Puedo brindarle información sobre horarios, servicios y consultas generales. "
+                        "¿En qué le puedo colaborar hoy?"
                     )
                 else:
-                    matched_answer = "¡Hola! 👋 Soy el asistente de {name}. ¿En qué más puedo ayudarte?"
+                    matched_answer = "Hola, soy el asistente de {name}. ¿En qué más puedo colaborarle?"
                 matched_answer = matched_answer.format(name=tenant.name)
 
             try:

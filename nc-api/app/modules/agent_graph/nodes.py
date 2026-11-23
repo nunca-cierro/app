@@ -39,6 +39,12 @@ ESCALATION_KEYWORDS = (
     "queja",
     "reclamo",
     "soporte tecnico",
+    "hombre a cargo",
+    "encargado",
+    "dueno",
+    "dueño",
+    "jefe",
+    "alguien real",
 )
 
 # Common commercial & operational query keywords across all business types

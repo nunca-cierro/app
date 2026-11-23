@@ -1,6 +1,6 @@
 """Integration tests for EngineService message orchestration.
 
-Tests deduplication, 72h admin cooldown, Evolution, and Telegram inbound routing.
+Tests deduplication, 48h admin cooldown, Evolution, and Telegram inbound routing.
 """
 
 from __future__ import annotations
@@ -143,7 +143,7 @@ class TestEngineServicePipeline:
     async def test_admin_from_me_activates_cooldown_and_skips_ai(
         self, db_session, mock_llm, mock_evo_adapter
     ) -> None:
-        """Admin sending a message from WhatsApp app sets 72h cooldown and skips AI."""
+        """Admin sending a message from WhatsApp app sets 48h cooldown and skips AI."""
         tenant = await _create_test_tenant(db_session)
         conn = await _create_test_connection(db_session, tenant.id, "evolution")
 
@@ -180,7 +180,7 @@ class TestEngineServicePipeline:
         assert saved.direction == "out"
         assert saved.payload == {"source": "admin"}
 
-        # Verify 72h cooldown was recorded on conversation
+        # Verify 48h cooldown was recorded on conversation
         conv_res = await db_session.execute(
             select(Conversation).where(
                 Conversation.platform_connection_id == conn.id,
@@ -190,7 +190,7 @@ class TestEngineServicePipeline:
         conv = conv_res.scalar_one()
         assert "admin_last_active_at" in (conv.extra_data or {})
 
-    async def test_admin_cooldown_72h_silent_save_customer_message(
+    async def test_admin_cooldown_48h_silent_save_customer_message(
         self, db_session, mock_llm, mock_evo_adapter
     ) -> None:
         """When admin cooldown is active, customer inbound is silently saved without AI response."""
@@ -214,7 +214,7 @@ class TestEngineServicePipeline:
             adapter=mock_evo_adapter,
         )
 
-        # 2. Customer replies while cooldown is active (< 72h)
+        # 2. Customer replies while cooldown is active (< 48h)
         cust_inbound = InboundMessage(
             platform_connection_id=conn.id,
             platform="evolution",

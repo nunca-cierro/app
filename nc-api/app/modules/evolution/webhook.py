@@ -87,6 +87,22 @@ def extract_evolution_message(event: EvolutionEvent) -> ParsedMessage:
         logger.debug("Ignoring Evolution event with missing key fields")
         return None
 
+    # ── Ignore non-individual chats (groups, status broadcasts, newsletters) ──
+    # @g.us = WhatsApp group
+    # @broadcast / status@broadcast = Status update / broadcast list
+    # @newsletter = WhatsApp Channel
+    if (
+        remote_jid.endswith("@g.us")
+        or remote_jid.endswith("@broadcast")
+        or remote_jid.endswith("@newsletter")
+        or remote_jid == "status@broadcast"
+    ):
+        logger.debug(
+            "Ignoring non-individual Evolution message | jid={jid}",
+            jid=remote_jid,
+        )
+        return None
+
     # ── 3. Extract text content ──────────────────────────────────────────
     message = data.get("message") or {}
     message_type: str = data.get("messageType", "") or ""

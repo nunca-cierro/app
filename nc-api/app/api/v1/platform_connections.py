@@ -490,6 +490,35 @@ async def delete_platform_connection(
     ):
         raise HTTPException(status_code=404, detail="Platform connection not found")
         
+    if connection.platform_type == "evolution":
+        import httpx
+        from loguru import logger
+        from app.core.config import settings
+        from app.core.encryption import decrypt
+        from app.modules.evolution.webhook_registration import resolve_effective_api_key
+
+        try:
+            creds = decrypt(connection.credentials)
+            if isinstance(creds, dict):
+                instance_name = (creds.get("instance_name") or "").strip()
+                base_url = (creds.get("base_url") or settings.evo_api_base_url).rstrip("/")
+                api_key = resolve_effective_api_key(creds, settings.evo_api_key)
+                if instance_name:
+                    headers = {"Content-Type": "application/json"}
+                    if api_key:
+                        headers["apikey"] = api_key
+                    async with httpx.AsyncClient(timeout=10.0) as client:
+                        try:
+                            await client.post(f"{base_url}/instance/logout/{instance_name}", headers=headers)
+                        except Exception:
+                            pass
+                        try:
+                            await client.delete(f"{base_url}/instance/delete/{instance_name}", headers=headers)
+                        except Exception:
+                            pass
+        except Exception as exc:
+            logger.warning("Error cleaning up Evolution instance during connection deletion: {exc}", exc=exc)
+
     await delete_connection(session, connection)
 
 
