@@ -22,6 +22,15 @@ export type DemoFaqItem = {
   answer: string;
 };
 
+export type DemoBotReply = {
+  reply: string;
+  action?: {
+    type: "whatsapp";
+    label: string;
+    url: string;
+  };
+};
+
 interface DemoChatWidgetProps {
   businessName: string;
   categoryName: string;
@@ -33,6 +42,11 @@ interface DemoChatWidgetProps {
   defaultOpen?: boolean;
   isOpenControlled?: boolean;
   onOpenChange?: (open: boolean) => void;
+  welcomeMessageText?: string;
+  quickQuestionsList?: string[];
+  customReplyFn?: (userQuery: string) => DemoBotReply | null;
+  queuedUserMessage?: string | null;
+  onQueuedMessageConsumed?: () => void;
 }
 
 type ChatMessage = {
@@ -58,6 +72,11 @@ export function DemoChatWidget({
   defaultOpen = false,
   isOpenControlled,
   onOpenChange,
+  welcomeMessageText,
+  quickQuestionsList,
+  customReplyFn,
+  queuedUserMessage,
+  onQueuedMessageConsumed,
 }: DemoChatWidgetProps) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
 
@@ -85,10 +104,12 @@ export function DemoChatWidget({
     () => ({
       id: "msg-welcome",
       sender: "bot",
-      text: `Hola, bienvenido a ${businessName}. Soy tu asistente virtual 24/7 impulsado por NuncaCierro. ¿En qué procedimiento o servicio estás interesado, o deseas conocer disponibilidad de citas y tarifas?`,
+      text:
+        welcomeMessageText ||
+        `Hola, bienvenido a ${businessName}. Soy tu asistente virtual 24/7 impulsado por NuncaCierro. ¿En qué procedimiento o servicio estás interesado, o deseas conocer disponibilidad de citas y tarifas?`,
       timestamp: "Ahora",
     }),
-    [businessName]
+    [businessName, welcomeMessageText]
   );
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -99,6 +120,9 @@ export function DemoChatWidget({
   );
 
   const quickQuestions = useMemo(() => {
+    if (quickQuestionsList && quickQuestionsList.length > 0) {
+      return quickQuestionsList;
+    }
     const list = [
       `¿Cuánto cuesta ${services[0]?.title || "el servicio"}?`,
       services[1] ? `¿Tienen ${services[1].title}?` : "¿Qué tratamientos ofrecen?",
@@ -106,7 +130,7 @@ export function DemoChatWidget({
       "¿Qué horarios manejan?",
     ];
     return list;
-  }, [services]);
+  }, [services, quickQuestionsList]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -121,6 +145,11 @@ export function DemoChatWidget({
   const generateBotReply = (
     userQuery: string
   ): { reply: string; action?: ChatMessage["action"] } => {
+    if (customReplyFn) {
+      const custom = customReplyFn(userQuery);
+      if (custom) return custom;
+    }
+
     const lower = userQuery.toLowerCase().trim();
 
     // 1. Coincidencia con servicio del catálogo
@@ -250,6 +279,8 @@ export function DemoChatWidget({
     };
   };
 
+  const handleSendRef = useRef<(textToSend?: string) => void>(() => {});
+
   const handleSend = (textToSend?: string) => {
     const text = (textToSend ?? inputText).trim();
     if (!text || isTyping) return;
@@ -287,6 +318,19 @@ export function DemoChatWidget({
       setIsTyping(false);
     }, 700);
   };
+
+  useEffect(() => {
+    handleSendRef.current = handleSend;
+  });
+
+  useEffect(() => {
+    if (!isOpen || !queuedUserMessage) return;
+    const timer = setTimeout(() => {
+      handleSendRef.current(queuedUserMessage);
+      onQueuedMessageConsumed?.();
+    }, 180);
+    return () => clearTimeout(timer);
+  }, [isOpen, queuedUserMessage, onQueuedMessageConsumed]);
 
   return (
     <>
