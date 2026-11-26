@@ -33,7 +33,7 @@ import {
 
 const imageLoader = ({ src }: { src: string }) => src;
 
-const WHATSAPP_NUMBER = "573115503372";
+const WHATSAPP_NUMBER = "573124932822";
 const ADDRESS = "Carrera 13 # 58-44, Chapinero, Bogotá, Colombia (Parqueadero para motos)";
 const SCHEDULE = "Horarios flexibles e híbridos · Sede Chapinero y Online en vivo";
 
@@ -149,7 +149,7 @@ function experiencePrimeBotReply(userQuery: string): DemoBotReply | null {
       action: {
         type: "whatsapp",
         label: "Continuar asesoría por WhatsApp",
-        url: `${waBase}${encodeURIComponent(`Hola Experience Prime, quiero iniciar mi proceso: ${userQuery}`)}`,
+        url: `${waBase}${encodeURIComponent(`Hola Nunca Cierro, probé la demo de Experience Prime y quiero continuar: ${userQuery}`)}`,
       },
     };
   }
@@ -268,7 +268,7 @@ function experiencePrimeBotReply(userQuery: string): DemoBotReply | null {
       action: {
         type: "whatsapp",
         label: "Escribir al WhatsApp oficial",
-        url: `${waBase}${encodeURIComponent("Hola Experience Prime, quisiera más información sobre los programas y sede en Chapinero.")}`,
+        url: `${waBase}${encodeURIComponent("Hola Nunca Cierro, vi la demo de Experience Prime y quisiera más información.")}`,
       },
     };
   }

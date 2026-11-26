@@ -195,7 +195,7 @@ export function DemoChatWidget({
       lower.includes("inmediato")
     ) {
       const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
-        `URGENCIA: Hola ${businessName}, requiero atención prioritaria hoy.`
+        `URGENCIA (Nunca Cierro - Demo ${businessName}): requiero atención prioritaria hoy.`
       )}`;
       return {
         reply: `Atendemos consultas prioritarias de forma preferencial. Puedes confirmar tu caso de inmediato por WhatsApp para que el equipo médico te reciba con urgencia.`,
@@ -219,7 +219,7 @@ export function DemoChatWidget({
       lower.includes("valoración")
     ) {
       const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
-        `Hola ${businessName}, deseo confirmar una cita de valoración para esta semana.`
+        `Hola Nunca Cierro, probé la demo de ${businessName} y deseo confirmar una cita de valoración.`
       )}`;
       return {
         reply: `Tenemos disponibilidad esta semana en nuestro horario de ${schedule}. Para registrar tu cupo, indícanos: 1. Tu nombre completo, 2. El tratamiento que deseas realizarte, y 3. El día u horario de tu preferencia. También puedes dejarlo confirmado directamente en WhatsApp.`,
@@ -261,7 +261,7 @@ export function DemoChatWidget({
       lower.includes("me llamo")
     ) {
       const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(
-        `Hola ${businessName}, solicité información a través del asistente virtual: "${userQuery}"`
+        `Hola Nunca Cierro, probé la demo de ${businessName} y solicité información en el asistente: "${userQuery}"`
       )}`;
       return {
         reply: `Excelente, hemos registrado tus datos para que un especialista de ${businessName} te contacte a la brevedad y coordine tu espacio en agenda.`,
