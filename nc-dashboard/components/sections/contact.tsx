@@ -1,6 +1,6 @@
 "use client";
 
-import { siteContact, siteWhatsAppMessages } from "@/data/site";
+import { siteContact, siteContactInfo, siteWhatsAppMessages } from "@/data/site";
 import { Section } from "@/components/layout/section";
 import { AnimatedWrapper } from "@/components/ui/animated-wrapper";
 import { Mail, MessageCircle, Clock, ArrowRight } from "lucide-react";
@@ -156,7 +156,7 @@ export function Contact() {
                 <div className="flex-1">
                   <p className="text-sm font-medium text-stone-500">WhatsApp</p>
                   <p className="text-base font-semibold text-stone-800">
-                    +57 321 961 5338
+                    {siteContactInfo.displayPhone}
                   </p>
                 </div>
                 <ArrowRight className="w-5 h-5 text-stone-300 group-hover:text-amber-500 transition-colors shrink-0" />

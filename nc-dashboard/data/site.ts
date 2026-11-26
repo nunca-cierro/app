@@ -16,6 +16,7 @@ export const siteMetadata = {
 
 export const siteContactInfo = {
   whatsappNumber: "573124932822",
+  displayPhone: "+57 312 493 2822",
   whatsappText:
     "Hola, quiero automatizar mi negocio con NuncaCierro.\n\nMi negocio es: ->\nEstoy ubicado en: ->\nMi mayor problema con los clientes es: ->",
   get whatsappUrl() {
@@ -150,7 +151,7 @@ export const sitePlans = {
     {
       name: "Básico",
       type: "Básico",
-      price: "Desde $390.000/mes + IVA",
+      price: "A cotizar",
       description:
         "Automatiza las preguntas frecuentes de tus clientes con respuestas programadas y con IA, con un cupo de hasta 2.000 respuestas con IA al mes. Ideal para negocios que están empezando a automatizar su atención.",
       features: [
@@ -169,7 +170,7 @@ export const sitePlans = {
     {
       name: "Profesional",
       type: "Profesional",
-      price: "Desde $790.000/mes + IVA",
+      price: "A cotizar",
       description:
         "Inteligencia artificial que entiende lo que preguntan tus clientes, con hasta 5 números de WhatsApp. Para negocios con volumen constante.",
       features: [
@@ -187,7 +188,7 @@ export const sitePlans = {
     {
       name: "Empresarial",
       type: "Empresarial",
-      price: "Desde $1.590.000/mes + IVA",
+      price: "A cotizar",
       description:
         "Todo incluido: inteligencia artificial, panel de control avanzado y múltiples negocios.",
       features: [
@@ -208,14 +209,8 @@ export const sitePlans = {
   quotaNote: AI_QUOTA_NOTE,
   // Footnote with the conversation estimate assumption (owner-validated: ÷4).
   estimateNote: CONVERSATION_ESTIMATE_NOTE,
-  // Comparison table rows (prices: Escenario A, copy strings)
+  // Comparison table rows (features & capacities without public prices)
   comparisonRows: [
-    {
-      label: "Precio",
-      basic: "Desde $390.000/mes + IVA",
-      pro: "Desde $790.000/mes + IVA",
-      enterprise: "Desde $1.590.000/mes + IVA",
-    },
     {
       label: "Respuestas con IA al mes",
       basic: "Hasta 2.000 (~500 conversaciones)",
@@ -395,7 +390,7 @@ export const siteContact = {
       get href() {
         return `https://wa.me/${siteContactInfo.whatsappNumber}`;
       },
-      text: "+57 312 4932822",
+      text: "+57 312 493 2822",
     },
   ],
   quickResponseText: "Respuesta inmediata — leemos tu mensaje al instante",

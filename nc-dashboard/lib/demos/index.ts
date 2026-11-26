@@ -25,7 +25,7 @@ export const defaultDemoProfile: DemoProfile = {
   services: [
     {
       title: "Atención y Calificación Automática",
-      price: "Desde $390.000 COP",
+      price: "A cotizar según volumen",
       description: "Respuestas inmediatas a dudas frecuentes y calificación de clientes.",
     },
     {
@@ -38,7 +38,7 @@ export const defaultDemoProfile: DemoProfile = {
   packages: [
     {
       name: "Plan Profesional",
-      price: "$790.000 COP/mes",
+      price: "A cotizar según volumen",
       description: "Atención comercial completa con Inteligencia Artificial.",
       includes: ["Hasta 10.000 respuestas IA", "RAG con catálogo oficial", "Escalamiento a Telegram"],
       featured: true,

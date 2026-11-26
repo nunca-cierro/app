@@ -43,12 +43,17 @@ function renderToHtml(element: React.ReactElement): Promise<string> {
 }
 
 describe("home swap — automation is the PRIMARY offer on the home", () => {
-  it("leads with the keyword-strong WhatsApp automation hero and SaaS plan pricing", async () => {
+  it("leads with the keyword-strong WhatsApp automation hero and plan tiers without public prices", async () => {
     const html = await renderToHtml(React.createElement(AutomationContent));
     expect(html).toContain("Atiende a tus clientes por WhatsApp 24/7");
     expect(html).toContain("Tu negocio nunca cierra");
-    expect(html).toContain("Desde $390.000/mes + IVA");
-    expect(html).toContain("Desde $1.590.000/mes + IVA");
+    expect(html).toContain("Básico");
+    expect(html).toContain("Profesional");
+    expect(html).toContain("Empresarial");
+    expect(html).not.toContain("$390.000");
+    expect(html).not.toContain("$1.590.000");
+    expect(html).toContain("+57 312 493 2822");
+    expect(html).not.toContain("321 961 5338");
   });
 
   it("does not render web design add-on section or links to /inicio", async () => {

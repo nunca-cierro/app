@@ -32,12 +32,10 @@ describe("sitePlans comparisonRows", () => {
     expect(row?.enterprise).not.toBe("Editar + agregar");
   });
 
-  it("shows Escenario A prices in the comparison table", () => {
+  it("omits public prices from comparisonRows while keeping feature differentiation", () => {
     const row = sitePlans.comparisonRows.find((r) => r.label === "Precio");
-    expect(row).toBeDefined();
-    expect(row?.basic).toBe("Desde $390.000/mes + IVA");
-    expect(row?.pro).toBe("Desde $790.000/mes + IVA");
-    expect(row?.enterprise).toBe("Desde $1.590.000/mes + IVA");
+    expect(row).toBeUndefined();
+    expect(sitePlans.comparisonRows.length).toBeGreaterThan(5);
   });
 
   it("shows the AI response caps with estimated conversations (÷4, ~)", () => {
@@ -73,14 +71,14 @@ describe("sitePlans comparisonRows", () => {
   });
 });
 
-describe("sitePlans packages (Escenario A)", () => {
-  it("prices every paid package with the Escenario A copy", () => {
+describe("sitePlans packages (price-free consultative framing)", () => {
+  it("sets every package price to A cotizar", () => {
     const byName = Object.fromEntries(
       sitePlans.packages.map((p) => [p.name, p.price]),
     );
-    expect(byName["Básico"]).toBe("Desde $390.000/mes + IVA");
-    expect(byName["Profesional"]).toBe("Desde $790.000/mes + IVA");
-    expect(byName["Empresarial"]).toBe("Desde $1.590.000/mes + IVA");
+    expect(byName["Básico"]).toBe("A cotizar");
+    expect(byName["Profesional"]).toBe("A cotizar");
+    expect(byName["Empresarial"]).toBe("A cotizar");
   });
 
   it("never drops the '+ IVA' framing on a paid tier", () => {
